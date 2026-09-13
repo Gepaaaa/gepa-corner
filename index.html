@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gepa — Personal Corner</title>
+        <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-l9Y2DBOBf5qo02s7"></script>
+</head>
+
+<body>
+    <div class="page-decoration decoration-one" aria-hidden="true">✦</div>
+    <div class="page-decoration decoration-two" aria-hidden="true">♡</div>
+
+    <header class="site-header">
+        <nav class="navbar container" aria-label="Main navigation">
+            <a href="#home" class="brand" aria-label="Gepa Home">
+                <span class="brand-dot"></span>
+                Gepa
+            </a>
+            <button class="mobile-menu-button" id="mobileMenuButton" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="navMenu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="nav-menu" id="navMenu">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="#links" class="nav-link">Links</a>
+                <a href="#support" class="nav-link">Support</a>
+                <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+                    <span id="themeIcon">☾</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ================= HERO ================= -->
+        <section class="hero section" id="home">
+            <div class="container hero-grid">
+                <!-- Hero text -->
+                <div class="hero-content reveal">
+                    <div class="tiny-label">
+                        <span class="status-dot"></span>
+                        welcome to my little corner
+                    </div>
+                    <p class="eyebrow">Hi, I'm Gepa ✌</p>
+                    <h1>Just a regular guy with <span>big dreams,</span> trying to be a better version of myself.</h1>
+                    <p class="hero-description">
+                        A small corner of the internet where I keep my interests, links, little moments, and a few pieces of my journey.
+                    </p>
+                    <div class="hero-actions">
+                        <a href="#about" class="button button-primary">
+                            Get to know me <span>↓</span>
+                        </a>
+                        <a href="#links" class="button button-secondary">
+                            Find me around
+                        </a>
+                    </div>
+                    <!-- Social icons -->
+                    <div class="social-row" aria-label="Social media links">
+                        <a href="https://www.instagram.com/argheeva_?stkn=MWIxa2o3ZnB5dDBrOQ==" class="social-icon" aria-label="Instagram" title="Instagram" target="_blank" rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.3" cy="6.7" r="1"></circle></svg>
+                        </a>
+                        <a href="https://whatsapp.com/channel/0029Vb6pu0S7tkj4IRcKyM44" class="social-icon" aria-label="WhatsApp" title="WhatsApp" target="_blank" rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.7a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.3-4.8A8.5 8.5 0 1 1 20.5 11.7Z"></path><path d="M8.4 8.1c.2-.4.4-.4.7-.4h.5c.2 0 .4.1.5.4l.7 1.6c.1.3.1.5-.1.7l-.5.6c-.1.2-.2.3 0 .6.3.6 1.2 1.9 2.7 2.6.3.2.5.1.7-.1l.7-.8c.2-.2.4-.2.7-.1l1.5.7c.3.1.4.3.4.5 0 .4-.2 1.2-.6 1.4-.4.3-1 .5-1.7.4-1.1-.2-2.4-.8-3.7-2-1.2-1.1-2-2.3-2.5-3.2-.5-.9-.6-1.6-.4-2.5.1-.4.3-.8.4-1Z"></path></svg>
+                        </a>
+                        <a href="https://www.tiktok.com/@argheeva?_r=1&_t=ZS-99eyKDmtMns" class="social-icon" aria-label="TikTok" title="TikTok" target="_blank" rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4c.2 2.2 1.5 3.7 3.7 3.9v3c-1.4 0-2.7-.4-3.7-1.1v5.7a5.5 5.5 0 1 1-4.7-5.4v3.1a2.5 2.5 0 1 0 1.7 2.4V4h3z"></path></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ================= PHOTO CAROUSEL ================= -->
+                <div class="hero-visual reveal">
+                    <div class="doodle doodle-star" aria-hidden="true">✦</div>
+                    <div class="doodle doodle-spark" aria-hidden="true">✧</div>
+                    
+                    <div class="profile-card">
+                        <div class="tape tape-top"></div>
+                        <!-- Carousel -->
+                        <div class="photo-carousel" id="photoCarousel" aria-label="Photo gallery">
+                            <div class="photo-track" id="photoTrack">
+                                <!-- JS akan memuat foto di sini -->
+                            </div>
+                        </div>
+                        <!-- Carousel controls -->
+                        <div class="carousel-controls">
+                            <button type="button" class="carousel-button" id="prevPhoto" aria-label="Previous photo">←</button>
+                            <div class="carousel-dots" id="carouselDots" aria-label="Photo indicators"></div>
+                            <button type="button" class="carousel-button" id="nextPhoto" aria-label="Next photo">→</button>
+                        </div>
+                        <div class="profile-note">
+                            <span>currently</span>
+                            <strong>figuring things out...</strong>
+                        </div>
+                        <div class="profile-line"></div>
+                        <div class="profile-mini">
+                            <span>♡</span>
+                            <span>dream big, stay kind</span>
+                        </div>
+                    </div>
+                    
+                    <div class="good-things-note">Good things take time. <span>☆</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= ABOUT ================= -->
+        <section class="section about-section" id="about">
+            <div class="container">
+                <div class="section-heading reveal">
+                    <p class="section-kicker">a little about me</p>
+                    <h2>Nice to meet you.</h2>
+                    <p>Nothing too complicated. Just me, my interests, and the things I'm working towards.</p>
+                </div>
+                
+                <div class="about-grid">
+                    <div class="about-story paper-card reveal">
+                        <span class="card-number">01</span>
+                        <p class="about-text">
+                            Hai! Gue Gepa. Anak biasa yang punya banyak rencana, mimpi, dan proses panjang buat jadi versi terbaik dari diri sendiri.
+                        </p>
+                        <p class="about-text">
+                            Suka hal-hal simpel, gaming, teknologi, musik, dan hal-hal yang bikin hidup terasa lebih berarti.
+                        </p>
+                        <div class="quote-box">
+                            <span class="quote-mark">“</span>
+                            <p>Bukan tentang jadi yang terbaik, tapi jadi lebih baik dari kemarin. ☺</p>
+                        </div>
+                    </div>
+                    
+                    <div class="info-grid reveal">
+                        <!-- AGE -->
+                        <div class="info-card clickable-card" id="ageCard" role="button" tabindex="0">
+                            <span class="info-icon">⌁</span>
+                            <span class="info-label">Age</span>
+                            <strong id="ageDisplay">Calculating...</strong>
+                        </div>
+                        <!-- LOCATION -->
+                        <div class="info-card clickable-card" id="locationCard" role="button" tabindex="0">
+                            <span class="info-icon">⌖</span>
+                            <span class="info-label">Based in</span>
+                            <strong>Bogor, Indonesia</strong>
+                        </div>
+                        <!-- HOBBIES -->
+                        <div class="info-card clickable-card" id="hobbyCard" role="button" tabindex="0">
+                            <span class="info-icon">♡</span>
+                            <span class="info-label">Hobbies</span>
+                            <strong>Gaming, Movies, Tech</strong>
+                        </div>
+                        <!-- DREAM -->
+                        <div class="info-card">
+                            <span class="info-icon">✦</span>
+                            <span class="info-label">Dream</span>
+                            <strong>Big dreams, bigger actions.</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= LINKS ================= -->
+        <section class="section links-section" id="links">
+            <div class="container">
+                <div class="section-heading reveal">
+                    <p class="section-kicker">find me around</p>
+                    <h2>My Links.</h2>
+                    <p>Some places where you can find me, my content, or things I'm currently into.</p>
+                </div>
+                
+                <div class="links-list">
+                    <!-- WhatsApp Channel -->
+                    <a href="https://whatsapp.com/channel/0029Vb6pu0S7tkj4IRcKyM44" target="_blank" rel="noopener noreferrer" class="link-card reveal">
+                        <div class="link-icon whatsapp-link-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.7a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.3-4.8A8.5 8.5 0 1 1 20.5 11.7Z"></path><path d="M8.4 8.1c.2-.4.4-.4.7-.4h.5c.2 0 .4.1.5.4l.7 1.6c.1.3.1.5-.1.7l-.5.6c-.1.2-.2.3 0 .6.3.6 1.2 1.9 2.7 2.6.3.2.5.1.7-.1l.7-.8c.2-.2.4-.2.7-.1l1.5.7c.3.1.4.3.4.5 0 .4-.2 1.2-.6 1.4-.4.3-1 .5-1.7.4-1.1-.2-2.4-.8-3.7-2-1.2-1.1-2-2.3-2.5-3.2-.5-.9-.6-1.6-.4-2.5.1-.4.3-.8.4-1Z"></path></svg>
+                        </div>
+                        <div class="link-info">
+                            <strong>WhatsApp Channel</strong>
+                            <span>Updates, random thoughts & little things.</span>
+                        </div>
+                        <span class="link-arrow">↗</span>
+                    </a>
+                    
+                    <!-- Instagram -->
+                    <a href="https://www.instagram.com/argheeva_?stkn=MWIxa2o3ZnB5dDBrOQ==" target="_blank" rel="noopener noreferrer" class="link-card reveal">
+                        <div class="link-icon instagram-icon">◎</div>
+                        <div class="link-info">
+                            <strong>Instagram</strong>
+                            <span>Random moments, photos & little updates.</span>
+                        </div>
+                        <span class="link-arrow">↗</span>
+                    </a>
+                    
+                    <!-- TikTok -->
+                    <a href="https://www.tiktok.com/@argheeva?_r=1&_t=ZS-99eyKDmtMns" target="_blank" rel="noopener noreferrer" class="link-card reveal">
+                        <div class="link-icon tiktok-icon">♪</div>
+                        <div class="link-info">
+                            <strong>TikTok</strong>
+                            <span>Short videos, random stuff & fun.</span>
+                        </div>
+                        <span class="link-arrow">↗</span>
+                    </a>
+                    
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SUPPORT ================= -->
+        <section class="section support-section" id="support">
+            <div class="container">
+                <div class="support-card reveal">
+                    <div class="support-decoration" aria-hidden="true">
+                        <span>✦</span><span>♡</span><span>☼</span>
+                    </div>
+                    <div class="support-content">
+                        <p class="section-kicker">totally optional</p>
+                        <h2>Support Me <span>(Optional)</span></h2>
+                        <p>Kalau kamu suka dengan apa yang gue bikin, dan mau traktir, boleh banget.</p>
+                        <button class="button button-support" id="supportButton" type="button">
+                            ☕ Dukung Gue →
+                        </button>
+                    </div>
+                    <div class="support-cup" aria-hidden="true">☕</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-inner">
+            <div class="footer-brand">
+                <a href="#home" class="brand">
+                    <span class="brand-dot"></span>
+                    Gepa
+                </a>
+                <p>Thanks for visiting! ☺</p>
+            </div>
+            <div class="footer-right">
+                <span>Made with patience & a little caffeine.</span>
+                <span>© <span id="currentYear"></span> Gepa</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================= MODALS ================= -->
+    
+    <!-- Support Modal -->
+    <div class="modal-overlay" id="supportModal">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <button class="modal-close" type="button" aria-label="Close support dialog">×</button>
+            <div class="modal-cup">☕</div>
+            <p class="section-kicker">a tiny little treat</p>
+            <h2 id="modalTitle">Traktir Gepa ☕</h2>
+            <p class="modal-description">Kalau mau support, pilih nominalnya. Nggak wajib kok.</p>
+            
+            <div class="amount-grid">
+                <button class="amount-button" type="button" data-amount="10000">Rp10K</button>
+                <button class="amount-button" type="button" data-amount="20000">Rp20K</button>
+                <button class="amount-button" type="button" data-amount="50000">Rp50K</button>
+                <button class="amount-button" type="button" data-amount="100000">Rp100K</button>
+            </div>
+            
+            <div class="custom-amount">
+                <label for="customAmount">Atau masukkan nominal sendiri</label>
+                <div class="amount-input-wrap">
+                    <span>Rp</span>
+                    <input type="number" id="customAmount" min="1000" step="1000" placeholder="Contoh: 25000" inputmode="numeric">
+                </div>
+            </div>
+            
+            <div class="selected-amount" id="selectedAmount">Belum memilih nominal</div>
+            <button class="modal-support-button" id="continueSupport" type="button" disabled>Lanjutkan →</button>
+            <p class="modal-note">Payment gateway belum diaktifkan. Tombol ini sementara hanya simulasi UI.</p>
+        </div>
+    </div>
+
+    <!-- Age Modal -->
+    <div class="modal-overlay" id="ageModalOverlay">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true">
+            <button class="modal-close" type="button" aria-label="Close" onclick="closeInfoModal('ageModalOverlay')">×</button>
+            <div class="modal-icon">⌁</div>
+            <p class="section-kicker">live counter</p>
+            <h2>My Exact Age</h2>
+            <p class="modal-birthday-note">🎂 Born on 17 May 2006</p>
+            <div class="age-realtime-grid">
+                <div class="age-box"><span id="ageYears">0</span><small>Years</small></div>
+                <div class="age-box"><span id="ageMonths">0</span><small>Months</small></div>
+                <div class="age-box"><span id="ageDays">0</span><small>Days</small></div>
+                <div class="age-box"><span id="ageHours">0</span><small>Hours</small></div>
+                <div class="age-box"><span id="ageMinutes">0</span><small>Minutes</small></div>
+                <div class="age-box"><span id="ageSeconds">0</span><small>Seconds</small></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location Modal -->
+    <div class="modal-overlay" id="locationModalOverlay">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true">
+            <button class="modal-close" type="button" aria-label="Close" onclick="closeInfoModal('locationModalOverlay')">×</button>
+            <div class="modal-icon">⌖</div>
+            <p class="section-kicker">current base</p>
+            <h2>Bogor, Indonesia</h2>
+            <div class="map-container">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126830.59712019972!2d106.71124503799042!3d-6.59013098595562!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69c5c760b2eb35%3A0xc67f7e90c885da8!2sBogor%20City%2C%20West%20Java!5e0!3m2!1sen!2sid!4v1700000000000!5m2!1sen!2sid" width="100%" height="250" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hobby Modal -->
+    <div class="modal-overlay" id="hobbyModalOverlay">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true">
+            <button class="modal-close" type="button" aria-label="Close" onclick="closeInfoModal('hobbyModalOverlay')">×</button>
+            <div class="modal-icon">♡</div>
+            <p class="section-kicker">what i like</p>
+            <h2>Interests & Favorites</h2>
+            <div class="hobby-list-custom">
+                <div class="hobby-category">
+                    <h3>🎮 Games Favorite</h3>
+                    <ul>
+                        <li><span>🎮</span> Mobile Legend</li>
+                        <li><span>🎮</span> Roblox</li>
+                    </ul>
+                </div>
+                <div class="hobby-category">
+                    <h3>🎬 Films Favorite</h3>
+                    <ul>
+                        <li><span>🎬</span> Senseless (1998)</li>
+                        <li><span>🎬</span> Flipped</li>
+                        <li><span>🎬</span> Final Destination</li>
+                    </ul>
+                </div>
+                <div class="hobby-category">
+                    <h3>🌸 Animes Favorite</h3>
+                    <ul>
+                        <li><span>🌸</span> Your Name</li>
+                        <li><span>🌸</span> Re:Life</li>
+                    </ul>
+                </div>
+                <div class="hobby-category">
+                    <h3>🎵 Musics Favorite</h3>
+                    <ul>
+                        <li><span>🎵</span> Flatline</li>
+                        <li><span>🎵</span> Confident</li>
+                        <li><span>🎵</span> About You</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
