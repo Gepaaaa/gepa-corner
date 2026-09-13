@@ -34,7 +34,7 @@ export default async function handler(req, res) {
           gross_amount: amount
         },
         callbacks: {
-          finish: "https://gepa-we-vercel-version.vercel.app/"
+          finish: "https://gepa-we-vercel-version.vercel.app/?status=success"
         }
       })
     });
