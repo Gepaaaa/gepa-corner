@@ -2,7 +2,7 @@
 
 /* =========================================================
 GEPA PERSONAL WEBSITE
-Vanilla JavaScript (Updated with Return Parameter Handler)
+Vanilla JavaScript (Updated with Custom Success Modal & Invoice Print)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -50,19 +50,6 @@ if (currentYear) {
 }
 
 /* =========================================================
-CHECK RETURN FROM PAYMENT REDIRECT
-========================================================= */
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get("status") === "success") {
-    // Beri sedikit jeda agar DOM dan toast siap
-    setTimeout(() => {
-        showToast("Terima kasih, stranger! Support kamu sangat berarti ☕");
-        // Bersihkan URL dari parameter agar bersih kembali
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }, 500);
-}
-
-/* =========================================================
 REAL-TIME AGE
 Birthday: 17 May 2006 (00:00:00)
 ========================================================= */
@@ -94,7 +81,6 @@ function calculateFullAge() {
 
 function updateAge() {
     const age = calculateFullAge();
-    
     const newAgeText = `${age.years} years`;
     if (ageDisplay && ageDisplay.textContent !== newAgeText) {
         ageDisplay.textContent = newAgeText;
@@ -515,16 +501,20 @@ if (continueSupport) {
             if (window.snap) {
                 window.snap.pay(data.token, {
                     onSuccess: function(result) {
-                        showToast("Terima kasih, stranger! Pembayaran berhasil ☕");
-                        console.log(result);
+                        // Isi data ke custom success modal
+                        document.getElementById("resOrderId").textContent = result.order_id || data.order_id;
+                        document.getElementById("resAmount").textContent = `Rp${formatRupiah(amount)}`;
+                        document.getElementById("resPaymentType").textContent = result.payment_type ? result.payment_type.toUpperCase() : "Online Payment";
+                        document.getElementById("resTime").textContent = result.transaction_time || new Date().toLocaleString();
+                        
+                        openInfoModal("successPaymentModal");
+                        showToast("Terima kasih! Pembayaran berhasil ☕");
                     },
                     onPending: function(result) {
                         showToast("Menunggu pembayaran selesai...");
-                        console.log(result);
                     },
                     onError: function(result) {
-                        showToast("Pembayaran gagal. Coba lagi.");
-                        console.log(result);
+                        showToast("Pembayaran gagal. Silakan coba lagi.");
                     },
                     onClose: function() {
                         showToast("Popup pembayaran ditutup.");
@@ -541,6 +531,14 @@ if (continueSupport) {
             continueSupport.disabled = false;
             continueSupport.textContent = "Lanjutkan →";
         }
+    });
+}
+
+// Download Invoice Feature using Print-to-PDF / Print Window
+const downloadInvoiceBtn = document.getElementById("downloadInvoiceBtn");
+if (downloadInvoiceBtn) {
+    downloadInvoiceBtn.addEventListener("click", () => {
+        window.print();
     });
 }
 
