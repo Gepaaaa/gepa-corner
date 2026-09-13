@@ -273,7 +273,7 @@
             
             <div class="selected-amount" id="selectedAmount">Belum memilih nominal</div>
             <button class="modal-support-button" id="continueSupport" type="button" disabled>Lanjutkan →</button>
-            <p class="modal-note">Payment gateway belum diaktifkan. Tombol ini sementara hanya simulasi UI.</p>
+            <p class="modal-note">Payment gateway aktif via Midtrans Sandbox.</p>
         </div>
     </div>
 
@@ -347,6 +347,39 @@
                         <li><span>🎵</span> About You</li>
                     </ul>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Success Payment Modal -->
+    <div class="modal-overlay" id="successPaymentModal">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left;">
+            <button class="modal-close" type="button" aria-label="Close" onclick="closeInfoModal('successPaymentModal')">×</button>
+            <div class="modal-icon" style="background: var(--sage-100); color: var(--sage-700);">❤️</div>
+            <p class="section-kicker">payment success</p>
+            <h2 style="font-size: 1.6rem; margin-bottom: 6px;">Terima Kasih Sudah Support! ❤️</h2>
+            <p class="modal-description" style="margin-bottom: 16px; text-align: left;">
+                Pembayaran kamu berhasil diterima.<br><br>
+                Dukungan kecil dari kamu sangat berarti buat kami dan membantu website ini terus berkembang.<br><br>
+                Thank you for being part of the journey. 🚀
+            </p>
+            
+            <div style="background: var(--sage-50); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 20px; font-size: 0.82rem; color: var(--text-soft);" id="invoicePrintArea">
+                <div style="font-weight: 700; color: var(--sage-700); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">INVOICE PEMBAYARAN - Gepa Corner</div>
+                <div style="display: grid; gap: 4px;">
+                    <div><strong>Order ID:</strong> <span id="resOrderId">-</span></div>
+                    <div><strong>Customer:</strong> Gepa Supporter</div>
+                    <div><strong>Item:</strong> Traktir Kopi / Support</div>
+                    <div><strong>Nominal:</strong> <span id="resAmount">-</span></div>
+                    <div><strong>Metode:</strong> <span id="resPaymentType">-</span></div>
+                    <div><strong>Status:</strong> ✅ Pembayaran Berhasil</div>
+                    <div><strong>Waktu:</strong> <span id="resTime">-</span></div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="modal-support-button" id="downloadInvoiceBtn" type="button" style="background: var(--sage-600); margin-top: 0;">Download Invoice</button>
+                <button class="modal-support-button" type="button" onclick="closeInfoModal('successPaymentModal')" style="background: var(--sage-700); margin-top: 0;">Kembali ke Website</button>
             </div>
         </div>
     </div>
