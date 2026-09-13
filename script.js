@@ -2,7 +2,7 @@
 
 /* =========================================================
 GEPA PERSONAL WEBSITE
-Vanilla JavaScript (Updated with Midtrans Integration & Fixes)
+Vanilla JavaScript (Updated with Midtrans Integration & Carousel Fix)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -199,7 +199,7 @@ const nextPhoto = document.getElementById("nextPhoto");
 const carouselDots = document.getElementById("carouselDots");
 
 const photoList = [
-    "assets/foto-1.jpg", "assets/foto-2.jpg", "assets/foto-6.jpg"
+    "assets/foto-1.jpg", "assets/foto-6.jpg"
 ];
 
 let currentPhoto = 1;
@@ -297,7 +297,8 @@ function moveCarousel(direction) {
             if (currentPhoto === 0) {
                 photoTrack.style.transition = "none";
                 currentPhoto = photoList.length;
-                photoTrack.style.transform = `translate3d(-100%, 0, 0)`;
+                // BUG FIX: Menggunakan variabel currentPhoto, bukan -100% mati
+                photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
             }
             isMoving = false;
         }, 430);
@@ -487,7 +488,6 @@ if (continueSupport) {
                 body: JSON.stringify({ amount: amount })
             });
 
-            // Proteksi jika Vercel error dan mengirim HTML alih-alih JSON
             let data;
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.indexOf("application/json") !== -1) {
@@ -502,7 +502,6 @@ if (continueSupport) {
 
             closeInfoModal("supportModal");
 
-            // Buka Midtrans Snap Pop-up
             if (window.snap) {
                 window.snap.pay(data.token, {
                     onSuccess: function(result) {
