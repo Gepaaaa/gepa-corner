@@ -587,32 +587,39 @@ TANGKAP REDIRECT DARI HP (E-WALLET)
 ========================================================= */
 const urlParams = new URLSearchParams(window.location.search);
 const txStatus = urlParams.get('transaction_status');
+const statusCode = urlParams.get('status_code');
 const incomingOrderId = urlParams.get('order_id');
 
-if (txStatus) {
-    if (txStatus === 'settlement' || txStatus === 'capture') {
-        const resOrderId = document.getElementById("resOrderId");
-        if (resOrderId) resOrderId.textContent = incomingOrderId || "-";
+// Cek apakah ada order_id dari Midtrans di URL
+if (incomingOrderId) {
+    // Kasih jeda 300ms biar halaman & animasi CSS kelar loading dulu
+    setTimeout(() => {
+        // Cek sukses berdasarkan status_code 200 ATAU transaction_status
+        if (statusCode === '200' || txStatus === 'settlement' || txStatus === 'capture') {
+            const resOrderId = document.getElementById("resOrderId");
+            if (resOrderId) resOrderId.textContent = incomingOrderId;
+            
+            const resAmount = document.getElementById("resAmount");
+            if (resAmount) resAmount.textContent = "Cek Ranking";
+            
+            const resUsername = document.getElementById("resUsername");
+            if (resUsername) resUsername.textContent = "Supporter";
+            
+            openInfoModal("successPaymentModal");
+            
+            // Update ranking terbaru
+            if (typeof fetchRankings === "function") fetchRankings();
+            
+        } else if (statusCode === '201' || txStatus === 'pending') {
+            openInfoModal("pendingPaymentModal");
+        } else {
+            openInfoModal("errorPaymentModal");
+        }
         
-        const resAmount = document.getElementById("resAmount");
-        if (resAmount) resAmount.textContent = "Cek Ranking";
-        
-        const resUsername = document.getElementById("resUsername");
-        if (resUsername) resUsername.textContent = "Supporter";
-        
-        openInfoModal("successPaymentModal");
-        
-        // Update ranking terbaru
-        fetchRankings();
-        
-    } else if (txStatus === 'pending') {
-        openInfoModal("pendingPaymentModal");
-    } else {
-        openInfoModal("errorPaymentModal");
-    }
-    
-    // Bersihkan parameter URL biar nggak muncul terus setiap direfresh
-    window.history.replaceState({}, document.title, window.location.pathname);
+        // Bersihkan parameter URL biar bersih lagi
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }, 300);
 }
+
 
 });
