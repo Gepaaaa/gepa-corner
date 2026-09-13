@@ -199,7 +199,7 @@ const nextPhoto = document.getElementById("nextPhoto");
 const carouselDots = document.getElementById("carouselDots");
 
 const photoList = [
-    "assets/foto-1.jpg", "assets/foto-2.jpg", "assets/foto-6.jpg"
+    "assets/foto-1.jpg", "assets/foto-6.jpg"
 ];
 
 let currentPhoto = 1;
