@@ -2,7 +2,7 @@
 
 /* =========================================================
 GEPA PERSONAL WEBSITE
-Vanilla JavaScript (Updated with Midtrans Popup Integration)
+Vanilla JavaScript (Updated with Midtrans Integration & Carousel Fix)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -501,7 +501,6 @@ if (continueSupport) {
 
             if (window.snap) {
                 window.snap.pay(data.token, {
-                    popup: true,
                     onSuccess: function(result) {
                         showToast("Terima kasih! Pembayaran berhasil ☕");
                         console.log(result);
