@@ -2,7 +2,7 @@
 
 /* =========================================================
 GEPA PERSONAL WEBSITE
-Vanilla JavaScript (Full Merged: Animations + Ranking + Midtrans)
+Vanilla JavaScript (Full Merged: Animations + Ranking + Midtrans + Redirect Handler)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -183,7 +183,7 @@ if (themeToggle) {
 applyInitialTheme();
 
 /* =========================================================
-REVEAL ON SCROLL (INI YANG BIKIN KONTEN MUNCUL)
+REVEAL ON SCROLL
 ========================================================= */
 if ("IntersectionObserver" in window) {
     const observer = new IntersectionObserver((entries, obs) => {
@@ -580,6 +580,39 @@ function showToast(msg) {
     toast.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove("show"), 3000);
+}
+
+/* =========================================================
+TANGKAP REDIRECT DARI HP (E-WALLET)
+========================================================= */
+const urlParams = new URLSearchParams(window.location.search);
+const txStatus = urlParams.get('transaction_status');
+const incomingOrderId = urlParams.get('order_id');
+
+if (txStatus) {
+    if (txStatus === 'settlement' || txStatus === 'capture') {
+        const resOrderId = document.getElementById("resOrderId");
+        if (resOrderId) resOrderId.textContent = incomingOrderId || "-";
+        
+        const resAmount = document.getElementById("resAmount");
+        if (resAmount) resAmount.textContent = "Cek Ranking";
+        
+        const resUsername = document.getElementById("resUsername");
+        if (resUsername) resUsername.textContent = "Supporter";
+        
+        openInfoModal("successPaymentModal");
+        
+        // Update ranking terbaru
+        fetchRankings();
+        
+    } else if (txStatus === 'pending') {
+        openInfoModal("pendingPaymentModal");
+    } else {
+        openInfoModal("errorPaymentModal");
+    }
+    
+    // Bersihkan parameter URL biar nggak muncul terus setiap direfresh
+    window.history.replaceState({}, document.title, window.location.pathname);
 }
 
 });
