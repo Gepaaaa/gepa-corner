@@ -82,13 +82,11 @@ function calculateFullAge() {
 function updateAge() {
     const age = calculateFullAge();
     
-    // Cegah DOM overwrite berulang jika angkanya tidak berubah
     const newAgeText = `${age.years} years`;
     if (ageDisplay && ageDisplay.textContent !== newAgeText) {
         ageDisplay.textContent = newAgeText;
     }
 
-    // Hanya update detik/menit jika modal sedang terbuka (hemat performa)
     const ageModal = document.getElementById("ageModalOverlay");
     if (ageModal && ageModal.classList.contains("open")) {
         if (ageYears) ageYears.textContent = age.years;
@@ -297,7 +295,6 @@ function moveCarousel(direction) {
             if (currentPhoto === 0) {
                 photoTrack.style.transition = "none";
                 currentPhoto = photoList.length;
-                // BUG FIX: Menggunakan variabel currentPhoto, bukan -100% mati
                 photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
             }
             isMoving = false;
@@ -521,7 +518,7 @@ if (continueSupport) {
                     }
                 });
             } else {
-                window.location.href = data.redirect_url;
+                window.open(data.redirect_url, '_blank');
             }
 
         } catch (error) {
