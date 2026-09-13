@@ -2,7 +2,7 @@
 
 /* =========================================================
 GEPA PERSONAL WEBSITE
-Vanilla JavaScript (Updated with Custom Success Modal & Invoice Print)
+Vanilla JavaScript (Updated with Seamless Custom Success Modal)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -501,7 +501,6 @@ if (continueSupport) {
             if (window.snap) {
                 window.snap.pay(data.token, {
                     onSuccess: function(result) {
-                        // Isi data ke custom success modal
                         document.getElementById("resOrderId").textContent = result.order_id || data.order_id;
                         document.getElementById("resAmount").textContent = `Rp${formatRupiah(amount)}`;
                         document.getElementById("resPaymentType").textContent = result.payment_type ? result.payment_type.toUpperCase() : "Online Payment";
@@ -511,7 +510,7 @@ if (continueSupport) {
                         showToast("Terima kasih! Pembayaran berhasil ☕");
                     },
                     onPending: function(result) {
-                        showToast("Menunggu pembayaran selesai...");
+                        showToast("Pembayaran sedang menunggu (Pending)...");
                     },
                     onError: function(result) {
                         showToast("Pembayaran gagal. Silakan coba lagi.");
