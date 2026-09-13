@@ -36,9 +36,14 @@ export default async function handler(req, res) {
         customer_details: {
           first_name: cleanUsername
         },
-        // Menyimpan username ke custom_field untuk diambil nanti di Webhook
-        custom_field1: cleanUsername 
-        // HAPUS callbacks.finish agar Midtrans Snap TIDAK MEREDIRECT HALAMAN
+        custom_field1: cleanUsername,
+        
+        // KITA KEMBALIKAN CALLBACKS AGAR BALIK KE WEB LU (BUKAN EXAMPLE.COM)
+        callbacks: {
+          finish: "https://gepa-we-vercel-version.vercel.app/",
+          error: "https://gepa-we-vercel-version.vercel.app/",
+          pending: "https://gepa-we-vercel-version.vercel.app/"
+        }
       })
     });
 
