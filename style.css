@@ -415,6 +415,138 @@ SUPPORT
 .support-decoration span:nth-child(3) { left: 19%; bottom: 35px; font-size: 1.5rem; }
 
 /* =========================
+RANKING SYSTEM UI
+========================= */
+.support-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+}
+@media (min-width: 950px) {
+    .support-grid {
+        grid-template-columns: 1.1fr 0.9fr;
+        align-items: stretch;
+    }
+}
+
+.ranking-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 30px;
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+}
+
+.ranking-header h3 {
+    font-size: 1.4rem;
+    color: var(--sage-800);
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.ranking-tabs {
+    display: flex;
+    background: var(--sage-50);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 5px;
+    margin-bottom: 20px;
+}
+
+.rank-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-soft);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.rank-tab.active {
+    background: var(--sage-700);
+    color: #fff;
+    box-shadow: var(--shadow-soft);
+}
+
+.ranking-body {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 300px;
+    padding-right: 5px;
+}
+
+/* Custom Scrollbar for Ranking */
+.ranking-body::-webkit-scrollbar { width: 6px; }
+.ranking-body::-webkit-scrollbar-track { background: transparent; }
+.ranking-body::-webkit-scrollbar-thumb { background: var(--sage-200); border-radius: 10px; }
+
+.ranking-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    background: var(--sage-50);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: var(--transition);
+}
+.ranking-item:hover {
+    transform: translateX(4px);
+    border-color: var(--sage-300);
+}
+
+.rank-medal {
+    font-size: 1.3rem;
+    width: 30px;
+    text-align: center;
+    font-weight: 700;
+    color: var(--sage-600);
+}
+
+.rank-info {
+    flex: 1;
+}
+.rank-name {
+    display: block;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+}
+.rank-tx {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.rank-amount {
+    font-weight: 700;
+    color: var(--sage-700);
+    font-size: 0.9rem;
+    background: var(--sage-100);
+    padding: 4px 10px;
+    border-radius: 8px;
+}
+
+.ranking-loading, .ranking-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* =========================
 FOOTER
 ========================= */
 .footer { padding: 30px 0; border-top: 1px solid var(--border); background: var(--warm-white); }
