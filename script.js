@@ -2,7 +2,7 @@
 
 /* =========================================================
 GEPA PERSONAL WEBSITE
-Vanilla JavaScript (Updated with Midtrans Integration & Carousel Fix)
+Vanilla JavaScript (Updated with Return Parameter Handler)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -47,6 +47,19 @@ CURRENT YEAR
 ========================================================= */
 if (currentYear) {
     currentYear.textContent = new Date().getFullYear();
+}
+
+/* =========================================================
+CHECK RETURN FROM PAYMENT REDIRECT
+========================================================= */
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("status") === "success") {
+    // Beri sedikit jeda agar DOM dan toast siap
+    setTimeout(() => {
+        showToast("Terima kasih, stranger! Support kamu sangat berarti ☕");
+        // Bersihkan URL dari parameter agar bersih kembali
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }, 500);
 }
 
 /* =========================================================
@@ -502,7 +515,7 @@ if (continueSupport) {
             if (window.snap) {
                 window.snap.pay(data.token, {
                     onSuccess: function(result) {
-                        showToast("Terima kasih! Pembayaran berhasil ☕");
+                        showToast("Terima kasih, stranger! Pembayaran berhasil ☕");
                         console.log(result);
                     },
                     onPending: function(result) {
