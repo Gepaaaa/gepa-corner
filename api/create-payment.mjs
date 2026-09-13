@@ -32,6 +32,9 @@ export default async function handler(req, res) {
         transaction_details: {
           order_id: orderId,
           gross_amount: amount
+        },
+        callbacks: {
+          finish: "https://gepa-we-vercel-version.vercel.app/"
         }
       })
     });
