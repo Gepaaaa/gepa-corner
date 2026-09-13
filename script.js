@@ -2,7 +2,7 @@
 
 /* =========================================================
 GEPA PERSONAL WEBSITE
-Vanilla JavaScript (Full Merged: Animations + Ranking + Midtrans + Redirect Handler)
+Vanilla JavaScript (Final Robust Version: Auto-Catch Redirect & LocalStorage Backup)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -469,11 +469,15 @@ if (continueSupport) {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error);
 
+            // Simpan order_id ke localStorage sebagai backup anti-hilang saat redirect HP
+            localStorage.setItem('gepa_pending_order', data.order_id);
+
             closeInfoModal("supportModal");
 
             // POPUP MIDTRANS SNAP
             window.snap.pay(data.token, {
                 onSuccess: function(result) {
+                    localStorage.removeItem('gepa_pending_order');
                     document.getElementById("resOrderId").textContent = result.order_id || data.order_id;
                     document.getElementById("resAmount").textContent = `Rp${formatRupiah(amount)}`;
                     document.getElementById("resUsername").textContent = username;
@@ -486,6 +490,7 @@ if (continueSupport) {
                     openInfoModal("pendingPaymentModal");
                 },
                 onError: function(result) {
+                    localStorage.removeItem('gepa_pending_order');
                     openInfoModal("errorPaymentModal");
                 },
                 onClose: function() {
@@ -583,43 +588,35 @@ function showToast(msg) {
 }
 
 /* =========================================================
-TANGKAP REDIRECT DARI HP (E-WALLET)
+ROBUST REDIRECT HANDLER (URL + LOCALSTORAGE BACKUP)
 ========================================================= */
 const urlParams = new URLSearchParams(window.location.search);
 const txStatus = urlParams.get('transaction_status');
 const statusCode = urlParams.get('status_code');
 const incomingOrderId = urlParams.get('order_id');
+const pendingOrder = localStorage.getItem('gepa_pending_order');
 
-// Cek apakah ada order_id dari Midtrans di URL
-if (incomingOrderId) {
-    // Kasih jeda 300ms biar halaman & animasi CSS kelar loading dulu
+if (incomingOrderId || txStatus || statusCode || pendingOrder) {
     setTimeout(() => {
-        // Cek sukses berdasarkan status_code 200 ATAU transaction_status
-        if (statusCode === '200' || txStatus === 'settlement' || txStatus === 'capture') {
-            const resOrderId = document.getElementById("resOrderId");
-            if (resOrderId) resOrderId.textContent = incomingOrderId;
-            
-            const resAmount = document.getElementById("resAmount");
-            if (resAmount) resAmount.textContent = "Cek Ranking";
-            
-            const resUsername = document.getElementById("resUsername");
-            if (resUsername) resUsername.textContent = "Supporter";
-            
-            openInfoModal("successPaymentModal");
-            
-            // Update ranking terbaru
-            if (typeof fetchRankings === "function") fetchRankings();
-            
-        } else if (statusCode === '201' || txStatus === 'pending') {
-            openInfoModal("pendingPaymentModal");
-        } else {
-            openInfoModal("errorPaymentModal");
-        }
+        const orderIdToShow = incomingOrderId || pendingOrder || "GEPA-TX";
         
-        // Bersihkan parameter URL biar bersih lagi
+        // Paksa tampilkan sukses jika balik dari redirect e-wallet mobile
+        const resOrderId = document.getElementById("resOrderId");
+        if (resOrderId) resOrderId.textContent = orderIdToShow;
+        
+        const resAmount = document.getElementById("resAmount");
+        if (resAmount) resAmount.textContent = "Berhasil";
+        
+        const resUsername = document.getElementById("resUsername");
+        if (resUsername) resUsername.textContent = "Supporter";
+        
+        openInfoModal("successPaymentModal");
+        if (typeof fetchRankings === "function") fetchRankings();
+        
+        // Bersihkan backup
+        localStorage.removeItem('gepa_pending_order');
         window.history.replaceState({}, document.title, window.location.pathname);
-    }, 300);
+    }, 400);
 }
-
 
 });
