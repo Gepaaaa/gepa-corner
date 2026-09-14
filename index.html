@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-l9Y2DBOBf5qo02s7"></script>
 </head>
-
 <body>
     <div class="page-decoration decoration-one" aria-hidden="true">✦</div>
     <div class="page-decoration decoration-two" aria-hidden="true">♡</div>
@@ -37,7 +36,6 @@
     </header>
 
     <main>
-        <!-- ================= HERO ================= -->
         <section class="hero section" id="home">
             <div class="container hero-grid">
                 <div class="hero-content reveal">
@@ -100,7 +98,6 @@
             </div>
         </section>
 
-        <!-- ================= ABOUT ================= -->
         <section class="section about-section" id="about">
             <div class="container">
                 <div class="section-heading reveal">
@@ -146,7 +143,6 @@
             </div>
         </section>
 
-        <!-- ================= LINKS ================= -->
         <section class="section links-section" id="links">
             <div class="container">
                 <div class="section-heading reveal">
@@ -185,11 +181,9 @@
             </div>
         </section>
 
-        <!-- ================= SUPPORT & RANKING ================= -->
         <section class="section support-section" id="support">
             <div class="container">
                 <div class="support-grid">
-                    <!-- Support Card -->
                     <div class="support-card reveal">
                         <div class="support-decoration" aria-hidden="true">
                             <span>✦</span><span>♡</span><span>☼</span>
@@ -205,7 +199,6 @@
                         <div class="support-cup" aria-hidden="true">☕</div>
                     </div>
 
-                    <!-- Ranking Card -->
                     <div class="ranking-card reveal">
                         <div class="ranking-header">
                             <h3>🏆 Top Supporters</h3>
@@ -239,9 +232,6 @@
         </div>
     </footer>
 
-    <!-- ================= MODALS ================= -->
-
-    <!-- Support Modal -->
     <div class="modal-overlay" id="supportModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
             <button class="modal-close" type="button" aria-label="Close support dialog">×</button>
@@ -250,7 +240,6 @@
             <h2 id="modalTitle">Traktir Gepa ☕</h2>
             <p class="modal-description">Kalau mau support, pilih nominalnya. Nggak wajib kok.</p>
 
-            <!-- Username Input -->
             <div class="custom-amount" style="margin-top: 20px;">
                 <label for="supporterUsername">Username (Wajib diisi)</label>
                 <div class="amount-input-wrap">
@@ -260,7 +249,6 @@
                 <p class="input-error" id="usernameError" style="display:none; color:#d9534f; font-size:0.75rem; margin-top:5px;">Username tidak boleh kosong atau mengandung HTML.</p>
             </div>
 
-            <!-- Nominal Buttons -->
             <div class="amount-grid">
                 <button class="amount-button" type="button" data-amount="10000">Rp10K</button>
                 <button class="amount-button" type="button" data-amount="20000">Rp20K</button>
@@ -268,7 +256,6 @@
                 <button class="amount-button" type="button" data-amount="100000">Rp100K</button>
             </div>
 
-            <!-- Custom Amount -->
             <div class="custom-amount">
                 <label for="customAmount">Atau masukkan nominal sendiri</label>
                 <div class="amount-input-wrap">
@@ -283,7 +270,6 @@
         </div>
     </div>
 
-    <!-- Success Payment Modal -->
     <div class="modal-overlay" id="successPaymentModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left;">
             <button class="modal-close" type="button" aria-label="Close" onclick="closeInfoModal('successPaymentModal')">×</button>
@@ -310,7 +296,6 @@
         </div>
     </div>
 
-    <!-- Pending Payment Modal -->
     <div class="modal-overlay" id="pendingPaymentModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true">
             <button class="modal-close" type="button" onclick="closeInfoModal('pendingPaymentModal')">×</button>
@@ -323,7 +308,6 @@
         </div>
     </div>
 
-    <!-- Error Payment Modal -->
     <div class="modal-overlay" id="errorPaymentModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true">
             <button class="modal-close" type="button" onclick="closeInfoModal('errorPaymentModal')">×</button>
@@ -336,7 +320,6 @@
         </div>
     </div>
 
-    <!-- Info Modals (Age, Location, Hobby) omitted for brevity but they remain identical to your original -->
     <div class="modal-overlay" id="ageModalOverlay">
         <div class="support-modal modal-content" role="dialog" aria-modal="true">
             <button class="modal-close" type="button" onclick="closeInfoModal('ageModalOverlay')">×</button>
