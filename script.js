@@ -1040,6 +1040,52 @@ if (yesCancelBtn) {
     });
 }
 
+/* =========================================================
+CHECK INVOICE HANDLER (DIKEMBALIKAN & DIAKTIFKAN)
+========================================================= */
+const checkInvoiceBtn = document.getElementById("checkInvoiceBtn");
+const checkOrderIdInput = document.getElementById("checkOrderIdInput");
+const invOrderId = document.getElementById("invOrderId");
+const invStatus = document.getElementById("invStatus");
+const invAmount = document.getElementById("invAmount");
+const invPaymentType = document.getElementById("invPaymentType");
+const invTime = document.getElementById("invTime");
+
+if (checkInvoiceBtn && checkOrderIdInput) {
+    checkInvoiceBtn.addEventListener("click", async () => {
+        const orderId = checkOrderIdInput.value.trim();
+        if (!orderId) {
+            showToast("Masukkan Order ID terlebih dahulu.");
+            return;
+        }
+        
+        checkInvoiceBtn.textContent = "Mengecek...";
+        checkInvoiceBtn.disabled = true;
+
+        const statusData = await checkPaymentStatus(orderId);
+        
+        checkInvoiceBtn.textContent = "Cek Invoice";
+        checkInvoiceBtn.disabled = false;
+
+        if (!statusData || !statusData.transaction_status) {
+            showToast("Invoice tidak ditemukan / belum ada transaksi.");
+            return;
+        }
+
+        if (invOrderId) invOrderId.textContent = statusData.order_id || orderId;
+        if (invStatus) {
+            const st = statusData.transaction_status.toUpperCase();
+            invStatus.textContent = st;
+            invStatus.style.color = (st === "SETTLEMENT" || st === "CAPTURE") ? "var(--sage-700)" : "#d97706";
+        }
+        if (invAmount) invAmount.textContent = `Rp${formatRupiah(statusData.gross_amount || 0)}`;
+        if (invPaymentType) invPaymentType.textContent = statusData.payment_type ? statusData.payment_type.replace(/_/g, " ").toUpperCase() : "-";
+        if (invTime) invTime.textContent = statusData.transaction_time || "-";
+
+        openInfoModal("invoiceModal");
+    });
+}
+
 window.scrollToRanking = function () {
     closeInfoModal("successPaymentModal");
     const supportSec = document.getElementById("support");
