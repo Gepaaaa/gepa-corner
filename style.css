@@ -63,9 +63,9 @@ body.modal-open {
 
 .container {
     width: 100%;
-    max-width: 960px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 30px;
 }
 
 /* =========================================================
@@ -295,7 +295,7 @@ HERO SECTION
     color: var(--text-soft);
     font-size: 1.05rem;
     margin-bottom: 32px;
-    max-width: 500px;
+    max-width: 540px;
 }
 
 .hero-actions {
@@ -575,17 +575,18 @@ ABOUT & INFO SECTION
 .about-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 30px;
 }
 
 .paper-card {
     background-color: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 32px;
+    padding: 36px;
     box-shadow: var(--shadow-sm);
     position: relative;
     overflow: hidden;
+    height: 100%;
 }
 
 .card-number {
@@ -633,13 +634,14 @@ ABOUT & INFO SECTION
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
+    align-content: start;
 }
 
 .info-card {
     background-color: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 20px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -678,8 +680,8 @@ ABOUT & INFO SECTION
 LINKS SECTION
 ========================================================= */
 .links-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 16px;
 }
 
@@ -779,6 +781,7 @@ SUPPORT & RANKING SECTION
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    height: 100%;
 }
 
 .support-decoration {
@@ -837,10 +840,11 @@ SUPPORT & RANKING SECTION
     background-color: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 24px;
+    padding: 30px;
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .ranking-header {
@@ -1244,30 +1248,6 @@ MODALS
 /* =========================================================
 RESPONSIVE DESIGN & DESKTOP OPTIMIZATION
 ========================================================= */
-@media (min-width: 768px) {
-    .hero-grid {
-        grid-template-columns: 1.1fr 0.9fr;
-    }
-    
-    .about-grid {
-        grid-template-columns: 1.2fr 0.8fr;
-    }
-    
-    .support-grid {
-        grid-template-columns: 1.1fr 0.9fr;
-    }
-
-    .footer-inner {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .footer-right {
-        align-items: flex-end;
-    }
-}
-
 @media (max-width: 767px) {
     .nav-menu {
         position: fixed;
@@ -1300,27 +1280,41 @@ RESPONSIVE DESIGN & DESKTOP OPTIMIZATION
     }
 }
 
-/* Wide Desktop Optimization */
-@media (min-width: 1024px) {
-    .container {
-        max-width: 1120px;
-    }
-
+/* Wide Desktop & Tablet Optimization (Grid Dua Kolom Seimbang) */
+@media (min-width: 768px) {
     .hero-grid {
-        grid-template-columns: 1.2fr 0.8fr;
-        align-items: center;
+        grid-template-columns: 1.15fr 0.85fr;
         gap: 50px;
     }
-
-    .support-grid {
-        grid-template-columns: 1fr 1fr;
-        align-items: start;
+    
+    .about-grid {
+        grid-template-columns: 1.1fr 0.9fr;
         gap: 30px;
     }
 
-    .about-grid {
+    .links-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    
+    .support-grid {
         grid-template-columns: 1fr 1fr;
-        align-items: start;
         gap: 30px;
+    }
+
+    .footer-inner {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .footer-right {
+        align-items: flex-end;
+    }
+}
+
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1280px;
     }
 }
