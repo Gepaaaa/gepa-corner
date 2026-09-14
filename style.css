@@ -550,3 +550,35 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
     .amount-grid { grid-template-columns: 1fr 1fr; }
     .age-realtime-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* =========================================================
+DESKTOP OPTIMIZATION (Wide Screen Layout)
+========================================================= */
+@media (min-width: 1024px) {
+    /* Lebarkan kontainer utama agar tidak terlalu sempit di layar PC */
+    .container {
+        max-width: 1120px;
+    }
+
+    /* Buat bagian Hero/Home lebih seimbang dan memanfaatkan space */
+    .hero-grid {
+        grid-template-columns: 1.2fr 0.8fr;
+        align-items: center;
+        gap: 40px;
+    }
+
+    /* Ubah section Support agar Grid-nya melebar rapi */
+    .support-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: 30px;
+    }
+
+    /* Sesuaikan grid section About */
+    .about-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: 30px;
+    }
+}
+
