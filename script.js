@@ -61,27 +61,191 @@ const ageSeconds = document.getElementById("ageSeconds");
 /* =========================================================
 SUPABASE AUTH INITIALIZATION & SESSION CHECK
 ========================================================= */
-const SUPABASE_URL = "https://dkybfxbhlwyrjcycpatp.supabase.co"; // Ganti URL Supabase kamu
-const SUPABASE_ANON_KEY = "sb_publishable_Av4YqKP2rl2BePcsms8wGA_JqUmHpCX"; // Ganti Anon Key Supabase kamu
+const SUPABASE_URL = "https://dkybfxbhlwyrjcycpatp.supabase.co"; 
+const SUPABASE_ANON_KEY = "sb_publishable_Av4YqKP2rl2BePcsms8wGA_JqUmHpCX"; 
 
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let currentUserSession = null;
 
 async function checkUserSession() {
     if (!supabaseClient) return;
     const { data: { session } } = await supabaseClient.auth.getSession();
+    currentUserSession = session;
     
     if (session && openAuthModalBtn) {
         openAuthModalBtn.textContent = "✨ Akun";
         openAuthModalBtn.onclick = () => {
-            if (confirm("Mau keluar (logout) dari Corner?")) {
-                supabaseClient.auth.signOut().then(() => {
-                    window.location.reload();
-                });
-            }
+            loadUserProfileData(session.user);
+            openInfoModal("accountModal");
+        };
+    } else if (openAuthModalBtn) {
+        openAuthModalBtn.textContent = "✨ Masuk";
+        openAuthModalBtn.onclick = () => {
+            isRegisterMode = false;
+            updateAuthModalUI();
+            openInfoModal("authModal");
         };
     }
 }
 setTimeout(checkUserSession, 500);
+
+
+/* =========================================================
+LOAD USER PROFILE & DONATION HISTORY
+========================================================= */
+async function loadUserProfileData(user) {
+    const emailDisplay = document.getElementById("accEmailDisplay");
+    const phoneInput = document.getElementById("accPhoneInput");
+    const usernameInput = document.getElementById("accUsernameInput");
+    const avatarPreview = document.getElementById("userAvatarPreview");
+
+    if (emailDisplay) emailDisplay.textContent = user.email;
+
+    // Ambil data profil dari tabel profiles
+    const { data } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+    if (data) {
+        if (usernameInput) usernameInput.value = data.username || "";
+        if (phoneInput) phoneInput.value = data.phone || "";
+        if (data.avatar_url && avatarPreview) {
+            avatarPreview.src = data.avatar_url;
+        }
+    }
+
+    // Load Riwayat Donasi User
+    loadUserDonationHistory(user.email);
+}
+
+async function loadUserDonationHistory(email) {
+    const historyList = document.getElementById("userHistoryList");
+    if (!historyList) return;
+    
+    try {
+        const res = await fetch(`/api/user-donations?email=${encodeURIComponent(email)}`, { cache: "no-store" });
+        if (!res.ok) throw new Error();
+        const donations = await res.json();
+
+        if (!donations || donations.length === 0) {
+            historyList.innerHTML = `<div style="text-align: center; color: var(--text-soft); padding: 15px;">Belum ada riwayat traktiran.</div>`;
+            return;
+        }
+
+        historyList.innerHTML = "";
+        donations.forEach(item => {
+            const div = document.createElement("div");
+            div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border);";
+            div.innerHTML = `
+                <div>
+                    <div style="font-weight: 600; font-size: 0.85rem;">Rp${formatRupiah(item.amount)}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-soft);">${new Date(item.created_at).toLocaleDateString("id-ID")}</div>
+                </div>
+                <span style="font-size: 0.75rem; padding: 3px 8px; background: var(--sage-700); color: #fff; border-radius: 6px;">Berhasil</span>
+            `;
+            historyList.appendChild(div);
+        });
+    } catch (err) {
+        historyList.innerHTML = `<div style="text-align: center; color: var(--text-soft); padding: 15px;">Gagal memuat riwayat.</div>`;
+    }
+}
+
+// Simpan Perubahan Profil (Username Unik & No HP)
+const saveProfileBtn = document.getElementById("saveProfileBtn");
+if (saveProfileBtn && supabaseClient) {
+    saveProfileBtn.addEventListener("click", async () => {
+        if (!currentUserSession) return;
+        const newUsername = document.getElementById("accUsernameInput").value.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+        const newPhone = document.getElementById("accPhoneInput").value.trim();
+
+        if (!newUsername) {
+            showToast("Username tidak boleh kosong!");
+            return;
+        }
+
+        saveProfileBtn.textContent = "Menyimpan...";
+        saveProfileBtn.disabled = true;
+
+        // Cek duplikasi username
+        const { data: existingUser } = await supabaseClient
+            .from('profiles')
+            .select('id')
+            .eq('username', newUsername)
+            .neq('id', currentUserSession.user.id)
+            .single();
+
+        if (existingUser) {
+            showToast("Username sudah digunakan orang lain!");
+            saveProfileBtn.textContent = "Simpan Perubahan";
+            saveProfileBtn.disabled = false;
+            return;
+        }
+
+        const { error } = await supabaseClient
+            .from('profiles')
+            .update({ username: newUsername, phone: newPhone, updated_at: new Date() })
+            .eq('id', currentUserSession.user.id);
+
+        saveProfileBtn.textContent = "Simpan Perubahan";
+        saveProfileBtn.disabled = false;
+
+        if (error) {
+            showToast("Gagal menyimpan: " + error.message);
+        } else {
+            showToast("Profil berhasil diperbarui! ✨");
+        }
+    });
+}
+
+// Upload Foto Profil ke Supabase Storage
+const avatarUploadInput = document.getElementById("avatarUploadInput");
+if (avatarUploadInput && supabaseClient) {
+    avatarUploadInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file || !currentUserSession) return;
+
+        showToast("Mengupload foto...");
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${currentUserSession.user.id}-${Math.random()}.${fileExt}`;
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from('avatars')
+            .upload(fileName, file);
+
+        if (uploadError) {
+            showToast("Gagal upload foto: " + uploadError.message);
+            return;
+        }
+
+        const { data: publicURLData } = supabaseClient.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+
+        const avatarUrl = publicURLData.publicUrl;
+
+        await supabaseClient
+            .from('profiles')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', currentUserSession.user.id);
+
+        document.getElementById("userAvatarPreview").src = avatarUrl;
+        showToast("Foto profil berhasil diubah! 📸");
+    });
+}
+
+// Logout Handler
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn && supabaseClient) {
+    logoutBtn.addEventListener("click", () => {
+        if (confirm("Mau keluar (logout) dari Corner?")) {
+            supabaseClient.auth.signOut().then(() => {
+                window.location.reload();
+            });
+        }
+    });
+}
 
 
 /* =========================================================
@@ -455,13 +619,13 @@ if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOver
 if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
 if (hobbyCard) hobbyCard.addEventListener("click", () => openInfoModal("hobbyModalOverlay"));
 if (supportButton) supportButton.addEventListener("click", () => openInfoModal("supportModal"));
+
 if (openAuthModalBtn) openAuthModalBtn.addEventListener("click", () => {
-    isRegisterMode = false; // Reset ke mode masuk
+    isRegisterMode = false; 
     updateAuthModalUI();
     openInfoModal("authModal");
 });
 
-// Listener untuk Tautan Toggle Masuk / Daftar (Bersih dari linter warning)
 if (toggleAuthModeLink) {
     toggleAuthModeLink.addEventListener("click", (e) => {
         e.preventDefault();
@@ -490,7 +654,6 @@ function updateAuthModalUI() {
         promptEl.innerHTML = `Belum punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Daftar sekarang</a>`;
     }
 
-    // Re-bind listener karena elemen HTML di-render ulang lewat innerHTML
     setTimeout(() => {
         const rebindLink = document.getElementById("toggleAuthModeLink");
         if (rebindLink) {
@@ -503,7 +666,7 @@ function updateAuthModalUI() {
     }, 10);
 }
 
-// Auth Tab Switcher
+// Auth Tab Switcher (Social vs Email)
 window.switchAuthTab = function(tabName) {
     const tabSocialBtn = document.getElementById("tabSocialBtn");
     const tabEmailBtn = document.getElementById("tabEmailBtn");
@@ -523,7 +686,27 @@ window.switchAuthTab = function(tabName) {
     }
 };
 
-// Supabase Google & Email/HP Actions (Sign In / Sign Up Handler)
+// Account Modal Tab Switcher (Edit Profil vs Riwayat Donasi)
+window.switchAccTab = function(tabName) {
+    const profileBtn = document.getElementById("accTabProfileBtn");
+    const historyBtn = document.getElementById("accTabHistoryBtn");
+    const profileContent = document.getElementById("accProfileContent");
+    const historyContent = document.getElementById("accHistoryContent");
+
+    if (tabName === 'profile') {
+        if (profileBtn) { profileBtn.style.background = "var(--sage-700)"; profileBtn.style.color = "#fff"; }
+        if (historyBtn) { historyBtn.style.background = "transparent"; historyBtn.style.color = "var(--text-soft)"; }
+        if (profileContent) profileContent.style.display = "flex";
+        if (historyContent) historyContent.style.display = "none";
+    } else {
+        if (historyBtn) { historyBtn.style.background = "var(--sage-700)"; historyBtn.style.color = "#fff"; }
+        if (profileBtn) { profileBtn.style.background = "transparent"; profileBtn.style.color = "var(--text-soft)"; }
+        if (historyContent) historyContent.style.display = "flex";
+        if (profileContent) profileContent.style.display = "none";
+    }
+};
+
+// Supabase Google & Email Actions
 if (loginGoogleBtn && supabaseClient) {
     loginGoogleBtn.addEventListener("click", async () => {
         const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -558,17 +741,9 @@ if (submitLoginEmailBtn && supabaseClient) {
 
         let result;
         if (isRegisterMode) {
-            // Proses Daftar Akun Baru (Sign Up)
-            result = await supabaseClient.auth.signUp({
-                email: identifier,
-                password: passwordInput,
-            });
+            result = await supabaseClient.auth.signUp({ email: identifier, password: passwordInput });
         } else {
-            // Proses Masuk (Sign In)
-            result = await supabaseClient.auth.signInWithPassword({
-                email: identifier,
-                password: passwordInput,
-            });
+            result = await supabaseClient.auth.signInWithPassword({ email: identifier, password: passwordInput });
         }
 
         submitLoginEmailBtn.textContent = isRegisterMode ? "Daftar Sekarang" : "Masuk Sekarang";
@@ -577,11 +752,7 @@ if (submitLoginEmailBtn && supabaseClient) {
         if (result.error) {
             showToast(result.error.message);
         } else {
-            if (isRegisterMode) {
-                showToast("Registrasi berhasil! Silakan cek email/masuk.");
-            } else {
-                showToast("Berhasil masuk! Selamat datang kembali ☺");
-            }
+            showToast(isRegisterMode ? "Registrasi berhasil!" : "Berhasil masuk! ☺");
             closeInfoModal("authModal");
             checkUserSession();
         }
@@ -857,47 +1028,6 @@ if (yesCancelBtn) {
         clearPendingPayment(orderId);
         closeInfoModal("confirmCancelModal");
         showToast("Pembayaran dibatalkan.");
-    });
-}
-
-const checkInvoiceBtn = document.getElementById("checkInvoiceBtn");
-const checkOrderIdInput = document.getElementById("checkOrderIdInput");
-const invOrderId = document.getElementById("invOrderId");
-const invStatus = document.getElementById("invStatus");
-const invAmount = document.getElementById("invAmount");
-const invPaymentType = document.getElementById("invPaymentType");
-const invTime = document.getElementById("invTime");
-
-if (checkInvoiceBtn && checkOrderIdInput) {
-    checkInvoiceBtn.addEventListener("click", async () => {
-        const orderId = checkOrderIdInput.value.trim();
-        if (!orderId) {
-            showToast("Masukkan Order ID terlebih dahulu.");
-            return;
-        }
-        checkInvoiceBtn.textContent = "Mengecek...";
-        checkInvoiceBtn.disabled = true;
-
-        const statusData = await checkPaymentStatus(orderId);
-        checkInvoiceBtn.textContent = "Cek Invoice";
-        checkInvoiceBtn.disabled = false;
-
-        if (!statusData || !statusData.transaction_status) {
-            showToast("Invoice tidak ditemukan / belum ada transaksi.");
-            return;
-        }
-
-        if (invOrderId) invOrderId.textContent = statusData.order_id || orderId;
-        if (invStatus) {
-            const st = statusData.transaction_status.toUpperCase();
-            invStatus.textContent = st;
-            invStatus.style.color = (st === "SETTLEMENT" || st === "CAPTURE") ? "var(--sage-700)" : "#d97706";
-        }
-        if (invAmount) invAmount.textContent = `Rp${formatRupiah(statusData.gross_amount || 0)}`;
-        if (invPaymentType) invPaymentType.textContent = statusData.payment_type ? statusData.payment_type.replace(/_/g, " ").toUpperCase() : "-";
-        if (invTime) invTime.textContent = statusData.transaction_time || "-";
-
-        openInfoModal("invoiceModal");
     });
 }
 
