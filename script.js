@@ -1881,6 +1881,41 @@ if (yesCancelBtn) {
 
 
 /* =========================================================
+CHECK INVOICE MANUAL
+========================================================= */
+const checkInvoiceBtn = document.getElementById("checkInvoiceBtn");
+const checkOrderIdInput = document.getElementById("checkOrderIdInput");
+
+if (checkInvoiceBtn && checkOrderIdInput) {
+    checkInvoiceBtn.addEventListener("click", async () => {
+        const orderId = checkOrderIdInput.value.trim();
+        if (!orderId) {
+            showToast("Masukkan Order ID terlebih dahulu.");
+            return;
+        }
+
+        checkInvoiceBtn.textContent = "Mengecek...";
+        checkInvoiceBtn.disabled = true;
+
+        const statusData = await checkPaymentStatus(orderId);
+
+        checkInvoiceBtn.textContent = "Cek";
+        checkInvoiceBtn.disabled = false;
+
+        if (!statusData || !statusData.transaction_status) {
+            showToast("Invoice tidak ditemukan atau error.");
+            return;
+        }
+
+        const status = statusData.transaction_status;
+        const amount = statusData.gross_amount || 0;
+
+        showToast(`Status: ${status.toUpperCase()} (Rp${formatRupiah(amount)})`);
+    });
+}
+
+
+/* =========================================================
 SCROLL TO RANKING
 ========================================================= */
 window.scrollToRanking =
