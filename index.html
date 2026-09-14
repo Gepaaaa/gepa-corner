@@ -266,7 +266,7 @@
 
             <div class="selected-amount" id="selectedAmount">Belum memilih nominal</div>
             <button class="modal-support-button" id="continueSupport" type="button" disabled>Proses Payment →</button>
-            <p class="modal-note">Payment gateway powered by Midtrans.</p>
+            <p class="modal-note">Payment gateway aktif via Midtrans. 100% aman.</p>
         </div>
     </div>
 
@@ -311,18 +311,19 @@
         </div>
     </div>
 
+    <!-- Success Payment Modal (Soft Boy / Green Flag Theme) -->
     <div class="modal-overlay" id="successPaymentModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left;">
             <button class="modal-close" type="button" aria-label="Close" onclick="closeInfoModal('successPaymentModal')">×</button>
-            <div class="modal-icon" style="background: var(--sage-100); color: var(--sage-700);">❤️</div>
-            <p class="section-kicker">payment success</p>
-            <h2 style="font-size: 1.6rem; margin-bottom: 6px;">Terima Kasih Sudah Support!</h2>
+            <div class="modal-icon" style="background: var(--sage-100); color: var(--sage-700);">♡</div>
+            <p class="section-kicker">thank you so much</p>
+            <h2 style="font-size: 1.6rem; margin-bottom: 6px;">Makasih banyak ya! ☺</h2>
             <p class="modal-description" style="margin-bottom: 16px; text-align: left;">
-                Pembayaran kamu berhasil diterima.<br><br>
-                Dukungan kecil dari kamu sangat berarti buat kami dan membantu website ini terus berkembang. Thank you for being part of the journey. 🚀
+                Dukungan kamu bener-bener bikin hariku lebih hangat.<br><br>
+                Senang bisa ketemu orang baik kayak kamu di sini. Semoga hal-hal baik dan kebaikan yang sama balik lagi ke kamu ya! ✨
             </p>
             <div style="background: var(--sage-50); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 20px; font-size: 0.82rem; color: var(--text-soft);">
-                <div style="font-weight: 700; color: var(--sage-700); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">✓ Pembayaran Berhasil</div>
+                <div style="font-weight: 700; color: var(--sage-700); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">♡ Detail Traktiran</div>
                 <div style="display: grid; gap: 4px;">
                     <div><strong>Username:</strong> @<span id="resUsername">-</span></div>
                     <div><strong>Order ID:</strong> <span id="resOrderId">-</span></div>
@@ -332,7 +333,7 @@
             </div>
             <div style="display: flex; gap: 10px;">
                 <button class="modal-support-button" type="button" onclick="scrollToRanking()" style="background: var(--sage-600); margin-top: 0;">Lihat Ranking</button>
-                <button class="modal-support-button" type="button" onclick="closeInfoModal('successPaymentModal')" style="background: var(--sage-700); margin-top: 0;">Kembali ke Website</button>
+                <button class="modal-support-button" type="button" onclick="closeInfoModal('successPaymentModal')" style="background: var(--sage-700); margin-top: 0;">Kembali</button>
             </div>
         </div>
     </div>
