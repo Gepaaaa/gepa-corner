@@ -59,7 +59,7 @@ const ageSeconds = document.getElementById("ageSeconds");
 
 
 /* =========================================================
-SUPABASE AUTH INITIALIZATION & SESSION CHECK
+SUPABASE AUTH INITIALIZATION & SESSION CHECK (ANTI-LOOP)
 ========================================================= */
 const SUPABASE_URL = "https://dkybfxbhlwyrjcycpatp.supabase.co"; 
 const SUPABASE_ANON_KEY = "sb_publishable_Av4YqKP2rl2BePcsms8wGA_JqUmHpCX"; 
@@ -67,11 +67,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_Av4YqKP2rl2BePcsms8wGA_JqUmHpCX";
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let currentUserSession = null;
 
-async function checkUserSession() {
-    if (!supabaseClient) return;
-    const { data: { session } } = await supabaseClient.auth.getSession();
+function updateAuthButtonState(session) {
     currentUserSession = session;
-    
     if (session && openAuthModalBtn) {
         openAuthModalBtn.textContent = "✨ Akun";
         openAuthModalBtn.onclick = () => {
@@ -87,7 +84,20 @@ async function checkUserSession() {
         };
     }
 }
-setTimeout(checkUserSession, 500);
+
+async function checkUserSession() {
+    if (!supabaseClient) return;
+    
+    // Cek sesi aktif saat halaman dimuat
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    updateAuthButtonState(session);
+
+    // Pantau perubahan sesi secara real-time (mencegah token hilang/loop)
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        updateAuthButtonState(session);
+    });
+}
+checkUserSession();
 
 
 /* =========================================================
@@ -116,7 +126,6 @@ async function loadUserProfileData(user) {
         }
     }
 
-    // Load Riwayat Donasi User
     loadUserDonationHistory(user.email);
 }
 
