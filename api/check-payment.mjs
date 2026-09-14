@@ -2,8 +2,11 @@
 
 /* =========================================================
    GEPA - CHECK PAYMENT STATUS
+   Secure Session Token
    Midtrans + Supabase Fallback
 ========================================================= */
+
+import crypto from "crypto";
 
 export default async function handler(req, res) {
 
@@ -38,28 +41,121 @@ export default async function handler(req, res) {
         );
 
         return res.status(500).json({
-            error: "Server configuration error"
+            error:
+                "Server configuration error"
         });
     }
 
-    /* =====================================================
-       GET ORDER ID
-    ===================================================== */
     try {
 
-        const { order_id } = req.query;
+        /* =================================================
+           GET QUERY PARAMETERS
+        ================================================= */
+        const {
+            order_id,
+            session_token
+        } = req.query;
 
         if (
             typeof order_id !== "string" ||
             !order_id.trim()
         ) {
             return res.status(400).json({
-                error: "order_id wajib diisi"
+                error:
+                    "order_id wajib diisi"
+            });
+        }
+
+        if (
+            typeof session_token !== "string" ||
+            !session_token.trim()
+        ) {
+            return res.status(403).json({
+                error:
+                    "Session pembayaran tidak valid."
             });
         }
 
         const cleanOrderId =
             order_id.trim();
+
+        const cleanSessionToken =
+            session_token.trim();
+
+        /* =================================================
+           VALIDATE SESSION TOKEN
+
+           Server membuat token dengan:
+
+           HMAC-SHA256(
+               MIDTRANS_SERVER_KEY,
+               GEPA-PAYMENT:ORDER_ID
+           )
+
+           Kita buat ulang tokennya dan bandingkan.
+        ================================================= */
+        const expectedToken =
+            crypto
+                .createHmac(
+                    "sha256",
+                    serverKey
+                )
+                .update(
+                    `GEPA-PAYMENT:${cleanOrderId}`
+                )
+                .digest("hex");
+
+        /* =================================================
+           TIMING-SAFE COMPARISON
+        ================================================= */
+        const providedBuffer =
+            Buffer.from(
+                cleanSessionToken,
+                "utf8"
+            );
+
+        const expectedBuffer =
+            Buffer.from(
+                expectedToken,
+                "utf8"
+            );
+
+        if (
+            providedBuffer.length !==
+            expectedBuffer.length
+        ) {
+            console.error(
+                "Invalid payment session token:",
+                cleanOrderId
+            );
+
+            return res.status(403).json({
+                error:
+                    "Session pembayaran tidak valid."
+            });
+        }
+
+        if (
+            !crypto.timingSafeEqual(
+                providedBuffer,
+                expectedBuffer
+            )
+        ) {
+            console.error(
+                "Invalid payment session token:",
+                cleanOrderId
+            );
+
+            return res.status(403).json({
+                error:
+                    "Session pembayaran tidak valid."
+            });
+        }
+
+        console.log(
+            "Payment session verified:",
+            cleanOrderId
+        );
 
         /* =================================================
            MIDTRANS AUTH
@@ -82,6 +178,7 @@ export default async function handler(req, res) {
                     `https://app.sandbox.midtrans.com/v2/${encodeURIComponent(cleanOrderId)}/status`,
                     {
                         method: "GET",
+
                         headers: {
                             "Accept":
                                 "application/json",
@@ -97,7 +194,9 @@ export default async function handler(req, res) {
 
             try {
                 midtransData =
-                    JSON.parse(responseText);
+                    JSON.parse(
+                        responseText
+                    );
             } catch {
                 midtransData = null;
             }
@@ -115,14 +214,17 @@ export default async function handler(req, res) {
                 );
 
                 /* =========================================
-                   Kalau Midtrans sudah sukses,
-                   langsung return sukses.
+                   SUCCESS FROM MIDTRANS
                 ========================================= */
                 if (
-                    midtransStatus === "settlement" ||
-                    midtransStatus === "capture"
+                    midtransStatus ===
+                        "settlement" ||
+                    midtransStatus ===
+                        "capture"
                 ) {
+
                     return res.status(200).json({
+
                         order_id:
                             midtransData.order_id ||
                             cleanOrderId,
@@ -146,7 +248,8 @@ export default async function handler(req, res) {
                             midtransData.transaction_time ||
                             null,
 
-                        source: "midtrans"
+                        source:
+                            "midtrans"
                     });
                 }
 
@@ -168,9 +271,8 @@ export default async function handler(req, res) {
         }
 
         /* =================================================
-           2. FALLBACK KE SUPABASE
+           2. SUPABASE FALLBACK
         ================================================= */
-
         console.log(
             "Checking Supabase fallback:",
             cleanOrderId
@@ -241,14 +343,17 @@ export default async function handler(req, res) {
                 );
 
                 /* =========================================
-                   SUPABASE MENYATAKAN SUKSES
+                   SUCCESS FROM SUPABASE
                 ========================================= */
                 if (
-                    donation.status === "settlement" ||
-                    donation.status === "capture"
+                    donation.status ===
+                        "settlement" ||
+                    donation.status ===
+                        "capture"
                 ) {
 
                     return res.status(200).json({
+
                         order_id:
                             donation.order_id,
 
@@ -281,10 +386,10 @@ export default async function handler(req, res) {
                 }
 
                 /* =========================================
-                   Kalau database ada tapi status belum
-                   sukses, kembalikan status database.
+                   TRANSACTION ADA, TAPI BELUM SUCCESS
                 ========================================= */
                 return res.status(200).json({
+
                     order_id:
                         donation.order_id,
 
@@ -328,13 +433,12 @@ export default async function handler(req, res) {
         }
 
         /* =================================================
-           3. KALAU MIDTRANS MEMBERIKAN STATUS
-              TAPI SUPABASE TIDAK MENEMUKAN DATA
+           3. MIDTRANS PUNYA STATUS TAPI BELUM SUCCESS
         ================================================= */
-
         if (midtransData) {
 
             return res.status(200).json({
+
                 order_id:
                     midtransData.order_id ||
                     cleanOrderId,
@@ -365,9 +469,8 @@ export default async function handler(req, res) {
         }
 
         /* =================================================
-           4. KEDUA SUMBER TIDAK MENEMUKAN TRANSAKSI
+           4. TRANSACTION NOT FOUND
         ================================================= */
-
         return res.status(404).json({
             error:
                 "Transaksi tidak ditemukan."
