@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-l9Y2DBOBf5qo02s7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="page-decoration decoration-one" aria-hidden="true">✦</div>
@@ -30,6 +31,9 @@
                 <a href="#support" class="nav-link">Support</a>
                 <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
                     <span id="themeIcon">☾</span>
+                </button>
+                <button class="button button-primary" id="openAuthModalBtn" type="button" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 12px; margin-left: 6px;">
+                    ✨ Masuk
                 </button>
             </div>
         </nav>
@@ -243,10 +247,65 @@
         </div>
     </footer>
 
+    <!-- Auth / Login & Register Modal (Tabbed Style) -->
+    <div class="modal-overlay" id="authModal">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 420px; text-align: left; padding: 28px 24px;">
+            <button class="modal-close" type="button" onclick="closeInfoModal('authModal')">×</button>
+            
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 id="authModalTitle" style="font-size: 1.4rem; font-weight: 700; margin-bottom: 4px;">Masuk ke Corner</h2>
+                <p id="authModalDesc" style="font-size: 0.88rem; color: var(--text-soft);">Hubungkan akunmu buat lihat riwayat traktir & kelola profil.</p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div style="display: flex; background: var(--bg-secondary); padding: 4px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border);">
+                <button type="button" id="tabSocialBtn" class="auth-tab active-tab" onclick="switchAuthTab('social')" style="flex: 1; padding: 10px; border: none; background: var(--sage-700); color: #fff; font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.88rem; transition: all 0.2s;">Social</button>
+                <button type="button" id="tabEmailBtn" class="auth-tab" onclick="switchAuthTab('email')" style="flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-soft); font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.88rem; transition: all 0.2s;">Email / HP</button>
+            </div>
+
+            <!-- Tab Content: Social -->
+            <div id="socialAuthContent" style="display: flex; flex-direction: column; gap: 10px;">
+                <button type="button" id="loginGoogleBtn" class="modal-support-button" style="background: #ffffff; color: #333; border: 1px solid var(--border); margin-top: 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">🌐</span> Lanjut dengan Google
+                </button>
+                <button type="button" id="loginPhoneBtn" class="modal-support-button" style="background: #25d366; color: #fff; margin-top: 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">📱</span> Lanjut dengan WhatsApp
+                </button>
+            </div>
+
+            <!-- Tab Content: Email / HP -->
+            <div id="emailAuthContent" style="display: none; flex-direction: column; gap: 12px;">
+                <div class="custom-amount" style="margin-top: 0;">
+                    <label for="authEmailInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Email / No. WhatsApp</label>
+                    <input type="text" id="authEmailInput" placeholder="nama@email.com atau 0812..." style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+                </div>
+                <div class="custom-amount" style="margin-top: 0;">
+                    <label for="authPasswordInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Password</label>
+                    <input type="password" id="authPasswordInput" placeholder="••••••••" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+                </div>
+                <button type="button" id="submitLoginEmailBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff; margin-top: 4px;">
+                    Masuk Sekarang
+                </button>
+                
+                <!-- Teks Tautan Daftar Sekarang (Bersih dari warning deprecated) -->
+                <div id="authSwitchPrompt" style="text-align: center; margin-top: 8px; font-size: 0.82rem; color: var(--text-soft);">
+                    Belum punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Daftar sekarang</a>
+                </div>
+            </div>
+
+            <!-- Footer Cancel Button -->
+            <div style="text-align: center; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px;">
+                <button type="button" onclick="closeInfoModal('authModal')" style="background: transparent; border: none; color: var(--text-soft); font-weight: 600; font-size: 0.9rem; cursor: pointer;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Support Modal -->
     <div class="modal-overlay" id="supportModal">
-        <div class="support-modal modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-            <button class="modal-close" type="button" aria-label="Close support dialog">×</button>
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="position: relative; z-index: 101;">
+            <button class="modal-close" type="button" aria-label="Close support dialog" onclick="closeInfoModal('supportModal')">×</button>
             <div class="modal-cup">☕</div>
             <p class="section-kicker">a tiny little treat</p>
             <h2 id="modalTitle">Traktir Gepa ☕</h2>
@@ -278,7 +337,7 @@
 
             <div class="selected-amount" id="selectedAmount">Belum memilih nominal</div>
             <button class="modal-support-button" id="continueSupport" type="button" disabled>Proses Payment →</button>
-            <p class="modal-note">Payment gateway aktif via Midtrans. 100% aman.</p>
+            <p class="modal-note">Payment powered by Midtrans.</p>
         </div>
     </div>
 
@@ -403,7 +462,7 @@
 
     <!-- Location Modal with Interactive Map (Bogor) -->
     <div class="modal-overlay" id="locationModalOverlay">
-        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: center;">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: center; position: relative; z-index: 101;">
             <button class="modal-close" type="button" onclick="closeInfoModal('locationModalOverlay')">×</button>
             <div class="modal-icon">⌖</div>
             <p class="section-kicker">current base</p>
@@ -423,7 +482,6 @@
                     referrerpolicy="no-referrer-when-downgrade">
                 </iframe>
             </div>
-            <button class="modal-support-button" type="button" onclick="closeInfoModal('locationModalOverlay')" style="margin-top: 16px; background: var(--sage-700);">Tutup</button>
         </div>
     </div>
 
