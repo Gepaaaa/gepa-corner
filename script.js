@@ -1374,10 +1374,8 @@ async function handlePaymentResult(
 
     if (!statusData) {
 
-        showToast(
-            "Status pembayaran belum bisa dicek."
-        );
-
+        // Fallback jika fetch gagal tapi order tersimpan di lokal (dianggap pending/closed)
+        showPendingModal(orderId, payment);
         return;
     }
 
@@ -1491,31 +1489,6 @@ async function handlePaymentResult(
 
 
     /* =====================================================
-    PENDING / CLOSED WITHOUT FINISHING
-    ===================================================== */
-    if (
-        !status ||
-        status === "pending" ||
-        status === "init" ||
-        status === "challenge"
-    ) {
-        const pendingResUsername = document.getElementById("pendingResUsername");
-        const pendingResOrderId = document.getElementById("pendingResOrderId");
-        const pendingResAmount = document.getElementById("pendingResAmount");
-
-        if (pendingResUsername) pendingResUsername.textContent = payment ? payment.username : "Supporter";
-        if (pendingResOrderId) pendingResOrderId.textContent = orderId;
-        if (pendingResAmount) pendingResAmount.textContent = `Rp${formatRupiah(payment ? payment.amount : 0)}`;
-
-        openInfoModal(
-            "pendingPaymentModal"
-        );
-
-        return;
-    }
-
-
-    /* =====================================================
     FAILED / CANCEL / EXPIRED
     ===================================================== */
     if (
@@ -1538,13 +1511,21 @@ async function handlePaymentResult(
 
 
     /* =====================================================
-    OTHER STATUS
+    PENDING / CLOSED DEFAULT FALLBACK
     ===================================================== */
-    showToast(
-        `Status pembayaran: ${
-            status || "unknown"
-        }`
-    );
+    showPendingModal(orderId, payment);
+}
+
+function showPendingModal(orderId, payment) {
+    const pendingResUsername = document.getElementById("pendingResUsername");
+    const pendingResOrderId = document.getElementById("pendingResOrderId");
+    const pendingResAmount = document.getElementById("pendingResAmount");
+
+    if (pendingResUsername) pendingResUsername.textContent = payment ? payment.username : "Supporter";
+    if (pendingResOrderId) pendingResOrderId.textContent = orderId;
+    if (pendingResAmount) pendingResAmount.textContent = `Rp${formatRupiah(payment ? payment.amount : 0)}`;
+
+    openInfoModal("pendingPaymentModal");
 }
 
 
@@ -1723,7 +1704,7 @@ function launchSnapPayment(token, orderId) {
             openInfoModal("errorPaymentModal");
         },
         onClose: async function () {
-            // Langsung panggil handlePaymentResult agar modal pending muncul saat popup ditutup (X)
+            // Ketika tombol X Midtrans diklik, langsung paksa tampilkan modal pending
             await handlePaymentResult(orderId);
         }
     });
@@ -1861,7 +1842,7 @@ if (continueSupport) {
 
 
 /* =========================================================
-PENDING MODAL ACTIONS (Lanjut Bayar & Batalkan Payment)
+PENDING MODAL ACTIONS (Lanjut Bayar & Custom Cancel Confirmation)
 ========================================================= */
 const resumePaymentBtn = document.getElementById("resumePaymentBtn");
 if (resumePaymentBtn) {
@@ -1885,12 +1866,19 @@ if (resumePaymentBtn) {
 const cancelPaymentBtn = document.getElementById("cancelPaymentBtn");
 if (cancelPaymentBtn) {
     cancelPaymentBtn.addEventListener("click", () => {
-        if (confirm("Batalkan pembayaran ini?")) {
-            const orderId = getActivePaymentOrder();
-            clearPendingPayment(orderId);
-            closeInfoModal("pendingPaymentModal");
-            showToast("Pembayaran dibatalkan.");
-        }
+        // Tutup modal pending, lalu buka modal konfirmasi cancel custom yang kecil & rapi
+        closeInfoModal("pendingPaymentModal");
+        openInfoModal("confirmCancelModal");
+    });
+}
+
+const yesCancelBtn = document.getElementById("yesCancelBtn");
+if (yesCancelBtn) {
+    yesCancelBtn.addEventListener("click", () => {
+        const orderId = getActivePaymentOrder();
+        clearPendingPayment(orderId);
+        closeInfoModal("confirmCancelModal");
+        showToast("Pembayaran dibatalkan.");
     });
 }
 
