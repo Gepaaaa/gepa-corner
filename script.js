@@ -3,7 +3,15 @@
 /* =========================================================
 GEPA PERSONAL WEBSITE
 Vanilla JavaScript
-Payment System: Midtrans + Supabase Status Verification
+
+Payment System:
+Midtrans + Supabase + Direct Status Verification
+
+Payment Safety:
+- Payment stored per order_id
+- Prevents payment data collision
+- Verifies transaction directly with Midtrans
+- No forced success popup
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -49,12 +57,14 @@ const ageHours = document.getElementById("ageHours");
 const ageMinutes = document.getElementById("ageMinutes");
 const ageSeconds = document.getElementById("ageSeconds");
 
+
 /* =========================================================
 CURRENT YEAR
 ========================================================= */
 if (currentYear) {
     currentYear.textContent = new Date().getFullYear();
 }
+
 
 /* =========================================================
 REAL-TIME AGE
@@ -75,12 +85,29 @@ function calculateFullAge() {
         };
     }
 
-    let years = now.getFullYear() - birthDate.getFullYear();
-    let months = now.getMonth() - birthDate.getMonth();
-    let days = now.getDate() - birthDate.getDate();
-    let hours = now.getHours() - birthDate.getHours();
-    let minutes = now.getMinutes() - birthDate.getMinutes();
-    let seconds = now.getSeconds() - birthDate.getSeconds();
+    let years =
+        now.getFullYear() -
+        birthDate.getFullYear();
+
+    let months =
+        now.getMonth() -
+        birthDate.getMonth();
+
+    let days =
+        now.getDate() -
+        birthDate.getDate();
+
+    let hours =
+        now.getHours() -
+        birthDate.getHours();
+
+    let minutes =
+        now.getMinutes() -
+        birthDate.getMinutes();
+
+    let seconds =
+        now.getSeconds() -
+        birthDate.getSeconds();
 
     if (seconds < 0) {
         minutes--;
@@ -100,11 +127,12 @@ function calculateFullAge() {
     if (days < 0) {
         months--;
 
-        const previousMonth = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            0
-        );
+        const previousMonth =
+            new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                0
+            );
 
         days += previousMonth.getDate();
     }
@@ -125,43 +153,78 @@ function calculateFullAge() {
 }
 
 function updateAge() {
-    const age = calculateFullAge();
+    const age =
+        calculateFullAge();
 
-    const newAgeText = `${age.years} years`;
+    const newAgeText =
+        `${age.years} years`;
 
     if (
         ageDisplay &&
         ageDisplay.textContent !== newAgeText
     ) {
-        ageDisplay.textContent = newAgeText;
+        ageDisplay.textContent =
+            newAgeText;
     }
 
     const ageModal =
-        document.getElementById("ageModalOverlay");
+        document.getElementById(
+            "ageModalOverlay"
+        );
 
     if (
         ageModal &&
         ageModal.classList.contains("open")
     ) {
-        if (ageYears) ageYears.textContent = age.years;
-        if (ageMonths) ageMonths.textContent = age.months;
-        if (ageDays) ageDays.textContent = age.days;
-        if (ageHours) ageHours.textContent = age.hours;
-        if (ageMinutes) ageMinutes.textContent = age.minutes;
-        if (ageSeconds) ageSeconds.textContent = age.seconds;
+        if (ageYears)
+            ageYears.textContent =
+                age.years;
+
+        if (ageMonths)
+            ageMonths.textContent =
+                age.months;
+
+        if (ageDays)
+            ageDays.textContent =
+                age.days;
+
+        if (ageHours)
+            ageHours.textContent =
+                age.hours;
+
+        if (ageMinutes)
+            ageMinutes.textContent =
+                age.minutes;
+
+        if (ageSeconds)
+            ageSeconds.textContent =
+                age.seconds;
     }
 }
 
 updateAge();
-setInterval(updateAge, 1000);
+
+setInterval(
+    updateAge,
+    1000
+);
+
 
 /* =========================================================
 MOBILE NAVIGATION
 ========================================================= */
 function closeMobileMenu() {
-    if (!navMenu || !mobileMenuButton) return;
+    if (
+        !navMenu ||
+        !mobileMenuButton
+    ) {
+        return;
+    }
 
-    navMenu.classList.remove("open");
+    navMenu.classList.remove(
+        "open"
+    );
+
     mobileMenuButton.setAttribute(
         "aria-expanded",
         "false"
@@ -169,10 +232,17 @@ function closeMobileMenu() {
 }
 
 function toggleMobileMenu() {
-    if (!navMenu || !mobileMenuButton) return;
+    if (
+        !navMenu ||
+        !mobileMenuButton
+    ) {
+        return;
+    }
 
     const isOpen =
-        navMenu.classList.toggle("open");
+        navMenu.classList.toggle(
+            "open"
+        );
 
     mobileMenuButton.setAttribute(
         "aria-expanded",
@@ -187,60 +257,82 @@ if (mobileMenuButton) {
     );
 }
 
-navLinks.forEach((link) => {
-    link.addEventListener(
-        "click",
-        closeMobileMenu
-    );
-});
+navLinks.forEach(
+    (link) => {
+        link.addEventListener(
+            "click",
+            closeMobileMenu
+        );
+    }
+);
+
 
 /* =========================================================
 HEADER SCROLL & ACTIVE NAVIGATION
 ========================================================= */
 function updateHeader() {
-    if (!header) return;
+    if (!header) {
+        return;
+    }
 
     if (window.scrollY > 20) {
-        header.classList.add("scrolled");
+        header.classList.add(
+            "scrolled"
+        );
     } else {
-        header.classList.remove("scrolled");
+        header.classList.remove(
+            "scrolled"
+        );
     }
 }
 
 const sections =
-    document.querySelectorAll("main section[id]");
+    document.querySelectorAll(
+        "main section[id]"
+    );
 
 function updateActiveNavigation() {
     const scrollPosition =
         window.scrollY + 150;
 
-    let currentSection = "home";
+    let currentSection =
+        "home";
 
-    sections.forEach((section) => {
-        const sectionTop =
-            section.offsetTop;
+    sections.forEach(
+        (section) => {
+            const sectionTop =
+                section.offsetTop;
 
-        const sectionBottom =
-            sectionTop +
-            section.offsetHeight;
+            const sectionBottom =
+                sectionTop +
+                section.offsetHeight;
 
-        if (
-            scrollPosition >= sectionTop &&
-            scrollPosition < sectionBottom
-        ) {
-            currentSection = section.id;
+            if (
+                scrollPosition >=
+                    sectionTop &&
+                scrollPosition <
+                    sectionBottom
+            ) {
+                currentSection =
+                    section.id;
+            }
         }
-    });
+    );
 
-    navLinks.forEach((link) => {
-        const href =
-            link.getAttribute("href");
+    navLinks.forEach(
+        (link) => {
+            const href =
+                link.getAttribute(
+                    "href"
+                );
 
-        link.classList.toggle(
-            "active",
-            href === `#${currentSection}`
-        );
-    });
+            link.classList.toggle(
+                "active",
+                href ===
+                    `#${currentSection}`
+            );
+        }
+    );
 }
 
 window.addEventListener(
@@ -249,24 +341,39 @@ window.addEventListener(
         updateHeader();
         updateActiveNavigation();
     },
-    { passive: true }
+    {
+        passive: true
+    }
 );
 
 updateHeader();
 updateActiveNavigation();
+
 
 /* =========================================================
 THEME
 ========================================================= */
 function applyInitialTheme() {
     const savedTheme =
-        localStorage.getItem("gepa-theme");
+        localStorage.getItem(
+            "gepa-theme"
+        );
 
     if (savedTheme === "dark") {
-        body.classList.add("dark-mode");
-    } else if (savedTheme === "light") {
-        body.classList.remove("dark-mode");
-    } else {
+        body.classList.add(
+            "dark-mode"
+        );
+    }
+
+    else if (
+        savedTheme === "light"
+    ) {
+        body.classList.remove(
+            "dark-mode"
+        );
+    }
+
+    else {
         const prefersDark =
             window.matchMedia &&
             window.matchMedia(
@@ -274,7 +381,9 @@ function applyInitialTheme() {
             ).matches;
 
         if (prefersDark) {
-            body.classList.add("dark-mode");
+            body.classList.add(
+                "dark-mode"
+            );
         }
     }
 
@@ -282,13 +391,19 @@ function applyInitialTheme() {
 }
 
 function updateThemeIcon() {
-    if (!themeIcon) return;
+    if (!themeIcon) {
+        return;
+    }
 
     const isDark =
-        body.classList.contains("dark-mode");
+        body.classList.contains(
+            "dark-mode"
+        );
 
     themeIcon.textContent =
-        isDark ? "☀" : "☾";
+        isDark
+            ? "☀"
+            : "☾";
 }
 
 if (themeToggle) {
@@ -302,7 +417,9 @@ if (themeToggle) {
 
             localStorage.setItem(
                 "gepa-theme",
-                isDark ? "dark" : "light"
+                isDark
+                    ? "dark"
+                    : "light"
             );
 
             updateThemeIcon();
@@ -312,24 +429,35 @@ if (themeToggle) {
 
 applyInitialTheme();
 
+
 /* =========================================================
 REVEAL ON SCROLL
 ========================================================= */
-if ("IntersectionObserver" in window) {
+if (
+    "IntersectionObserver"
+    in window
+) {
     const observer =
         new IntersectionObserver(
             (entries, obs) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add(
-                            "visible"
-                        );
 
-                        obs.unobserve(
-                            entry.target
-                        );
+                entries.forEach(
+                    (entry) => {
+
+                        if (
+                            entry.isIntersecting
+                        ) {
+
+                            entry.target.classList.add(
+                                "visible"
+                            );
+
+                            obs.unobserve(
+                                entry.target
+                            );
+                        }
                     }
-                });
+                );
             },
             {
                 threshold: 0.12,
@@ -338,20 +466,29 @@ if ("IntersectionObserver" in window) {
             }
         );
 
-    revealElements.forEach((el) =>
-        observer.observe(el)
+    revealElements.forEach(
+        (el) =>
+            observer.observe(el)
     );
+
 } else {
-    revealElements.forEach((el) =>
-        el.classList.add("visible")
+
+    revealElements.forEach(
+        (el) =>
+            el.classList.add(
+                "visible"
+            )
     );
 }
+
 
 /* =========================================================
 PHOTO CAROUSEL
 ========================================================= */
 const photoTrack =
-    document.getElementById("photoTrack");
+    document.getElementById(
+        "photoTrack"
+    );
 
 const photoCarousel =
     document.getElementById(
@@ -359,10 +496,14 @@ const photoCarousel =
     );
 
 const prevPhoto =
-    document.getElementById("prevPhoto");
+    document.getElementById(
+        "prevPhoto"
+    );
 
 const nextPhoto =
-    document.getElementById("nextPhoto");
+    document.getElementById(
+        "nextPhoto"
+    );
 
 const carouselDots =
     document.getElementById(
@@ -381,7 +522,9 @@ let currentX = 0;
 let isDragging = false;
 
 function createPhotoSlides() {
-    if (!photoTrack) return;
+    if (!photoTrack) {
+        return;
+    }
 
     photoTrack.innerHTML = "";
 
@@ -390,30 +533,41 @@ function createPhotoSlides() {
         index,
         isClone
     ) => {
+
         const slide =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
 
         slide.className =
             "photo-slide";
 
         if (isClone) {
-            slide.classList.add("clone");
+            slide.classList.add(
+                "clone"
+            );
         }
 
         const image =
-            document.createElement("img");
+            document.createElement(
+                "img"
+            );
 
         image.src = photo;
 
         image.alt =
             `Foto Gepa ${index + 1}`;
 
-        image.loading = "eager";
-        image.draggable = false;
+        image.loading =
+            "eager";
+
+        image.draggable =
+            false;
 
         image.addEventListener(
             "error",
             () => {
+
                 slide.innerHTML = `
                     <div class="photo-fallback">
                         <span>G</span>
@@ -425,12 +579,15 @@ function createPhotoSlides() {
             }
         );
 
-        slide.appendChild(image);
+        slide.appendChild(
+            image
+        );
 
         if (
             !isClone &&
             index === 0
         ) {
+
             const caption =
                 document.createElement(
                     "span"
@@ -462,6 +619,7 @@ function createPhotoSlides() {
 
     photoList.forEach(
         (photo, index) => {
+
             createSlide(
                 photo,
                 index,
@@ -484,27 +642,30 @@ function createPhotoSlides() {
 }
 
 function createCarouselDots() {
-    if (!carouselDots) return;
+    if (!carouselDots) {
+        return;
+    }
 
     carouselDots.innerHTML = "";
 
     photoList.forEach(
         (_, index) => {
+
             const dot =
                 document.createElement(
                     "button"
                 );
 
-            dot.type = "button";
+            dot.type =
+                "button";
 
             dot.className =
                 "carousel-dot";
 
             dot.addEventListener(
                 "click",
-                () => {
-                    goToPhoto(index);
-                }
+                () =>
+                    goToPhoto(index)
             );
 
             carouselDots.appendChild(
@@ -515,7 +676,9 @@ function createCarouselDots() {
 }
 
 function updateDots() {
-    if (!carouselDots) return;
+    if (!carouselDots) {
+        return;
+    }
 
     const dots =
         carouselDots.querySelectorAll(
@@ -525,10 +688,14 @@ function updateDots() {
     let activeIndex =
         currentPhoto - 1;
 
-    if (currentPhoto === 0) {
+    if (
+        currentPhoto === 0
+    ) {
         activeIndex =
             photoList.length - 1;
-    } else if (
+    }
+
+    else if (
         currentPhoto ===
         photoList.length + 1
     ) {
@@ -537,15 +704,20 @@ function updateDots() {
 
     dots.forEach(
         (dot, index) => {
+
             dot.classList.toggle(
                 "active",
-                index === activeIndex
+                index ===
+                    activeIndex
             );
         }
     );
 }
 
-function moveCarousel(direction) {
+function moveCarousel(
+    direction
+) {
+
     if (
         photoList.length <= 1 ||
         isMoving ||
@@ -559,7 +731,10 @@ function moveCarousel(direction) {
     photoTrack.style.transition =
         "transform 420ms cubic-bezier(.22,.61,.36,1)";
 
-    if (direction === "next") {
+    if (
+        direction === "next"
+    ) {
+
         currentPhoto++;
 
         photoTrack.style.transform =
@@ -567,23 +742,31 @@ function moveCarousel(direction) {
 
         updateDots();
 
-        setTimeout(() => {
-            if (
-                currentPhoto ===
-                photoList.length + 1
-            ) {
-                photoTrack.style.transition =
-                    "none";
+        setTimeout(
+            () => {
 
-                currentPhoto = 1;
+                if (
+                    currentPhoto ===
+                    photoList.length + 1
+                ) {
 
-                photoTrack.style.transform =
-                    "translate3d(-100%, 0, 0)";
-            }
+                    photoTrack.style.transition =
+                        "none";
 
-            isMoving = false;
-        }, 430);
+                    currentPhoto = 1;
+
+                    photoTrack.style.transform =
+                        "translate3d(-100%, 0, 0)";
+                }
+
+                isMoving = false;
+
+            },
+            430
+        );
+
     } else {
+
         currentPhoto--;
 
         photoTrack.style.transform =
@@ -591,32 +774,46 @@ function moveCarousel(direction) {
 
         updateDots();
 
-        setTimeout(() => {
-            if (currentPhoto === 0) {
-                photoTrack.style.transition =
-                    "none";
+        setTimeout(
+            () => {
 
-                currentPhoto =
-                    photoList.length;
+                if (
+                    currentPhoto === 0
+                ) {
 
-                photoTrack.style.transform =
-                    `translate3d(-${currentPhoto * 100}%, 0, 0)`;
-            }
+                    photoTrack.style.transition =
+                        "none";
 
-            isMoving = false;
-        }, 430);
+                    currentPhoto =
+                        photoList.length;
+
+                    photoTrack.style.transform =
+                        `translate3d(-${currentPhoto * 100}%, 0, 0)`;
+                }
+
+                isMoving = false;
+
+            },
+            430
+        );
     }
 }
 
-function goToPhoto(index) {
-    if (!photoTrack) return;
+function goToPhoto(
+    index
+) {
+
+    if (!photoTrack) {
+        return;
+    }
 
     const targetPhoto =
         index + 1;
 
     if (
         isMoving ||
-        currentPhoto === targetPhoto
+        currentPhoto ===
+            targetPhoto
     ) {
         return;
     }
@@ -634,37 +831,53 @@ function goToPhoto(index) {
 
     updateDots();
 
-    setTimeout(() => {
-        isMoving = false;
-    }, 430);
+    setTimeout(
+        () => {
+            isMoving = false;
+        },
+        430
+    );
 }
 
 if (prevPhoto) {
     prevPhoto.addEventListener(
         "click",
-        () => moveCarousel("prev")
+        () =>
+            moveCarousel(
+                "prev"
+            )
     );
 }
 
 if (nextPhoto) {
     nextPhoto.addEventListener(
         "click",
-        () => moveCarousel("next")
+        () =>
+            moveCarousel(
+                "next"
+            )
     );
 }
 
 if (photoCarousel) {
+
     photoCarousel.addEventListener(
         "touchstart",
         (e) => {
-            if (e.touches.length !== 1) {
+
+            if (
+                e.touches.length !==
+                1
+            ) {
                 return;
             }
 
             startX =
                 e.touches[0].clientX;
 
-            currentX = startX;
+            currentX =
+                startX;
+
             isDragging = true;
 
             if (photoTrack) {
@@ -672,13 +885,19 @@ if (photoCarousel) {
                     "none";
             }
         },
-        { passive: true }
+        {
+            passive: true
+        }
     );
 
     photoCarousel.addEventListener(
         "touchmove",
         (e) => {
-            if (!isDragging || !photoTrack) {
+
+            if (
+                !isDragging ||
+                !photoTrack
+            ) {
                 return;
             }
 
@@ -686,28 +905,34 @@ if (photoCarousel) {
                 e.touches[0].clientX;
 
             const diff =
-                currentX - startX;
+                currentX -
+                startX;
 
             const width =
                 photoCarousel.offsetWidth;
 
             const dragPercent =
                 width > 0
-                    ? (diff / width) * 100
+                    ? (diff / width) *
+                      100
                     : 0;
 
             const base =
-                -(currentPhoto * 100);
+                -(currentPhoto *
+                    100);
 
             photoTrack.style.transform =
                 `translate3d(${base + dragPercent}%, 0, 0)`;
         },
-        { passive: true }
+        {
+            passive: true
+        }
     );
 
     photoCarousel.addEventListener(
         "touchend",
         () => {
+
             if (
                 !isDragging ||
                 !photoTrack
@@ -718,13 +943,24 @@ if (photoCarousel) {
             isDragging = false;
 
             const diff =
-                currentX - startX;
+                currentX -
+                startX;
 
-            if (Math.abs(diff) >= 45) {
+            if (
+                Math.abs(diff) >=
+                45
+            ) {
+
                 diff < 0
-                    ? moveCarousel("next")
-                    : moveCarousel("prev");
+                    ? moveCarousel(
+                        "next"
+                    )
+                    : moveCarousel(
+                        "prev"
+                    );
+
             } else {
+
                 photoTrack.style.transition =
                     "transform 420ms cubic-bezier(.22,.61,.36,1)";
 
@@ -732,7 +968,9 @@ if (photoCarousel) {
                     `translate3d(-${currentPhoto * 100}%, 0, 0)`;
             }
         },
-        { passive: true }
+        {
+            passive: true
+        }
     );
 }
 
@@ -740,45 +978,56 @@ createPhotoSlides();
 createCarouselDots();
 updateDots();
 
+
 /* =========================================================
 MODAL SYSTEM
 ========================================================= */
-window.openInfoModal = function(modalId) {
-    const modal =
-        document.getElementById(
-            modalId
-        );
+window.openInfoModal =
+    function(modalId) {
 
-    if (modal) {
-        modal.classList.add("open");
-        body.classList.add(
-            "modal-open"
-        );
-    }
-};
+        const modal =
+            document.getElementById(
+                modalId
+            );
 
-window.closeInfoModal = function(modalId) {
-    const modal =
-        document.getElementById(
-            modalId
-        );
+        if (modal) {
 
-    if (modal) {
-        modal.classList.remove(
-            "open"
-        );
+            modal.classList.add(
+                "open"
+            );
 
-        if (
-            !document.querySelector(
-                ".modal-overlay.open"
-            )
-        ) {
-            body.classList.remove(
+            body.classList.add(
                 "modal-open"
             );
         }
-    }
-};
+    };
+
+window.closeInfoModal =
+    function(modalId) {
+
+        const modal =
+            document.getElementById(
+                modalId
+            );
+
+        if (modal) {
+
+            modal.classList.remove(
+                "open"
+            );
+
+            if (
+                !document.querySelector(
+                    ".modal-overlay.open"
+                )
+            ) {
+
+                body.classList.remove(
+                    "modal-open"
+                );
+            }
+        }
+    };
 
 if (ageCard) {
     ageCard.addEventListener(
@@ -827,12 +1076,16 @@ const modals =
 
 modals.forEach(
     (modal) => {
+
         modal.addEventListener(
             "click",
             (e) => {
+
                 if (
-                    e.target === modal
+                    e.target ===
+                    modal
                 ) {
+
                     closeInfoModal(
                         modal.id
                     );
@@ -842,54 +1095,217 @@ modals.forEach(
     }
 );
 
+
 /* =========================================================
 SUPPORT PAYMENT & RANKING
 ========================================================= */
 let selectedValue = 0;
 
-function formatRupiah(value) {
+function formatRupiah(
+    value
+) {
+
     return new Intl.NumberFormat(
         "id-ID"
     ).format(value);
 }
 
+
 /* =========================================================
-PAYMENT LOCAL STORAGE
+PAYMENT STORAGE
 ========================================================= */
+
+/*
+ * Setiap order punya storage sendiri.
+ *
+ * Contoh:
+ * gepa_payment_GEPA-123
+ * gepa_payment_GEPA-456
+ *
+ * Jadi kalau ada dua payment,
+ * datanya tidak saling menimpa.
+ */
+
+const PAYMENT_STORAGE_PREFIX =
+    "gepa_payment_";
+
+const PAYMENT_MAX_AGE =
+    24 * 60 * 60 * 1000;
+
+function getPaymentStorageKey(
+    orderId
+) {
+
+    return (
+        PAYMENT_STORAGE_PREFIX +
+        encodeURIComponent(
+            orderId
+        )
+    );
+}
+
 function savePendingPayment(
     orderId,
     username,
     amount
 ) {
+
+    if (!orderId) {
+        return;
+    }
+
+    const paymentData = {
+        orderId:
+            orderId,
+
+        username:
+            username ||
+            "Anonim",
+
+        amount:
+            Number(amount) || 0,
+
+        createdAt:
+            Date.now()
+    };
+
     localStorage.setItem(
-        "gepa_pending_order",
+        getPaymentStorageKey(
+            orderId
+        ),
+        JSON.stringify(
+            paymentData
+        )
+    );
+
+    /*
+     * Pointer hanya menunjukkan
+     * payment terakhir yang dibuat.
+     */
+    localStorage.setItem(
+        "gepa_active_payment",
         orderId
     );
-
-    localStorage.setItem(
-        "gepa_pending_username",
-        username
-    );
-
-    localStorage.setItem(
-        "gepa_pending_amount",
-        String(amount)
-    );
 }
 
-function clearPendingPayment() {
-    localStorage.removeItem(
-        "gepa_pending_order"
-    );
+function getPendingPayment(
+    orderId
+) {
 
-    localStorage.removeItem(
-        "gepa_pending_username"
-    );
+    if (!orderId) {
+        return null;
+    }
 
-    localStorage.removeItem(
-        "gepa_pending_amount"
-    );
+    const key =
+        getPaymentStorageKey(
+            orderId
+        );
+
+    const raw =
+        localStorage.getItem(
+            key
+        );
+
+    if (!raw) {
+        return null;
+    }
+
+    try {
+
+        const data =
+            JSON.parse(raw);
+
+        /*
+         * Payment terlalu lama
+         * dianggap tidak valid
+         * untuk popup otomatis.
+         */
+        if (
+            !data.createdAt ||
+            Date.now() -
+                data.createdAt >
+                PAYMENT_MAX_AGE
+        ) {
+
+            localStorage.removeItem(
+                key
+            );
+
+            if (
+                localStorage.getItem(
+                    "gepa_active_payment"
+                ) === orderId
+            ) {
+
+                localStorage.removeItem(
+                    "gepa_active_payment"
+                );
+            }
+
+            return null;
+        }
+
+        return data;
+
+    } catch (error) {
+
+        localStorage.removeItem(
+            key
+        );
+
+        return null;
+    }
 }
+
+function clearPendingPayment(
+    orderId
+) {
+
+    if (!orderId) {
+        return;
+    }
+
+    localStorage.removeItem(
+        getPaymentStorageKey(
+            orderId
+        )
+    );
+
+    if (
+        localStorage.getItem(
+            "gepa_active_payment"
+        ) === orderId
+    ) {
+
+        localStorage.removeItem(
+            "gepa_active_payment"
+        );
+    }
+}
+
+function getActivePaymentOrder() {
+
+    const orderId =
+        localStorage.getItem(
+            "gepa_active_payment"
+        );
+
+    if (!orderId) {
+        return null;
+    }
+
+    const payment =
+        getPendingPayment(
+            orderId
+        );
+
+    if (!payment) {
+        return null;
+    }
+
+    return orderId;
+}
+
 
 /* =========================================================
 CHECK PAYMENT STATUS
@@ -897,20 +1313,26 @@ CHECK PAYMENT STATUS
 async function checkPaymentStatus(
     orderId
 ) {
+
     if (!orderId) {
         return null;
     }
 
     try {
+
         const response =
             await fetch(
-                `/api/check-payment?order_id=${encodeURIComponent(orderId)}`
+                `/api/check-payment?order_id=${encodeURIComponent(orderId)}`,
+                {
+                    cache: "no-store"
+                }
             );
 
         const data =
             await response.json();
 
         if (!response.ok) {
+
             console.error(
                 "Check payment failed:",
                 data
@@ -922,6 +1344,7 @@ async function checkPaymentStatus(
         return data;
 
     } catch (error) {
+
         console.error(
             "Check payment error:",
             error
@@ -931,22 +1354,57 @@ async function checkPaymentStatus(
     }
 }
 
+
 /* =========================================================
 SHOW PAYMENT RESULT
 ========================================================= */
 async function handlePaymentResult(
     orderId
 ) {
+
     if (!orderId) {
         return;
     }
 
+    /*
+     * Ambil metadata payment
+     * berdasarkan order ID.
+     */
+    const payment =
+        getPendingPayment(
+            orderId
+        );
+
+    /*
+     * Kalau ada payment lokal,
+     * pastikan order ID sama.
+     */
+    if (
+        payment &&
+        payment.orderId !==
+            orderId
+    ) {
+
+        console.warn(
+            "Payment data mismatch."
+        );
+
+        return;
+    }
+
+    /*
+     * Cek langsung ke Midtrans.
+     *
+     * Ini adalah sumber kebenaran
+     * untuk status transaksi.
+     */
     const statusData =
         await checkPaymentStatus(
             orderId
         );
 
     if (!statusData) {
+
         showToast(
             "Status pembayaran belum bisa dicek."
         );
@@ -955,33 +1413,40 @@ async function handlePaymentResult(
     }
 
     console.log(
-        "Payment status:",
+        "Verified payment status:",
         statusData
     );
 
     const status =
         statusData.transaction_status;
 
-    /* =========================
+
+    /* =====================================================
     SUCCESS
-    ========================= */
+    ===================================================== */
     if (
         status === "settlement" ||
         status === "capture"
     ) {
-        const username =
-            localStorage.getItem(
-                "gepa_pending_username"
-            ) || "Supporter";
 
-        const savedAmount =
-            localStorage.getItem(
-                "gepa_pending_amount"
-            );
+        /*
+         * Username dan nominal diambil
+         * dari storage yang TERKAIT
+         * dengan order ID ini.
+         *
+         * Tidak mengambil dari payment
+         * terakhir secara sembarangan.
+         */
+        const username =
+            payment &&
+            payment.username
+                ? payment.username
+                : "Supporter";
 
         const amount =
-            savedAmount
-                ? Number(savedAmount)
+            payment &&
+            Number(payment.amount) > 0
+                ? Number(payment.amount)
                 : Number(
                     statusData.gross_amount
                 );
@@ -1007,22 +1472,28 @@ async function handlePaymentResult(
             );
 
         if (resultOrderId) {
+
             resultOrderId.textContent =
                 statusData.order_id ||
                 orderId;
         }
 
         if (resultAmount) {
+
             resultAmount.textContent =
-                `Rp${formatRupiah(amount)}`;
+                `Rp${formatRupiah(
+                    amount
+                )}`;
         }
 
         if (resultUsername) {
+
             resultUsername.textContent =
                 username;
         }
 
         if (resultPaymentType) {
+
             resultPaymentType.textContent =
                 statusData.payment_type
                     ? statusData
@@ -1035,36 +1506,59 @@ async function handlePaymentResult(
                     : "ONLINE PAYMENT";
         }
 
-        clearPendingPayment();
+        /*
+         * Payment sudah diverifikasi
+         * sukses dari Midtrans.
+         *
+         * Sekarang boleh hapus
+         * data pending order tersebut.
+         */
+        clearPendingPayment(
+            orderId
+        );
 
+        /*
+         * Tampilkan SUCCESS.
+         */
         openInfoModal(
             "successPaymentModal"
         );
 
         /*
-         * Webhook bisa masuk sedikit setelah
-         * Midtrans mengembalikan status sukses.
-         * Jadi kita refresh ranking beberapa kali.
+         * Webhook mungkin masuk
+         * beberapa detik setelah status
+         * Midtrans berubah.
+         *
+         * Karena itu ranking di-refresh
+         * beberapa kali.
          */
         await fetchRankings();
 
         setTimeout(
-            () => fetchRankings(),
+            () => {
+                fetchRankings();
+            },
             1500
         );
 
         setTimeout(
-            () => fetchRankings(),
+            () => {
+                fetchRankings();
+            },
             3500
         );
 
         return;
     }
 
-    /* =========================
+
+    /* =====================================================
     PENDING
-    ========================= */
-    if (status === "pending") {
+    ===================================================== */
+    if (
+        status === "pending"
+    ) {
+
         openInfoModal(
             "pendingPaymentModal"
         );
@@ -1072,16 +1566,20 @@ async function handlePaymentResult(
         return;
     }
 
-    /* =========================
+
+    /* =====================================================
     FAILED / CANCEL / EXPIRED
-    ========================= */
+    ===================================================== */
     if (
         status === "cancel" ||
         status === "expire" ||
         status === "deny" ||
         status === "failure"
     ) {
-        clearPendingPayment();
+
+        clearPendingPayment(
+            orderId
+        );
 
         openInfoModal(
             "errorPaymentModal"
@@ -1090,9 +1588,10 @@ async function handlePaymentResult(
         return;
     }
 
-    /* =========================
+
+    /* =====================================================
     OTHER STATUS
-    ========================= */
+    ===================================================== */
     showToast(
         `Status pembayaran: ${
             status || "unknown"
@@ -1100,10 +1599,12 @@ async function handlePaymentResult(
     );
 }
 
+
 /* =========================================================
 VALIDATE SUPPORT INPUT
 ========================================================= */
 function validateInput() {
+
     if (
         !supporterUsername ||
         !usernameError
@@ -1123,12 +1624,14 @@ function validateInput() {
         username === "" ||
         hasHtml
     ) {
+
         continueSupport.disabled =
             true;
 
         if (
             selectedValue > 0
         ) {
+
             usernameError.style.display =
                 "block";
         }
@@ -1136,12 +1639,14 @@ function validateInput() {
         return false;
 
     } else {
+
         usernameError.style.display =
             "none";
 
         if (
             selectedValue > 0
         ) {
+
             continueSupport.disabled =
                 false;
 
@@ -1152,10 +1657,12 @@ function validateInput() {
     return false;
 }
 
+
 /* =========================================================
 SUPPORT AMOUNT
 ========================================================= */
 function updateSupportAmount() {
+
     if (!selectedAmount) {
         return;
     }
@@ -1163,9 +1670,14 @@ function updateSupportAmount() {
     if (
         selectedValue > 0
     ) {
+
         selectedAmount.textContent =
-            `Nominal: Rp${formatRupiah(selectedValue)}`;
+            `Nominal: Rp${formatRupiah(
+                selectedValue
+            )}`;
+
     } else {
+
         selectedAmount.textContent =
             "Belum memilih nominal";
     }
@@ -1175,9 +1687,11 @@ function updateSupportAmount() {
 
 amountButtons.forEach(
     (button) => {
+
         button.addEventListener(
             "click",
             () => {
+
                 selectedValue =
                     Number(
                         button.dataset.amount
@@ -1194,7 +1708,10 @@ amountButtons.forEach(
                     "selected"
                 );
 
-                if (customAmount) {
+                if (
+                    customAmount
+                ) {
+
                     customAmount.value =
                         "";
                 }
@@ -1206,9 +1723,11 @@ amountButtons.forEach(
 );
 
 if (customAmount) {
+
     customAmount.addEventListener(
         "input",
         () => {
+
             const val =
                 Number(
                     customAmount.value
@@ -1232,16 +1751,19 @@ if (customAmount) {
 }
 
 if (supporterUsername) {
+
     supporterUsername.addEventListener(
         "input",
         validateInput
     );
 }
 
+
 /* =========================================================
 START PAYMENT
 ========================================================= */
 if (continueSupport) {
+
     continueSupport.addEventListener(
         "click",
         async () => {
@@ -1272,10 +1794,12 @@ if (continueSupport) {
                         "/api/create-payment",
                         {
                             method: "POST",
+
                             headers: {
                                 "Content-Type":
                                     "application/json"
                             },
+
                             body:
                                 JSON.stringify({
                                     amount,
@@ -1292,46 +1816,47 @@ if (continueSupport) {
                     !data.token ||
                     !data.order_id
                 ) {
+
                     throw new Error(
                         data.error ||
                         "Gagal membuat pembayaran."
                     );
                 }
 
-                /*
-                 * SIMPAN SEMUA DATA PAYMENT
-                 * sebelum membuka Midtrans.
-                 *
-                 * Ini penting kalau user:
-                 * - bayar lewat HP
-                 * - tidak otomatis kembali
-                 * - menekan tombol Back
-                 * - halaman melakukan refresh
-                 */
+
+                /* =================================================
+                SIMPAN PAYMENT SECARA TERPISAH
+                ================================================= */
                 savePendingPayment(
                     data.order_id,
                     username,
                     amount
                 );
 
+
+                /* =================================================
+                TUTUP SUPPORT MODAL
+                ================================================= */
                 closeInfoModal(
                     "supportModal"
                 );
 
-                /* =========================
+
+                /* =================================================
                 MIDTRANS SNAP
-                ========================= */
+                ================================================= */
                 window.snap.pay(
                     data.token,
                     {
 
-                        /* =====================
+                        /* =========================================
                         SUCCESS
-                        ===================== */
+                        ========================================= */
                         onSuccess:
                             async function (
                                 result
                             ) {
+
                                 console.log(
                                     "Midtrans onSuccess:",
                                     result
@@ -1342,13 +1867,15 @@ if (continueSupport) {
                                 );
                             },
 
-                        /* =====================
+
+                        /* =========================================
                         PENDING
-                        ===================== */
+                        ========================================= */
                         onPending:
                             async function (
                                 result
                             ) {
+
                                 console.log(
                                     "Midtrans onPending:",
                                     result
@@ -1359,42 +1886,48 @@ if (continueSupport) {
                                 );
                             },
 
-                        /* =====================
+
+                        /* =========================================
                         ERROR
-                        ===================== */
+                        ========================================= */
                         onError:
                             async function (
                                 result
                             ) {
+
                                 console.log(
                                     "Midtrans onError:",
                                     result
                                 );
 
-                                clearPendingPayment();
+                                clearPendingPayment(
+                                    data.order_id
+                                );
 
                                 openInfoModal(
                                     "errorPaymentModal"
                                 );
                             },
 
-                        /* =====================
+
+                        /* =========================================
                         CLOSE
-                        ===================== */
+                        ========================================= */
                         onClose:
                             function () {
+
                                 /*
                                  * JANGAN hapus
-                                 * pending order.
+                                 * pending payment.
                                  *
-                                 * User bisa saja:
+                                 * User mungkin:
                                  * - sudah bayar
+                                 * - pindah ke aplikasi e-wallet
                                  * - popup tertutup
-                                 * - belum kembali ke website
-                                 *
-                                 * localStorage akan
-                                 * menjadi backup.
+                                 * - kembali lewat tombol Back
+                                 * - refresh halaman
                                  */
+
                                 console.log(
                                     "Popup pembayaran ditutup."
                                 );
@@ -1421,23 +1954,26 @@ if (continueSupport) {
             } finally {
 
                 /*
-                 * Jangan hapus pending payment
-                 * di sini.
+                 * Hanya reset FORM.
                  *
-                 * window.snap.pay() berjalan
-                 * asynchronous.
+                 * Jangan hapus payment storage.
                  */
-
                 continueSupport.disabled =
                     false;
 
                 continueSupport.textContent =
                     "Proses Payment →";
 
-                supporterUsername.value =
-                    "";
+                if (
+                    supporterUsername
+                ) {
 
-                selectedValue = 0;
+                    supporterUsername.value =
+                        "";
+                }
+
+                selectedValue =
+                    0;
 
                 amountButtons.forEach(
                     (btn) =>
@@ -1446,7 +1982,10 @@ if (continueSupport) {
                         )
                 );
 
-                if (customAmount) {
+                if (
+                    customAmount
+                ) {
+
                     customAmount.value =
                         "";
                 }
@@ -1457,11 +1996,13 @@ if (continueSupport) {
     );
 }
 
+
 /* =========================================================
 SCROLL TO RANKING
 ========================================================= */
 window.scrollToRanking =
     function () {
+
         closeInfoModal(
             "successPaymentModal"
         );
@@ -1472,16 +2013,20 @@ window.scrollToRanking =
             );
 
         if (supportSec) {
+
             supportSec.scrollIntoView({
-                behavior: "smooth"
+                behavior:
+                    "smooth"
             });
         }
     };
 
+
 /* =========================================================
 RANKING
 ========================================================= */
-let currentRankTab = "daily";
+let currentRankTab =
+    "daily";
 
 let rankingDataCache = {
     daily: [],
@@ -1490,6 +2035,7 @@ let rankingDataCache = {
 };
 
 async function fetchRankings() {
+
     if (!rankingList) {
         return;
     }
@@ -1498,10 +2044,15 @@ async function fetchRankings() {
 
         const res =
             await fetch(
-                "/api/ranking"
+                "/api/ranking",
+                {
+                    cache:
+                        "no-store"
+                }
             );
 
         if (!res.ok) {
+
             throw new Error(
                 "Ranking request failed"
             );
@@ -1510,7 +2061,8 @@ async function fetchRankings() {
         const data =
             await res.json();
 
-        rankingDataCache = data;
+        rankingDataCache =
+            data;
 
         renderRanking(
             currentRankTab
@@ -1530,18 +2082,26 @@ async function fetchRankings() {
     }
 }
 
-function renderRanking(tab) {
+function renderRanking(
+    tab
+) {
+
     if (!rankingList) {
         return;
     }
 
     const data =
-        rankingDataCache[tab] ||
-        [];
+        rankingDataCache[
+            tab
+        ] || [];
 
-    rankingList.innerHTML = "";
+    rankingList.innerHTML =
+        "";
 
-    if (data.length === 0) {
+    if (
+        data.length === 0
+    ) {
+
         rankingList.innerHTML =
             `<li class="ranking-empty">
                 Belum ada supporter di periode ini.
@@ -1564,23 +2124,31 @@ function renderRanking(tab) {
             let medal =
                 `${index + 1}`;
 
-            if (index === 0) {
-                medal = "🥇";
+            if (
+                index === 0
+            ) {
+                medal =
+                    "🥇";
             }
 
-            if (index === 1) {
-                medal = "🥈";
+            if (
+                index === 1
+            ) {
+                medal =
+                    "🥈";
             }
 
-            if (index === 2) {
-                medal = "🥉";
+            if (
+                index === 2
+            ) {
+                medal =
+                    "🥉";
             }
 
-            /*
-             * Gunakan textContent untuk username
-             * supaya username tidak bisa
-             * menyisipkan HTML ke halaman.
-             */
+
+            /* =========================
+            MEDAL
+            ========================= */
             const medalDiv =
                 document.createElement(
                     "div"
@@ -1592,6 +2160,10 @@ function renderRanking(tab) {
             medalDiv.textContent =
                 medal;
 
+
+            /* =========================
+            INFO
+            ========================= */
             const infoDiv =
                 document.createElement(
                     "div"
@@ -1599,6 +2171,7 @@ function renderRanking(tab) {
 
             infoDiv.className =
                 "rank-info";
+
 
             const nameSpan =
                 document.createElement(
@@ -1611,6 +2184,7 @@ function renderRanking(tab) {
             nameSpan.textContent =
                 `@${item.username}`;
 
+
             const txSpan =
                 document.createElement(
                     "span"
@@ -1622,6 +2196,7 @@ function renderRanking(tab) {
             txSpan.textContent =
                 `${item.txCount}x Support`;
 
+
             infoDiv.appendChild(
                 nameSpan
             );
@@ -1630,6 +2205,10 @@ function renderRanking(tab) {
                 txSpan
             );
 
+
+            /* =========================
+            AMOUNT
+            ========================= */
             const amountDiv =
                 document.createElement(
                     "div"
@@ -1643,6 +2222,10 @@ function renderRanking(tab) {
                     item.totalAmount
                 )}`;
 
+
+            /* =========================
+            APPEND
+            ========================= */
             li.appendChild(
                 medalDiv
             );
@@ -1664,6 +2247,7 @@ function renderRanking(tab) {
 
 rankTabs.forEach(
     (tab) => {
+
         tab.addEventListener(
             "click",
             () => {
@@ -1692,17 +2276,22 @@ rankTabs.forEach(
 
 fetchRankings();
 
+
 /* =========================================================
 TOAST
 ========================================================= */
 let toastTimer;
 
-function showToast(msg) {
+function showToast(
+    msg
+) {
+
     if (!toast) {
         return;
     }
 
-    toast.textContent = msg;
+    toast.textContent =
+        msg;
 
     toast.classList.add(
         "show"
@@ -1722,6 +2311,7 @@ function showToast(msg) {
         );
 }
 
+
 /* =========================================================
 PAYMENT RETURN / REDIRECT HANDLER
 ========================================================= */
@@ -1737,48 +2327,105 @@ async function handlePaymentReturn() {
             "order_id"
         );
 
-    const pendingOrder =
-        localStorage.getItem(
-            "gepa_pending_order"
-        );
-
     /*
-     * Prioritas:
-     * 1. order_id dari URL
-     * 2. order_id dari localStorage
+     * Ambil payment aktif dari browser.
      */
-    const orderId =
-        incomingOrderId ||
-        pendingOrder;
+    const activeOrderId =
+        getActivePaymentOrder();
+
+
+    /* =====================================================
+    VALIDATE ORDER ID
+    ===================================================== */
+
+    let orderId =
+        null;
+
 
     /*
-     * Kalau bukan halaman yang
-     * berhubungan dengan payment,
-     * tidak melakukan apa-apa.
+     * Jika Midtrans mengembalikan
+     * order_id melalui URL:
+     */
+    if (incomingOrderId) {
+
+        /*
+         * Kalau browser punya payment aktif,
+         * order_id HARUS sama.
+         *
+         * Ini mencegah URL random
+         * memproses payment lain.
+         */
+        if (
+            activeOrderId &&
+            incomingOrderId !==
+                activeOrderId
+        ) {
+
+            console.warn(
+                "Incoming order_id tidak cocok dengan payment aktif."
+            );
+
+            /*
+             * Jangan tampilkan popup.
+             */
+            if (
+                window.location.search
+            ) {
+
+                window.history.replaceState(
+                    {},
+                    document.title,
+                    window.location.pathname
+                );
+            }
+
+            return;
+        }
+
+        orderId =
+            incomingOrderId;
+    }
+
+
+    /*
+     * Kalau tidak ada order_id dari URL,
+     * gunakan payment aktif.
+     *
+     * Ini yang membuat tombol Back /
+     * refresh tetap bisa mendeteksi
+     * payment yang sedang berjalan.
+     */
+    else if (
+        activeOrderId
+    ) {
+
+        orderId =
+            activeOrderId;
+    }
+
+
+    /*
+     * Tidak ada payment yang
+     * perlu diperiksa.
      */
     if (!orderId) {
         return;
     }
+
 
     console.log(
         "Payment return detected:",
         orderId
     );
 
-    /*
-     * Bersihkan query URL.
-     *
-     * Contoh:
-     * ?order_id=GEPA-123
-     *
-     * menjadi:
-     * /
-     *
-     * Supaya refresh berikutnya
-     * tidak memproses order yang sama
-     * dari URL.
-     */
-    if (window.location.search) {
+
+    /* =====================================================
+    CLEAN URL
+    ===================================================== */
+    if (
+        window.location.search
+    ) {
+
         window.history.replaceState(
             {},
             document.title,
@@ -1786,9 +2433,14 @@ async function handlePaymentReturn() {
         );
     }
 
+
+    /* =====================================================
+    WAIT FOR MIDTRANS
+    ===================================================== */
+
     /*
-     * Beri waktu webhook Midtrans
-     * untuk diproses.
+     * Beri waktu supaya status
+     * transaksi sudah tersedia.
      */
     await new Promise(
         (resolve) =>
@@ -1798,20 +2450,30 @@ async function handlePaymentReturn() {
             )
     );
 
+
+    /* =====================================================
+    CHECK PAYMENT
+    ===================================================== */
     await handlePaymentResult(
         orderId
     );
 }
 
-/*
- * Jalankan sedikit setelah halaman
- * selesai loading.
- */
+
+/* =========================================================
+RUN PAYMENT RETURN CHECK
+========================================================= */
 setTimeout(
     () => {
+
         handlePaymentReturn();
+
     },
     500
 );
 
+
+/* =========================================================
+END
+========================================================= */
 });
