@@ -215,6 +215,17 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Cek Invoice Section -->
+                <div class="paper-card reveal" style="margin-top: 30px; padding: 28px;">
+                    <p class="section-kicker">track transaction</p>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">🔍 Cek Status Invoice</h3>
+                    <p style="font-size: 0.95rem; color: var(--text-soft); margin-bottom: 20px;">Masukkan Order ID transaksi kamu untuk melihat status pembayarannya secara langsung.</p>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <input type="text" id="checkOrderIdInput" placeholder="Contoh: GEPA-178338..." style="flex: 1; min-width: 240px; background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px 16px; border-radius: 14px; color: var(--text-main); font-size: 0.95rem; outline: none;">
+                        <button type="button" id="checkInvoiceBtn" class="button button-primary" style="padding: 12px 24px; font-size: 0.95rem; border-radius: 14px;">Cek Status</button>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -295,7 +306,7 @@
         </div>
     </div>
 
-    <!-- Confirm Cancel Payment Modal (Custom & Compact) -->
+    <!-- Confirm Cancel Payment Modal -->
     <div class="modal-overlay" id="confirmCancelModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 360px; padding: 28px 24px;">
             <button class="modal-close" type="button" onclick="closeInfoModal('confirmCancelModal')">×</button>
@@ -311,7 +322,7 @@
         </div>
     </div>
 
-    <!-- Success Payment Modal (Soft Boy / Green Flag Theme) -->
+    <!-- Success Payment Modal -->
     <div class="modal-overlay" id="successPaymentModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left;">
             <button class="modal-close" type="button" aria-label="Close" onclick="closeInfoModal('successPaymentModal')">×</button>
