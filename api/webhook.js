@@ -2,29 +2,29 @@ import crypto from 'crypto';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        return res.status(405).json({
+            error: 'Method not allowed'
+        });
     }
 
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    // Pastikan semua environment variable tersedia
-    if (!serverKey) {
-        console.error('MIDTRANS_SERVER_KEY belum diset.');
-        return res.status(500).json({ error: 'Server configuration error' });
-    }
+    // Pastikan environment variable tersedia
+    if (!serverKey || !supabaseUrl || !supabaseServiceRoleKey) {
+        console.error('Environment variable belum lengkap.');
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-        console.error('SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY belum diset.');
-        return res.status(500).json({ error: 'Server configuration error' });
+        return res.status(500).json({
+            error: 'Server configuration error'
+        });
     }
 
     try {
         const data = req.body || {};
 
         // ==========================================
-        // 1. VALIDASI DATA WEBHOOK
+        // 1. VALIDASI DATA DARI MIDTRANS
         // ==========================================
 
         if (
@@ -54,7 +54,10 @@ export default async function handler(req, res) {
             .digest('hex');
 
         if (data.signature_key !== hash) {
-            console.error('Invalid Midtrans signature:', data.order_id);
+            console.error(
+                'Invalid signature:',
+                data.order_id
+            );
 
             return res.status(403).json({
                 error: 'Invalid signature'
@@ -69,8 +72,7 @@ export default async function handler(req, res) {
             data.transaction_status === 'settlement' ||
             data.transaction_status === 'capture';
 
-        // Kalau bukan transaksi sukses,
-        // tidak perlu dimasukkan ke ranking.
+        // Pending / expire / cancel / deny tidak masuk ranking
         if (!isSuccess) {
             console.log(
                 `Transaksi ${data.order_id} status: ${data.transaction_status}`
@@ -83,7 +85,7 @@ export default async function handler(req, res) {
         }
 
         // ==========================================
-        // 4. BERSIHKAN DATA
+        // 4. BERSIHKAN USERNAME
         // ==========================================
 
         const username =
@@ -92,10 +94,17 @@ export default async function handler(req, res) {
                 ? data.custom_field1.trim().substring(0, 15)
                 : 'Anonim';
 
+        // ==========================================
+        // 5. VALIDASI NOMINAL
+        // ==========================================
+
         const amount = Number(data.gross_amount);
 
         if (!Number.isInteger(amount) || amount < 1000) {
-            console.error('Nominal transaksi tidak valid:', data.gross_amount);
+            console.error(
+                'Nominal transaksi tidak valid:',
+                data.gross_amount
+            );
 
             return res.status(400).json({
                 error: 'Invalid transaction amount'
@@ -103,35 +112,44 @@ export default async function handler(req, res) {
         }
 
         // ==========================================
-        // 5. FORMAT WAKTU TRANSAKSI
+        // 6. WAKTU TRANSAKSI
         // ==========================================
 
         let transactionTime = new Date().toISOString();
 
         if (data.transaction_time) {
-            const midtransTime = String(data.transaction_time).replace(' ', 'T');
+            const midtransTime = String(
+                data.transaction_time
+            ).replace(' ', 'T');
 
-            const parsedTime = new Date(`${midtransTime}+07:00`);
+            const parsedTime = new Date(
+                `${midtransTime}+07:00`
+            );
 
             if (!Number.isNaN(parsedTime.getTime())) {
-                transactionTime = parsedTime.toISOString();
+                transactionTime =
+                    parsedTime.toISOString();
             }
         }
 
         // ==========================================
-        // 6. SIMPAN KE SUPABASE
+        // 7. SIMPAN KE SUPABASE
         // ==========================================
 
         const supabaseResponse = await fetch(
             `${supabaseUrl}/rest/v1/donations`,
             {
                 method: 'POST',
+
                 headers: {
                     'Content-Type': 'application/json',
                     'apikey': supabaseServiceRoleKey,
-                    'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-                    'Prefer': 'resolution=merge-duplicates,return=minimal'
+                    'Authorization':
+                        `Bearer ${supabaseServiceRoleKey}`,
+                    'Prefer':
+                        'resolution=merge-duplicates,return=minimal'
                 },
+
                 body: JSON.stringify({
                     order_id: data.order_id,
                     username: username,
@@ -142,8 +160,13 @@ export default async function handler(req, res) {
             }
         );
 
+        // ==========================================
+        // 8. CEK HASIL SUPABASE
+        // ==========================================
+
         if (!supabaseResponse.ok) {
-            const errorText = await supabaseResponse.text();
+            const errorText =
+                await supabaseResponse.text();
 
             console.error(
                 'Supabase error:',
@@ -156,20 +179,23 @@ export default async function handler(req, res) {
             });
         }
 
-        // ==========================================
-        // 7. SELESAI
-        // ==========================================
-
         console.log(
-            `Donation berhasil disimpan: ${data.order_id} - ${username} - Rp${amount}`
+            `Donation berhasil disimpan: ${data.order_id} | ${username} | Rp${amount}`
         );
+
+        // ==========================================
+        // 9. BALAS KE MIDTRANS
+        // ==========================================
 
         return res.status(200).json({
             status: 'ok'
         });
 
     } catch (error) {
-        console.error('Webhook error:', error);
+        console.error(
+            'Webhook error:',
+            error
+        );
 
         return res.status(500).json({
             error: 'Terjadi kesalahan server'
