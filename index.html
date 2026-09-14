@@ -364,12 +364,33 @@
             </div>
         </div>
     </div>
+
+    <!-- Location Modal with Interactive Map (Bogor) -->
     <div class="modal-overlay" id="locationModalOverlay">
-        <div class="support-modal modal-content" role="dialog" aria-modal="true">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: center;">
             <button class="modal-close" type="button" onclick="closeInfoModal('locationModalOverlay')">×</button>
-            <div class="modal-icon">⌖</div><p class="section-kicker">current base</p><h2>Bogor, Indonesia</h2>
+            <div class="modal-icon">⌖</div>
+            <p class="section-kicker">current base</p>
+            <h2 style="font-size: 1.5rem; margin-bottom: 6px;">Bogor, Indonesia</h2>
+            <p class="modal-description" style="margin-bottom: 16px;">
+                Kota hujan yang nyaman buat mikir, berkarya, dan jalanin hari. ☕
+            </p>
+            <div style="width: 100%; height: 260px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: var(--bg-secondary);">
+                <iframe 
+                    title="Peta Bogor"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126748.56223840742!2d106.7470123041992!3d-6.597653700000005!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69c5c14605ab41%3A0x2bb135ef0952047!2sBogor%2C%20Kota%20Bogor%2C%20Jawa%20Barat!5e0!3m2!1sid!2sid!4v1700000000000!5m2!1sid!2sid" 
+                    width="100%" 
+                    height="100%" 
+                    style="border:0;" 
+                    allowfullscreen="" 
+                    loading="lazy" 
+                    referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+            </div>
+            <button class="modal-support-button" type="button" onclick="closeInfoModal('locationModalOverlay')" style="margin-top: 16px; background: var(--sage-700);">Tutup</button>
         </div>
     </div>
+
     <div class="modal-overlay" id="hobbyModalOverlay">
         <div class="support-modal modal-content" role="dialog" aria-modal="true">
             <button class="modal-close" type="button" onclick="closeInfoModal('hobbyModalOverlay')">×</button>
