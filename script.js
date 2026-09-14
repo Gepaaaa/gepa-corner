@@ -1374,7 +1374,6 @@ async function handlePaymentResult(
 
     if (!statusData) {
 
-        // Fallback jika fetch gagal tapi order tersimpan di lokal (dianggap pending/closed)
         showPendingModal(orderId, payment);
         return;
     }
@@ -1704,7 +1703,6 @@ function launchSnapPayment(token, orderId) {
             openInfoModal("errorPaymentModal");
         },
         onClose: async function () {
-            // Ketika tombol X Midtrans diklik, langsung paksa tampilkan modal pending
             await handlePaymentResult(orderId);
         }
     });
@@ -1866,7 +1864,6 @@ if (resumePaymentBtn) {
 const cancelPaymentBtn = document.getElementById("cancelPaymentBtn");
 if (cancelPaymentBtn) {
     cancelPaymentBtn.addEventListener("click", () => {
-        // Tutup modal pending, lalu buka modal konfirmasi cancel custom yang kecil & rapi
         closeInfoModal("pendingPaymentModal");
         openInfoModal("confirmCancelModal");
     });
