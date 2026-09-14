@@ -220,10 +220,10 @@
                 <div class="paper-card reveal" style="margin-top: 30px; padding: 28px;">
                     <p class="section-kicker">track transaction</p>
                     <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">🔍 Cek Status Invoice</h3>
-                    <p style="font-size: 0.95rem; color: var(--text-soft); margin-bottom: 20px;">Masukkan Order ID transaksi kamu untuk melihat status pembayarannya secara langsung.</p>
+                    <p style="font-size: 0.95rem; color: var(--text-soft); margin-bottom: 20px;">Masukkan Order ID transaksi kamu untuk melihat detail invoice secara langsung.</p>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                         <input type="text" id="checkOrderIdInput" placeholder="Contoh: GEPA-178338..." style="flex: 1; min-width: 240px; background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px 16px; border-radius: 14px; color: var(--text-main); font-size: 0.95rem; outline: none;">
-                        <button type="button" id="checkInvoiceBtn" class="button button-primary" style="padding: 12px 24px; font-size: 0.95rem; border-radius: 14px;">Cek Status</button>
+                        <button type="button" id="checkInvoiceBtn" class="button button-primary" style="padding: 12px 24px; font-size: 0.95rem; border-radius: 14px;">Cek Invoice</button>
                     </div>
                 </div>
             </div>
@@ -243,6 +243,7 @@
         </div>
     </footer>
 
+    <!-- Support Modal -->
     <div class="modal-overlay" id="supportModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
             <button class="modal-close" type="button" aria-label="Close support dialog">×</button>
@@ -281,10 +282,34 @@
         </div>
     </div>
 
+    <!-- Invoice Detail Popup Modal -->
+    <div class="modal-overlay" id="invoiceModal">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left;">
+            <button class="modal-close" type="button" onclick="closeInfoModal('invoiceModal')">×</button>
+            <div class="modal-icon" style="background: var(--sage-100); color: var(--sage-700);">📄</div>
+            <p class="section-kicker">transaction receipt</p>
+            <h2 style="font-size: 1.6rem; margin-bottom: 6px;">Detail Invoice</h2>
+            <p class="modal-description" style="margin-bottom: 16px;">Berikut adalah informasi status transaksi langsung dari sistem Midtrans.</p>
+            
+            <div style="background: var(--sage-50); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 20px; font-size: 0.85rem; color: var(--text-soft);">
+                <div style="font-weight: 700; color: var(--sage-700); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">🧾 Informasi Invoice</div>
+                <div style="display: grid; gap: 6px;">
+                    <div><strong>Order ID:</strong> <span id="invOrderId">-</span></div>
+                    <div><strong>Status:</strong> <span id="invStatus" style="font-weight: 700;">-</span></div>
+                    <div><strong>Nominal:</strong> <span id="invAmount">-</span></div>
+                    <div><strong>Metode Pembayaran:</strong> <span id="invPaymentType">-</span></div>
+                    <div><strong>Waktu Transaksi:</strong> <span id="invTime">-</span></div>
+                </div>
+            </div>
+            
+            <button class="modal-support-button" type="button" onclick="closeInfoModal('invoiceModal')" style="background: var(--sage-700); margin-top: 0;">Tutup</button>
+        </div>
+    </div>
+
     <!-- Pending Payment Modal -->
     <div class="modal-overlay" id="pendingPaymentModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left;">
-            <button class="modal-close" type="button" aria-label="Close" onclick="closeInfoModal('pendingPaymentModal')">×</button>
+            <button class="modal-close" type="button" onclick="closeInfoModal('pendingPaymentModal')">×</button>
             <div class="modal-icon" style="color: #d97706; background: rgba(217, 119, 6, 0.1);">⏳</div>
             <p class="section-kicker">payment pending</p>
             <h2 style="font-size: 1.6rem; margin-bottom: 6px;">Menunggu Pembayaran</h2>
