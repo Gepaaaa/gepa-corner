@@ -2,7 +2,8 @@
 
 /* =========================================================
 GEPA PERSONAL WEBSITE
-Vanilla JavaScript (Final Robust Version: Auto-Catch Redirect & LocalStorage Backup)
+Vanilla JavaScript
+Payment System: Midtrans + Supabase Status Verification
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -62,7 +63,17 @@ const birthDate = new Date(2006, 4, 17, 0, 0, 0);
 
 function calculateFullAge() {
     const now = new Date();
-    if (now < birthDate) return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+    if (now < birthDate) {
+        return {
+            years: 0,
+            months: 0,
+            days: 0,
+            hours: 0,
+            minutes: 0,
+            seconds: 0
+        };
+    }
 
     let years = now.getFullYear() - birthDate.getFullYear();
     let months = now.getMonth() - birthDate.getMonth();
@@ -71,28 +82,67 @@ function calculateFullAge() {
     let minutes = now.getMinutes() - birthDate.getMinutes();
     let seconds = now.getSeconds() - birthDate.getSeconds();
 
-    if (seconds < 0) { minutes--; seconds += 60; }
-    if (minutes < 0) { hours--; minutes += 60; }
-    if (hours < 0) { days--; hours += 24; }
+    if (seconds < 0) {
+        minutes--;
+        seconds += 60;
+    }
+
+    if (minutes < 0) {
+        hours--;
+        minutes += 60;
+    }
+
+    if (hours < 0) {
+        days--;
+        hours += 24;
+    }
+
     if (days < 0) {
         months--;
-        const previousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+        const previousMonth = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            0
+        );
+
         days += previousMonth.getDate();
     }
-    if (months < 0) { years--; months += 12; }
 
-    return { years, months, days, hours, minutes, seconds };
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+
+    return {
+        years,
+        months,
+        days,
+        hours,
+        minutes,
+        seconds
+    };
 }
 
 function updateAge() {
     const age = calculateFullAge();
+
     const newAgeText = `${age.years} years`;
-    if (ageDisplay && ageDisplay.textContent !== newAgeText) {
+
+    if (
+        ageDisplay &&
+        ageDisplay.textContent !== newAgeText
+    ) {
         ageDisplay.textContent = newAgeText;
     }
 
-    const ageModal = document.getElementById("ageModalOverlay");
-    if (ageModal && ageModal.classList.contains("open")) {
+    const ageModal =
+        document.getElementById("ageModalOverlay");
+
+    if (
+        ageModal &&
+        ageModal.classList.contains("open")
+    ) {
         if (ageYears) ageYears.textContent = age.years;
         if (ageMonths) ageMonths.textContent = age.months;
         if (ageDays) ageDays.textContent = age.days;
@@ -109,47 +159,98 @@ setInterval(updateAge, 1000);
 MOBILE NAVIGATION
 ========================================================= */
 function closeMobileMenu() {
+    if (!navMenu || !mobileMenuButton) return;
+
     navMenu.classList.remove("open");
-    mobileMenuButton.setAttribute("aria-expanded", "false");
+    mobileMenuButton.setAttribute(
+        "aria-expanded",
+        "false"
+    );
 }
 
 function toggleMobileMenu() {
-    const isOpen = navMenu.classList.toggle("open");
-    mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
+    if (!navMenu || !mobileMenuButton) return;
+
+    const isOpen =
+        navMenu.classList.toggle("open");
+
+    mobileMenuButton.setAttribute(
+        "aria-expanded",
+        String(isOpen)
+    );
 }
 
-if (mobileMenuButton) mobileMenuButton.addEventListener("click", toggleMobileMenu);
-navLinks.forEach((link) => link.addEventListener("click", closeMobileMenu));
+if (mobileMenuButton) {
+    mobileMenuButton.addEventListener(
+        "click",
+        toggleMobileMenu
+    );
+}
+
+navLinks.forEach((link) => {
+    link.addEventListener(
+        "click",
+        closeMobileMenu
+    );
+});
 
 /* =========================================================
 HEADER SCROLL & ACTIVE NAVIGATION
 ========================================================= */
 function updateHeader() {
-    if (window.scrollY > 20) header.classList.add("scrolled");
-    else header.classList.remove("scrolled");
+    if (!header) return;
+
+    if (window.scrollY > 20) {
+        header.classList.add("scrolled");
+    } else {
+        header.classList.remove("scrolled");
+    }
 }
 
-const sections = document.querySelectorAll("main section[id]");
+const sections =
+    document.querySelectorAll("main section[id]");
+
 function updateActiveNavigation() {
-    const scrollPosition = window.scrollY + 150;
+    const scrollPosition =
+        window.scrollY + 150;
+
     let currentSection = "home";
+
     sections.forEach((section) => {
-        const sectionTop = section.offsetTop;
-        const sectionBottom = sectionTop + section.offsetHeight;
-        if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+        const sectionTop =
+            section.offsetTop;
+
+        const sectionBottom =
+            sectionTop +
+            section.offsetHeight;
+
+        if (
+            scrollPosition >= sectionTop &&
+            scrollPosition < sectionBottom
+        ) {
             currentSection = section.id;
         }
     });
+
     navLinks.forEach((link) => {
-        const href = link.getAttribute("href");
-        link.classList.toggle("active", href === `#${currentSection}`);
+        const href =
+            link.getAttribute("href");
+
+        link.classList.toggle(
+            "active",
+            href === `#${currentSection}`
+        );
     });
 }
 
-window.addEventListener("scroll", () => {
-    updateHeader();
-    updateActiveNavigation();
-}, { passive: true });
+window.addEventListener(
+    "scroll",
+    () => {
+        updateHeader();
+        updateActiveNavigation();
+    },
+    { passive: true }
+);
 
 updateHeader();
 updateActiveNavigation();
@@ -158,198 +259,481 @@ updateActiveNavigation();
 THEME
 ========================================================= */
 function applyInitialTheme() {
-    const savedTheme = localStorage.getItem("gepa-theme");
-    if (savedTheme === "dark") body.classList.add("dark-mode");
-    else if (savedTheme === "light") body.classList.remove("dark-mode");
-    else {
-        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        if (prefersDark) body.classList.add("dark-mode");
+    const savedTheme =
+        localStorage.getItem("gepa-theme");
+
+    if (savedTheme === "dark") {
+        body.classList.add("dark-mode");
+    } else if (savedTheme === "light") {
+        body.classList.remove("dark-mode");
+    } else {
+        const prefersDark =
+            window.matchMedia &&
+            window.matchMedia(
+                "(prefers-color-scheme: dark)"
+            ).matches;
+
+        if (prefersDark) {
+            body.classList.add("dark-mode");
+        }
     }
+
     updateThemeIcon();
 }
 
 function updateThemeIcon() {
-    const isDark = body.classList.contains("dark-mode");
-    themeIcon.textContent = isDark ? "☀" : "☾";
+    if (!themeIcon) return;
+
+    const isDark =
+        body.classList.contains("dark-mode");
+
+    themeIcon.textContent =
+        isDark ? "☀" : "☾";
 }
 
 if (themeToggle) {
-    themeToggle.addEventListener("click", () => {
-        const isDark = body.classList.toggle("dark-mode");
-        localStorage.setItem("gepa-theme", isDark ? "dark" : "light");
-        updateThemeIcon();
-    });
+    themeToggle.addEventListener(
+        "click",
+        () => {
+            const isDark =
+                body.classList.toggle(
+                    "dark-mode"
+                );
+
+            localStorage.setItem(
+                "gepa-theme",
+                isDark ? "dark" : "light"
+            );
+
+            updateThemeIcon();
+        }
+    );
 }
+
 applyInitialTheme();
 
 /* =========================================================
 REVEAL ON SCROLL
 ========================================================= */
 if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver((entries, obs) => {
-        entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add("visible");
-                obs.unobserve(entry.target);
+    const observer =
+        new IntersectionObserver(
+            (entries, obs) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add(
+                            "visible"
+                        );
+
+                        obs.unobserve(
+                            entry.target
+                        );
+                    }
+                });
+            },
+            {
+                threshold: 0.12,
+                rootMargin:
+                    "0px 0px -30px 0px"
             }
-        });
-    }, { threshold: 0.12, rootMargin: "0px 0px -30px 0px" });
-    revealElements.forEach((el) => observer.observe(el));
+        );
+
+    revealElements.forEach((el) =>
+        observer.observe(el)
+    );
 } else {
-    revealElements.forEach((el) => el.classList.add("visible"));
+    revealElements.forEach((el) =>
+        el.classList.add("visible")
+    );
 }
 
 /* =========================================================
 PHOTO CAROUSEL
 ========================================================= */
-const photoTrack = document.getElementById("photoTrack");
-const photoCarousel = document.getElementById("photoCarousel");
-const prevPhoto = document.getElementById("prevPhoto");
-const nextPhoto = document.getElementById("nextPhoto");
-const carouselDots = document.getElementById("carouselDots");
+const photoTrack =
+    document.getElementById("photoTrack");
 
-const photoList = ["assets/foto-1.jpg", "assets/foto-6.jpg"];
+const photoCarousel =
+    document.getElementById(
+        "photoCarousel"
+    );
+
+const prevPhoto =
+    document.getElementById("prevPhoto");
+
+const nextPhoto =
+    document.getElementById("nextPhoto");
+
+const carouselDots =
+    document.getElementById(
+        "carouselDots"
+    );
+
+const photoList = [
+    "assets/foto-1.jpg",
+    "assets/foto-6.jpg"
+];
+
 let currentPhoto = 1;
 let isMoving = false;
-let startX = 0, currentX = 0, isDragging = false;
+let startX = 0;
+let currentX = 0;
+let isDragging = false;
 
 function createPhotoSlides() {
     if (!photoTrack) return;
+
     photoTrack.innerHTML = "";
 
-    const createSlide = (photo, index, isClone) => {
-        const slide = document.createElement("div");
-        slide.className = "photo-slide";
-        if (isClone) slide.classList.add("clone");
-        
-        const image = document.createElement("img");
+    const createSlide = (
+        photo,
+        index,
+        isClone
+    ) => {
+        const slide =
+            document.createElement("div");
+
+        slide.className =
+            "photo-slide";
+
+        if (isClone) {
+            slide.classList.add("clone");
+        }
+
+        const image =
+            document.createElement("img");
+
         image.src = photo;
-        image.alt = `Foto Gepa ${index + 1}`;
+
+        image.alt =
+            `Foto Gepa ${index + 1}`;
+
         image.loading = "eager";
         image.draggable = false;
-        
-        image.addEventListener("error", () => {
-            slide.innerHTML = `<div class="photo-fallback"><span>G</span></div><span class="photo-caption">foto ${index + 1}</span>`;
-        });
-        
+
+        image.addEventListener(
+            "error",
+            () => {
+                slide.innerHTML = `
+                    <div class="photo-fallback">
+                        <span>G</span>
+                    </div>
+                    <span class="photo-caption">
+                        foto ${index + 1}
+                    </span>
+                `;
+            }
+        );
+
         slide.appendChild(image);
-        if (!isClone && index === 0) {
-            const caption = document.createElement("span");
-            caption.className = "photo-caption";
-            caption.textContent = "that's me :)";
-            slide.appendChild(caption);
+
+        if (
+            !isClone &&
+            index === 0
+        ) {
+            const caption =
+                document.createElement(
+                    "span"
+                );
+
+            caption.className =
+                "photo-caption";
+
+            caption.textContent =
+                "that's me :)";
+
+            slide.appendChild(
+                caption
+            );
         }
-        photoTrack.appendChild(slide);
+
+        photoTrack.appendChild(
+            slide
+        );
     };
 
-    createSlide(photoList[photoList.length - 1], photoList.length - 1, true);
-    photoList.forEach((photo, index) => { createSlide(photo, index, false); });
-    createSlide(photoList[0], 0, true);
+    createSlide(
+        photoList[
+            photoList.length - 1
+        ],
+        photoList.length - 1,
+        true
+    );
 
-    photoTrack.style.transition = "none";
-    photoTrack.style.transform = `translate3d(-100%, 0, 0)`;
+    photoList.forEach(
+        (photo, index) => {
+            createSlide(
+                photo,
+                index,
+                false
+            );
+        }
+    );
+
+    createSlide(
+        photoList[0],
+        0,
+        true
+    );
+
+    photoTrack.style.transition =
+        "none";
+
+    photoTrack.style.transform =
+        "translate3d(-100%, 0, 0)";
 }
 
 function createCarouselDots() {
     if (!carouselDots) return;
+
     carouselDots.innerHTML = "";
-    photoList.forEach((_, index) => {
-        const dot = document.createElement("button");
-        dot.type = "button";
-        dot.className = "carousel-dot";
-        dot.addEventListener("click", () => { goToPhoto(index); });
-        carouselDots.appendChild(dot);
-    });
+
+    photoList.forEach(
+        (_, index) => {
+            const dot =
+                document.createElement(
+                    "button"
+                );
+
+            dot.type = "button";
+
+            dot.className =
+                "carousel-dot";
+
+            dot.addEventListener(
+                "click",
+                () => {
+                    goToPhoto(index);
+                }
+            );
+
+            carouselDots.appendChild(
+                dot
+            );
+        }
+    );
 }
 
 function updateDots() {
     if (!carouselDots) return;
-    const dots = carouselDots.querySelectorAll(".carousel-dot");
-    let activeIndex = currentPhoto - 1;
-    if (currentPhoto === 0) activeIndex = photoList.length - 1;
-    else if (currentPhoto === photoList.length + 1) activeIndex = 0;
 
-    dots.forEach((dot, index) => {
-        dot.classList.toggle("active", index === activeIndex);
-    });
+    const dots =
+        carouselDots.querySelectorAll(
+            ".carousel-dot"
+        );
+
+    let activeIndex =
+        currentPhoto - 1;
+
+    if (currentPhoto === 0) {
+        activeIndex =
+            photoList.length - 1;
+    } else if (
+        currentPhoto ===
+        photoList.length + 1
+    ) {
+        activeIndex = 0;
+    }
+
+    dots.forEach(
+        (dot, index) => {
+            dot.classList.toggle(
+                "active",
+                index === activeIndex
+            );
+        }
+    );
 }
 
 function moveCarousel(direction) {
-    if (photoList.length <= 1 || isMoving) return;
+    if (
+        photoList.length <= 1 ||
+        isMoving ||
+        !photoTrack
+    ) {
+        return;
+    }
+
     isMoving = true;
-    photoTrack.style.transition = "transform 420ms cubic-bezier(.22,.61,.36,1)";
+
+    photoTrack.style.transition =
+        "transform 420ms cubic-bezier(.22,.61,.36,1)";
 
     if (direction === "next") {
         currentPhoto++;
-        photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
+
+        photoTrack.style.transform =
+            `translate3d(-${currentPhoto * 100}%, 0, 0)`;
+
         updateDots();
+
         setTimeout(() => {
-            if (currentPhoto === photoList.length + 1) {
-                photoTrack.style.transition = "none";
+            if (
+                currentPhoto ===
+                photoList.length + 1
+            ) {
+                photoTrack.style.transition =
+                    "none";
+
                 currentPhoto = 1;
-                photoTrack.style.transform = `translate3d(-100%, 0, 0)`;
+
+                photoTrack.style.transform =
+                    "translate3d(-100%, 0, 0)";
             }
+
             isMoving = false;
         }, 430);
     } else {
         currentPhoto--;
-        photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
+
+        photoTrack.style.transform =
+            `translate3d(-${currentPhoto * 100}%, 0, 0)`;
+
         updateDots();
+
         setTimeout(() => {
             if (currentPhoto === 0) {
-                photoTrack.style.transition = "none";
-                currentPhoto = photoList.length;
-                photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
+                photoTrack.style.transition =
+                    "none";
+
+                currentPhoto =
+                    photoList.length;
+
+                photoTrack.style.transform =
+                    `translate3d(-${currentPhoto * 100}%, 0, 0)`;
             }
+
             isMoving = false;
         }, 430);
     }
 }
 
 function goToPhoto(index) {
-    const targetPhoto = index + 1;
-    if (isMoving || currentPhoto === targetPhoto) return;
+    if (!photoTrack) return;
+
+    const targetPhoto =
+        index + 1;
+
+    if (
+        isMoving ||
+        currentPhoto === targetPhoto
+    ) {
+        return;
+    }
+
     isMoving = true;
-    currentPhoto = targetPhoto;
-    photoTrack.style.transition = "transform 420ms cubic-bezier(.22,.61,.36,1)";
-    photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
+
+    currentPhoto =
+        targetPhoto;
+
+    photoTrack.style.transition =
+        "transform 420ms cubic-bezier(.22,.61,.36,1)";
+
+    photoTrack.style.transform =
+        `translate3d(-${currentPhoto * 100}%, 0, 0)`;
+
     updateDots();
-    setTimeout(() => { isMoving = false; }, 430);
+
+    setTimeout(() => {
+        isMoving = false;
+    }, 430);
 }
 
-if (prevPhoto) prevPhoto.addEventListener("click", () => moveCarousel("prev"));
-if (nextPhoto) nextPhoto.addEventListener("click", () => moveCarousel("next"));
+if (prevPhoto) {
+    prevPhoto.addEventListener(
+        "click",
+        () => moveCarousel("prev")
+    );
+}
+
+if (nextPhoto) {
+    nextPhoto.addEventListener(
+        "click",
+        () => moveCarousel("next")
+    );
+}
 
 if (photoCarousel) {
-    photoCarousel.addEventListener("touchstart", (e) => {
-        if (e.touches.length !== 1) return;
-        startX = e.touches[0].clientX;
-        currentX = startX;
-        isDragging = true;
-        photoTrack.style.transition = "none";
-    }, { passive: true });
+    photoCarousel.addEventListener(
+        "touchstart",
+        (e) => {
+            if (e.touches.length !== 1) {
+                return;
+            }
 
-    photoCarousel.addEventListener("touchmove", (e) => {
-        if (!isDragging) return;
-        currentX = e.touches[0].clientX;
-        const diff = currentX - startX;
-        const width = photoCarousel.offsetWidth;
-        const dragPercent = width > 0 ? (diff / width) * 100 : 0;
-        const base = -(currentPhoto * 100);
-        photoTrack.style.transform = `translate3d(${base + dragPercent}%, 0, 0)`;
-    }, { passive: true });
+            startX =
+                e.touches[0].clientX;
 
-    photoCarousel.addEventListener("touchend", () => {
-        if (!isDragging) return;
-        isDragging = false;
-        const diff = currentX - startX;
-        if (Math.abs(diff) >= 45) {
-            diff < 0 ? moveCarousel("next") : moveCarousel("prev");
-        } else {
-            photoTrack.style.transition = "transform 420ms cubic-bezier(.22,.61,.36,1)";
-            photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
-        }
-    }, { passive: true });
+            currentX = startX;
+            isDragging = true;
+
+            if (photoTrack) {
+                photoTrack.style.transition =
+                    "none";
+            }
+        },
+        { passive: true }
+    );
+
+    photoCarousel.addEventListener(
+        "touchmove",
+        (e) => {
+            if (!isDragging || !photoTrack) {
+                return;
+            }
+
+            currentX =
+                e.touches[0].clientX;
+
+            const diff =
+                currentX - startX;
+
+            const width =
+                photoCarousel.offsetWidth;
+
+            const dragPercent =
+                width > 0
+                    ? (diff / width) * 100
+                    : 0;
+
+            const base =
+                -(currentPhoto * 100);
+
+            photoTrack.style.transform =
+                `translate3d(${base + dragPercent}%, 0, 0)`;
+        },
+        { passive: true }
+    );
+
+    photoCarousel.addEventListener(
+        "touchend",
+        () => {
+            if (
+                !isDragging ||
+                !photoTrack
+            ) {
+                return;
+            }
+
+            isDragging = false;
+
+            const diff =
+                currentX - startX;
+
+            if (Math.abs(diff) >= 45) {
+                diff < 0
+                    ? moveCarousel("next")
+                    : moveCarousel("prev");
+            } else {
+                photoTrack.style.transition =
+                    "transform 420ms cubic-bezier(.22,.61,.36,1)";
+
+                photoTrack.style.transform =
+                    `translate3d(-${currentPhoto * 100}%, 0, 0)`;
+            }
+        },
+        { passive: true }
+    );
 }
 
 createPhotoSlides();
@@ -360,34 +744,103 @@ updateDots();
 MODAL SYSTEM
 ========================================================= */
 window.openInfoModal = function(modalId) {
-    const modal = document.getElementById(modalId);
+    const modal =
+        document.getElementById(
+            modalId
+        );
+
     if (modal) {
         modal.classList.add("open");
-        body.classList.add("modal-open");
+        body.classList.add(
+            "modal-open"
+        );
     }
 };
 
 window.closeInfoModal = function(modalId) {
-    const modal = document.getElementById(modalId);
+    const modal =
+        document.getElementById(
+            modalId
+        );
+
     if (modal) {
-        modal.classList.remove("open");
-        if (!document.querySelector('.modal-overlay.open')) {
-            body.classList.remove("modal-open");
+        modal.classList.remove(
+            "open"
+        );
+
+        if (
+            !document.querySelector(
+                ".modal-overlay.open"
+            )
+        ) {
+            body.classList.remove(
+                "modal-open"
+            );
         }
     }
 };
 
-if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOverlay"));
-if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
-if (hobbyCard) hobbyCard.addEventListener("click", () => openInfoModal("hobbyModalOverlay"));
-if (supportButton) supportButton.addEventListener("click", () => openInfoModal("supportModal"));
+if (ageCard) {
+    ageCard.addEventListener(
+        "click",
+        () =>
+            openInfoModal(
+                "ageModalOverlay"
+            )
+    );
+}
 
-const modals = document.querySelectorAll('.modal-overlay');
-modals.forEach(modal => {
-    modal.addEventListener("click", (e) => {
-        if (e.target === modal) closeInfoModal(modal.id);
-    });
-});
+if (locationCard) {
+    locationCard.addEventListener(
+        "click",
+        () =>
+            openInfoModal(
+                "locationModalOverlay"
+            )
+    );
+}
+
+if (hobbyCard) {
+    hobbyCard.addEventListener(
+        "click",
+        () =>
+            openInfoModal(
+                "hobbyModalOverlay"
+            )
+    );
+}
+
+if (supportButton) {
+    supportButton.addEventListener(
+        "click",
+        () =>
+            openInfoModal(
+                "supportModal"
+            )
+    );
+}
+
+const modals =
+    document.querySelectorAll(
+        ".modal-overlay"
+    );
+
+modals.forEach(
+    (modal) => {
+        modal.addEventListener(
+            "click",
+            (e) => {
+                if (
+                    e.target === modal
+                ) {
+                    closeInfoModal(
+                        modal.id
+                    );
+                }
+            }
+        );
+    }
+);
 
 /* =========================================================
 SUPPORT PAYMENT & RANKING
@@ -395,183 +848,847 @@ SUPPORT PAYMENT & RANKING
 let selectedValue = 0;
 
 function formatRupiah(value) {
-    return new Intl.NumberFormat("id-ID").format(value);
+    return new Intl.NumberFormat(
+        "id-ID"
+    ).format(value);
 }
 
+/* =========================================================
+PAYMENT LOCAL STORAGE
+========================================================= */
+function savePendingPayment(
+    orderId,
+    username,
+    amount
+) {
+    localStorage.setItem(
+        "gepa_pending_order",
+        orderId
+    );
+
+    localStorage.setItem(
+        "gepa_pending_username",
+        username
+    );
+
+    localStorage.setItem(
+        "gepa_pending_amount",
+        String(amount)
+    );
+}
+
+function clearPendingPayment() {
+    localStorage.removeItem(
+        "gepa_pending_order"
+    );
+
+    localStorage.removeItem(
+        "gepa_pending_username"
+    );
+
+    localStorage.removeItem(
+        "gepa_pending_amount"
+    );
+}
+
+/* =========================================================
+CHECK PAYMENT STATUS
+========================================================= */
+async function checkPaymentStatus(
+    orderId
+) {
+    if (!orderId) {
+        return null;
+    }
+
+    try {
+        const response =
+            await fetch(
+                `/api/check-payment?order_id=${encodeURIComponent(orderId)}`
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+            console.error(
+                "Check payment failed:",
+                data
+            );
+
+            return null;
+        }
+
+        return data;
+
+    } catch (error) {
+        console.error(
+            "Check payment error:",
+            error
+        );
+
+        return null;
+    }
+}
+
+/* =========================================================
+SHOW PAYMENT RESULT
+========================================================= */
+async function handlePaymentResult(
+    orderId
+) {
+    if (!orderId) {
+        return;
+    }
+
+    const statusData =
+        await checkPaymentStatus(
+            orderId
+        );
+
+    if (!statusData) {
+        showToast(
+            "Status pembayaran belum bisa dicek."
+        );
+
+        return;
+    }
+
+    console.log(
+        "Payment status:",
+        statusData
+    );
+
+    const status =
+        statusData.transaction_status;
+
+    /* =========================
+    SUCCESS
+    ========================= */
+    if (
+        status === "settlement" ||
+        status === "capture"
+    ) {
+        const username =
+            localStorage.getItem(
+                "gepa_pending_username"
+            ) || "Supporter";
+
+        const savedAmount =
+            localStorage.getItem(
+                "gepa_pending_amount"
+            );
+
+        const amount =
+            savedAmount
+                ? Number(savedAmount)
+                : Number(
+                    statusData.gross_amount
+                );
+
+        const resultOrderId =
+            document.getElementById(
+                "resOrderId"
+            );
+
+        const resultAmount =
+            document.getElementById(
+                "resAmount"
+            );
+
+        const resultUsername =
+            document.getElementById(
+                "resUsername"
+            );
+
+        const resultPaymentType =
+            document.getElementById(
+                "resPaymentType"
+            );
+
+        if (resultOrderId) {
+            resultOrderId.textContent =
+                statusData.order_id ||
+                orderId;
+        }
+
+        if (resultAmount) {
+            resultAmount.textContent =
+                `Rp${formatRupiah(amount)}`;
+        }
+
+        if (resultUsername) {
+            resultUsername.textContent =
+                username;
+        }
+
+        if (resultPaymentType) {
+            resultPaymentType.textContent =
+                statusData.payment_type
+                    ? statusData
+                        .payment_type
+                        .replace(
+                            /_/g,
+                            " "
+                        )
+                        .toUpperCase()
+                    : "ONLINE PAYMENT";
+        }
+
+        clearPendingPayment();
+
+        openInfoModal(
+            "successPaymentModal"
+        );
+
+        /*
+         * Webhook bisa masuk sedikit setelah
+         * Midtrans mengembalikan status sukses.
+         * Jadi kita refresh ranking beberapa kali.
+         */
+        await fetchRankings();
+
+        setTimeout(
+            () => fetchRankings(),
+            1500
+        );
+
+        setTimeout(
+            () => fetchRankings(),
+            3500
+        );
+
+        return;
+    }
+
+    /* =========================
+    PENDING
+    ========================= */
+    if (status === "pending") {
+        openInfoModal(
+            "pendingPaymentModal"
+        );
+
+        return;
+    }
+
+    /* =========================
+    FAILED / CANCEL / EXPIRED
+    ========================= */
+    if (
+        status === "cancel" ||
+        status === "expire" ||
+        status === "deny" ||
+        status === "failure"
+    ) {
+        clearPendingPayment();
+
+        openInfoModal(
+            "errorPaymentModal"
+        );
+
+        return;
+    }
+
+    /* =========================
+    OTHER STATUS
+    ========================= */
+    showToast(
+        `Status pembayaran: ${
+            status || "unknown"
+        }`
+    );
+}
+
+/* =========================================================
+VALIDATE SUPPORT INPUT
+========================================================= */
 function validateInput() {
-    if (!supporterUsername || !usernameError) return true;
-    const username = supporterUsername.value.trim();
-    const hasHtml = /<[a-z][\s\S]*>/i.test(username);
-    
-    if (username === "" || hasHtml) {
-        continueSupport.disabled = true;
-        if (selectedValue > 0) usernameError.style.display = "block";
+    if (
+        !supporterUsername ||
+        !usernameError
+    ) {
+        return true;
+    }
+
+    const username =
+        supporterUsername.value.trim();
+
+    const hasHtml =
+        /<[a-z][\s\S]*>/i.test(
+            username
+        );
+
+    if (
+        username === "" ||
+        hasHtml
+    ) {
+        continueSupport.disabled =
+            true;
+
+        if (
+            selectedValue > 0
+        ) {
+            usernameError.style.display =
+                "block";
+        }
+
         return false;
+
     } else {
-        usernameError.style.display = "none";
-        if (selectedValue > 0) {
-            continueSupport.disabled = false;
+        usernameError.style.display =
+            "none";
+
+        if (
+            selectedValue > 0
+        ) {
+            continueSupport.disabled =
+                false;
+
             return true;
         }
     }
+
     return false;
 }
 
+/* =========================================================
+SUPPORT AMOUNT
+========================================================= */
 function updateSupportAmount() {
-    if (selectedValue > 0) {
-        selectedAmount.textContent = `Nominal: Rp${formatRupiah(selectedValue)}`;
-    } else {
-        selectedAmount.textContent = "Belum memilih nominal";
+    if (!selectedAmount) {
+        return;
     }
+
+    if (
+        selectedValue > 0
+    ) {
+        selectedAmount.textContent =
+            `Nominal: Rp${formatRupiah(selectedValue)}`;
+    } else {
+        selectedAmount.textContent =
+            "Belum memilih nominal";
+    }
+
     validateInput();
 }
 
-amountButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-        selectedValue = Number(button.dataset.amount);
-        amountButtons.forEach(btn => btn.classList.remove("selected"));
-        button.classList.add("selected");
-        if (customAmount) customAmount.value = "";
-        updateSupportAmount();
-    });
-});
+amountButtons.forEach(
+    (button) => {
+        button.addEventListener(
+            "click",
+            () => {
+                selectedValue =
+                    Number(
+                        button.dataset.amount
+                    );
+
+                amountButtons.forEach(
+                    (btn) =>
+                        btn.classList.remove(
+                            "selected"
+                        )
+                );
+
+                button.classList.add(
+                    "selected"
+                );
+
+                if (customAmount) {
+                    customAmount.value =
+                        "";
+                }
+
+                updateSupportAmount();
+            }
+        );
+    }
+);
 
 if (customAmount) {
-    customAmount.addEventListener("input", () => {
-        const val = Number(customAmount.value);
-        selectedValue = val >= 1000 ? val : 0;
-        amountButtons.forEach(btn => btn.classList.remove("selected"));
-        updateSupportAmount();
-    });
+    customAmount.addEventListener(
+        "input",
+        () => {
+            const val =
+                Number(
+                    customAmount.value
+                );
+
+            selectedValue =
+                val >= 1000
+                    ? val
+                    : 0;
+
+            amountButtons.forEach(
+                (btn) =>
+                    btn.classList.remove(
+                        "selected"
+                    )
+            );
+
+            updateSupportAmount();
+        }
+    );
 }
 
 if (supporterUsername) {
-    supporterUsername.addEventListener("input", validateInput);
+    supporterUsername.addEventListener(
+        "input",
+        validateInput
+    );
 }
 
+/* =========================================================
+START PAYMENT
+========================================================= */
 if (continueSupport) {
-    continueSupport.addEventListener("click", async () => {
-        if (!validateInput() || selectedValue < 1000) return;
-        
-        const amount = selectedValue;
-        const username = supporterUsername.value.trim();
-        
-        continueSupport.disabled = true;
-        continueSupport.textContent = "Memproses...";
+    continueSupport.addEventListener(
+        "click",
+        async () => {
 
-        try {
-            const response = await fetch("/api/create-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ amount, username })
-            });
+            if (
+                !validateInput() ||
+                selectedValue < 1000
+            ) {
+                return;
+            }
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error);
+            const amount =
+                selectedValue;
 
-            // Simpan order_id ke localStorage sebagai backup anti-hilang saat redirect HP
-            localStorage.setItem('gepa_pending_order', data.order_id);
+            const username =
+                supporterUsername.value.trim();
 
-            closeInfoModal("supportModal");
+            continueSupport.disabled =
+                true;
 
-            // POPUP MIDTRANS SNAP
-            window.snap.pay(data.token, {
-                onSuccess: function(result) {
-                    localStorage.removeItem('gepa_pending_order');
-                    document.getElementById("resOrderId").textContent = result.order_id || data.order_id;
-                    document.getElementById("resAmount").textContent = `Rp${formatRupiah(amount)}`;
-                    document.getElementById("resUsername").textContent = username;
-                    document.getElementById("resPaymentType").textContent = result.payment_type ? result.payment_type.replace(/_/g, ' ').toUpperCase() : "ONLINE PAYMENT";
-                    
-                    openInfoModal("successPaymentModal");
-                    fetchRankings(); 
-                },
-                onPending: function(result) {
-                    openInfoModal("pendingPaymentModal");
-                },
-                onError: function(result) {
-                    localStorage.removeItem('gepa_pending_order');
-                    openInfoModal("errorPaymentModal");
-                },
-                onClose: function() {
-                    showToast("Popup pembayaran ditutup.");
+            continueSupport.textContent =
+                "Memproses...";
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/api/create-payment",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body:
+                                JSON.stringify({
+                                    amount,
+                                    username
+                                })
+                        }
+                    );
+
+                const data =
+                    await response.json();
+
+                if (
+                    !response.ok ||
+                    !data.token ||
+                    !data.order_id
+                ) {
+                    throw new Error(
+                        data.error ||
+                        "Gagal membuat pembayaran."
+                    );
                 }
-            });
-        } catch (error) {
-            console.error("Payment error:", error);
-            showToast(error.message || "Terjadi kesalahan koneksi.");
-        } finally {
-            continueSupport.disabled = false;
-            continueSupport.textContent = "Proses Payment →";
-            supporterUsername.value = ""; 
-            selectedValue = 0;
-            amountButtons.forEach(btn => btn.classList.remove("selected"));
-            if (customAmount) customAmount.value = "";
-            updateSupportAmount();
+
+                /*
+                 * SIMPAN SEMUA DATA PAYMENT
+                 * sebelum membuka Midtrans.
+                 *
+                 * Ini penting kalau user:
+                 * - bayar lewat HP
+                 * - tidak otomatis kembali
+                 * - menekan tombol Back
+                 * - halaman melakukan refresh
+                 */
+                savePendingPayment(
+                    data.order_id,
+                    username,
+                    amount
+                );
+
+                closeInfoModal(
+                    "supportModal"
+                );
+
+                /* =========================
+                MIDTRANS SNAP
+                ========================= */
+                window.snap.pay(
+                    data.token,
+                    {
+
+                        /* =====================
+                        SUCCESS
+                        ===================== */
+                        onSuccess:
+                            async function (
+                                result
+                            ) {
+                                console.log(
+                                    "Midtrans onSuccess:",
+                                    result
+                                );
+
+                                await handlePaymentResult(
+                                    data.order_id
+                                );
+                            },
+
+                        /* =====================
+                        PENDING
+                        ===================== */
+                        onPending:
+                            async function (
+                                result
+                            ) {
+                                console.log(
+                                    "Midtrans onPending:",
+                                    result
+                                );
+
+                                await handlePaymentResult(
+                                    data.order_id
+                                );
+                            },
+
+                        /* =====================
+                        ERROR
+                        ===================== */
+                        onError:
+                            async function (
+                                result
+                            ) {
+                                console.log(
+                                    "Midtrans onError:",
+                                    result
+                                );
+
+                                clearPendingPayment();
+
+                                openInfoModal(
+                                    "errorPaymentModal"
+                                );
+                            },
+
+                        /* =====================
+                        CLOSE
+                        ===================== */
+                        onClose:
+                            function () {
+                                /*
+                                 * JANGAN hapus
+                                 * pending order.
+                                 *
+                                 * User bisa saja:
+                                 * - sudah bayar
+                                 * - popup tertutup
+                                 * - belum kembali ke website
+                                 *
+                                 * localStorage akan
+                                 * menjadi backup.
+                                 */
+                                console.log(
+                                    "Popup pembayaran ditutup."
+                                );
+
+                                showToast(
+                                    "Pembayaran belum diketahui statusnya."
+                                );
+                            }
+                    }
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Payment error:",
+                    error
+                );
+
+                showToast(
+                    error.message ||
+                    "Terjadi kesalahan koneksi."
+                );
+
+            } finally {
+
+                /*
+                 * Jangan hapus pending payment
+                 * di sini.
+                 *
+                 * window.snap.pay() berjalan
+                 * asynchronous.
+                 */
+
+                continueSupport.disabled =
+                    false;
+
+                continueSupport.textContent =
+                    "Proses Payment →";
+
+                supporterUsername.value =
+                    "";
+
+                selectedValue = 0;
+
+                amountButtons.forEach(
+                    (btn) =>
+                        btn.classList.remove(
+                            "selected"
+                        )
+                );
+
+                if (customAmount) {
+                    customAmount.value =
+                        "";
+                }
+
+                updateSupportAmount();
+            }
         }
-    });
+    );
 }
 
-window.scrollToRanking = function() {
-    closeInfoModal('successPaymentModal');
-    const supportSec = document.getElementById('support');
-    if (supportSec) supportSec.scrollIntoView({ behavior: 'smooth' });
+/* =========================================================
+SCROLL TO RANKING
+========================================================= */
+window.scrollToRanking =
+    function () {
+        closeInfoModal(
+            "successPaymentModal"
+        );
+
+        const supportSec =
+            document.getElementById(
+                "support"
+            );
+
+        if (supportSec) {
+            supportSec.scrollIntoView({
+                behavior: "smooth"
+            });
+        }
+    };
+
+/* =========================================================
+RANKING
+========================================================= */
+let currentRankTab = "daily";
+
+let rankingDataCache = {
+    daily: [],
+    weekly: [],
+    lifetime: []
 };
 
-let currentRankTab = 'daily';
-let rankingDataCache = { daily: [], weekly: [], lifetime: [] };
-
 async function fetchRankings() {
-    if (!rankingList) return;
+    if (!rankingList) {
+        return;
+    }
+
     try {
-        const res = await fetch('/api/ranking');
-        const data = await res.json();
+
+        const res =
+            await fetch(
+                "/api/ranking"
+            );
+
+        if (!res.ok) {
+            throw new Error(
+                "Ranking request failed"
+            );
+        }
+
+        const data =
+            await res.json();
+
         rankingDataCache = data;
-        renderRanking(currentRankTab);
+
+        renderRanking(
+            currentRankTab
+        );
+
     } catch (error) {
-        rankingList.innerHTML = `<li class="ranking-empty">Gagal memuat ranking.</li>`;
+
+        console.error(
+            "Ranking error:",
+            error
+        );
+
+        rankingList.innerHTML =
+            `<li class="ranking-empty">
+                Gagal memuat ranking.
+            </li>`;
     }
 }
 
 function renderRanking(tab) {
-    if (!rankingList) return;
-    const data = rankingDataCache[tab] || [];
-    rankingList.innerHTML = "";
-
-    if (data.length === 0) {
-        rankingList.innerHTML = `<li class="ranking-empty">Belum ada supporter di periode ini.</li>`;
+    if (!rankingList) {
         return;
     }
 
-    data.forEach((item, index) => {
-        const li = document.createElement("li");
-        li.className = "ranking-item";
-        
-        let medal = `${index + 1}`;
-        if (index === 0) medal = "🥇";
-        if (index === 1) medal = "🥈";
-        if (index === 2) medal = "🥉";
+    const data =
+        rankingDataCache[tab] ||
+        [];
 
-        li.innerHTML = `
-            <div class="rank-medal">${medal}</div>
-            <div class="rank-info">
-                <span class="rank-name">@${item.username}</span>
-                <span class="rank-tx">${item.txCount}x Support</span>
-            </div>
-            <div class="rank-amount">Rp${formatRupiah(item.totalAmount)}</div>
-        `;
-        rankingList.appendChild(li);
-    });
+    rankingList.innerHTML = "";
+
+    if (data.length === 0) {
+        rankingList.innerHTML =
+            `<li class="ranking-empty">
+                Belum ada supporter di periode ini.
+            </li>`;
+
+        return;
+    }
+
+    data.forEach(
+        (item, index) => {
+
+            const li =
+                document.createElement(
+                    "li"
+                );
+
+            li.className =
+                "ranking-item";
+
+            let medal =
+                `${index + 1}`;
+
+            if (index === 0) {
+                medal = "🥇";
+            }
+
+            if (index === 1) {
+                medal = "🥈";
+            }
+
+            if (index === 2) {
+                medal = "🥉";
+            }
+
+            /*
+             * Gunakan textContent untuk username
+             * supaya username tidak bisa
+             * menyisipkan HTML ke halaman.
+             */
+            const medalDiv =
+                document.createElement(
+                    "div"
+                );
+
+            medalDiv.className =
+                "rank-medal";
+
+            medalDiv.textContent =
+                medal;
+
+            const infoDiv =
+                document.createElement(
+                    "div"
+                );
+
+            infoDiv.className =
+                "rank-info";
+
+            const nameSpan =
+                document.createElement(
+                    "span"
+                );
+
+            nameSpan.className =
+                "rank-name";
+
+            nameSpan.textContent =
+                `@${item.username}`;
+
+            const txSpan =
+                document.createElement(
+                    "span"
+                );
+
+            txSpan.className =
+                "rank-tx";
+
+            txSpan.textContent =
+                `${item.txCount}x Support`;
+
+            infoDiv.appendChild(
+                nameSpan
+            );
+
+            infoDiv.appendChild(
+                txSpan
+            );
+
+            const amountDiv =
+                document.createElement(
+                    "div"
+                );
+
+            amountDiv.className =
+                "rank-amount";
+
+            amountDiv.textContent =
+                `Rp${formatRupiah(
+                    item.totalAmount
+                )}`;
+
+            li.appendChild(
+                medalDiv
+            );
+
+            li.appendChild(
+                infoDiv
+            );
+
+            li.appendChild(
+                amountDiv
+            );
+
+            rankingList.appendChild(
+                li
+            );
+        }
+    );
 }
 
-rankTabs.forEach(tab => {
-    tab.addEventListener("click", () => {
-        rankTabs.forEach(t => t.classList.remove("active"));
-        tab.classList.add("active");
-        currentRankTab = tab.dataset.tab;
-        renderRanking(currentRankTab);
-    });
-});
+rankTabs.forEach(
+    (tab) => {
+        tab.addEventListener(
+            "click",
+            () => {
+
+                rankTabs.forEach(
+                    (t) =>
+                        t.classList.remove(
+                            "active"
+                        )
+                );
+
+                tab.classList.add(
+                    "active"
+                );
+
+                currentRankTab =
+                    tab.dataset.tab;
+
+                renderRanking(
+                    currentRankTab
+                );
+            }
+        );
+    }
+);
 
 fetchRankings();
 
@@ -579,44 +1696,122 @@ fetchRankings();
 TOAST
 ========================================================= */
 let toastTimer;
+
 function showToast(msg) {
-    if (!toast) return;
+    if (!toast) {
+        return;
+    }
+
     toast.textContent = msg;
-    toast.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 3000);
+
+    toast.classList.add(
+        "show"
+    );
+
+    clearTimeout(
+        toastTimer
+    );
+
+    toastTimer =
+        setTimeout(
+            () =>
+                toast.classList.remove(
+                    "show"
+                ),
+            3000
+        );
 }
 
 /* =========================================================
-ROBUST REDIRECT HANDLER (URL + LOCALSTORAGE BACKUP)
+PAYMENT RETURN / REDIRECT HANDLER
 ========================================================= */
-const urlParams = new URLSearchParams(window.location.search);
-const txStatus = urlParams.get('transaction_status');
-const statusCode = urlParams.get('status_code');
-const incomingOrderId = urlParams.get('order_id');
-const pendingOrder = localStorage.getItem('gepa_pending_order');
+async function handlePaymentReturn() {
 
-if (incomingOrderId || txStatus || statusCode || pendingOrder) {
-    setTimeout(() => {
-        const orderIdToShow = incomingOrderId || pendingOrder || "GEPA-TX";
-        
-        // Paksa tampilkan sukses jika balik dari redirect e-wallet mobile
-        const resOrderId = document.getElementById("resOrderId");
-        if (resOrderId) resOrderId.textContent = orderIdToShow;
-        
-        const resAmount = document.getElementById("resAmount");
-        if (resAmount) resAmount.textContent = "Berhasil";
-        
-        const resUsername = document.getElementById("resUsername");
-        if (resUsername) resUsername.textContent = "Supporter";
-        
-        openInfoModal("successPaymentModal");
-        if (typeof fetchRankings === "function") fetchRankings();
-        
-        // Bersihkan backup
-        localStorage.removeItem('gepa_pending_order');
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }, 400);
+    const urlParams =
+        new URLSearchParams(
+            window.location.search
+        );
+
+    const incomingOrderId =
+        urlParams.get(
+            "order_id"
+        );
+
+    const pendingOrder =
+        localStorage.getItem(
+            "gepa_pending_order"
+        );
+
+    /*
+     * Prioritas:
+     * 1. order_id dari URL
+     * 2. order_id dari localStorage
+     */
+    const orderId =
+        incomingOrderId ||
+        pendingOrder;
+
+    /*
+     * Kalau bukan halaman yang
+     * berhubungan dengan payment,
+     * tidak melakukan apa-apa.
+     */
+    if (!orderId) {
+        return;
+    }
+
+    console.log(
+        "Payment return detected:",
+        orderId
+    );
+
+    /*
+     * Bersihkan query URL.
+     *
+     * Contoh:
+     * ?order_id=GEPA-123
+     *
+     * menjadi:
+     * /
+     *
+     * Supaya refresh berikutnya
+     * tidak memproses order yang sama
+     * dari URL.
+     */
+    if (window.location.search) {
+        window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname
+        );
+    }
+
+    /*
+     * Beri waktu webhook Midtrans
+     * untuk diproses.
+     */
+    await new Promise(
+        (resolve) =>
+            setTimeout(
+                resolve,
+                1500
+            )
+    );
+
+    await handlePaymentResult(
+        orderId
+    );
 }
+
+/*
+ * Jalankan sedikit setelah halaman
+ * selesai loading.
+ */
+setTimeout(
+    () => {
+        handlePaymentReturn();
+    },
+    500
+);
 
 });
