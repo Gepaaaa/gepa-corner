@@ -160,6 +160,25 @@ export default async function handler(req, res) {
 
                                 pending:
                                     "https://gepa-we-vercel-version.vercel.app/"
+                            },
+
+                            /* =================================
+                               GOPAY CALLBACK
+                               =================================
+                               Setelah pembayaran GoPay selesai
+                               melalui deeplink, GoPay akan
+                               mengembalikan user ke website ini.
+
+                               Midtrans akan menambahkan:
+                               ?order_id=...&result=success
+                               atau failure/abort.
+                            */
+                            gopay: {
+                                enable_callback:
+                                    true,
+
+                                callback_url:
+                                    "https://gepa-we-vercel-version.vercel.app/"
                             }
                         })
                 }
