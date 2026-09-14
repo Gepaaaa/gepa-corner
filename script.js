@@ -1491,10 +1491,13 @@ async function handlePaymentResult(
 
 
     /* =====================================================
-    PENDING
+    PENDING / CLOSED WITHOUT FINISHING
     ===================================================== */
     if (
-        status === "pending"
+        !status ||
+        status === "pending" ||
+        status === "init" ||
+        status === "challenge"
     ) {
         const pendingResUsername = document.getElementById("pendingResUsername");
         const pendingResOrderId = document.getElementById("pendingResOrderId");
@@ -1720,25 +1723,8 @@ function launchSnapPayment(token, orderId) {
             openInfoModal("errorPaymentModal");
         },
         onClose: async function () {
-            // Beri jeda 1 detik agar server Midtrans sempat memperbarui status transaksi menjadi pending
-            setTimeout(async () => {
-                const statusData = await checkPaymentStatus(orderId);
-                
-                if (statusData && statusData.transaction_status === "pending") {
-                    const payment = getPendingPayment(orderId);
-                    const pendingResUsername = document.getElementById("pendingResUsername");
-                    const pendingResOrderId = document.getElementById("pendingResOrderId");
-                    const pendingResAmount = document.getElementById("pendingResAmount");
-
-                    if (pendingResUsername) pendingResUsername.textContent = payment ? payment.username : "Supporter";
-                    if (pendingResOrderId) pendingResOrderId.textContent = orderId;
-                    if (pendingResAmount) pendingResAmount.textContent = `Rp${formatRupiah(payment ? payment.amount : 0)}`;
-
-                    openInfoModal("pendingPaymentModal");
-                } else {
-                    showToast("Pembayaran ditutup.");
-                }
-            }, 1000);
+            // Langsung panggil handlePaymentResult agar modal pending muncul saat popup ditutup (X)
+            await handlePaymentResult(orderId);
         }
     });
 }
