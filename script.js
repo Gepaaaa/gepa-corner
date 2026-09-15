@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 /* =========================================================
-GEPA PERSONAL WEBSITE - SCRIPT.JS (FINAL CLEAN VERSION)
+GEPA PERSONAL WEBSITE - SCRIPT.JS (STABLE FIX VERSION)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -30,7 +30,6 @@ const customAmount = document.getElementById("customAmount");
 const selectedAmount = document.getElementById("selectedAmount");
 const continueSupport = document.getElementById("continueSupport");
 const supporterUsername = document.getElementById("supporterUsername");
-const usernameError = document.getElementById("usernameError");
 
 // Ranking Elements
 const rankTabs = document.querySelectorAll(".rank-tab");
@@ -56,7 +55,15 @@ SUPABASE AUTH INITIALIZATION & SESSION CHECK
 const SUPABASE_URL = "https://dkybfxbhlwyrjcycpatp.supabase.co"; 
 const SUPABASE_ANON_KEY = "sb_publishable_Av4YqKP2rl2BePcsms8wGA_JqUmHpCX"; 
 
-const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let supabaseClient = null;
+try {
+    if (window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+} catch (e) {
+    console.error("Supabase init error:", e);
+}
+
 let currentUserSession = null;
 let isRegisterMode = false;
 let userProfileCache = null;
@@ -83,30 +90,37 @@ async function updateAuthButtonState(session) {
 
 async function fetchUserProfile(userId) {
     if (!supabaseClient) return;
-    const { data } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-    if (data) {
-        userProfileCache = data;
+    try {
+        const { data } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+        if (data) {
+            userProfileCache = data;
+        }
+    } catch (err) {
+        console.log("Profile not found yet");
     }
 }
 
 async function checkUserSession() {
     if (!supabaseClient) return;
     
-    // Bersihkan URL dari sisa parameter error jika ada
     if (window.location.search) {
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    await updateAuthButtonState(session);
-
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
         await updateAuthButtonState(session);
-    });
+
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            await updateAuthButtonState(session);
+        });
+    } catch (e) {
+        console.error("Session check error:", e);
+    }
 }
 checkUserSession();
 
@@ -122,16 +136,20 @@ async function loadUserProfileData(user) {
     if (emailDisplay) emailDisplay.textContent = user.email;
 
     if (supabaseClient) {
-        const { data } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
+        try {
+            const { data } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
 
-        if (data) {
-            userProfileCache = data;
-            if (usernameInput) usernameInput.value = data.username || "";
-            if (phoneInput) phoneInput.value = data.phone || "";
+            if (data) {
+                userProfileCache = data;
+                if (usernameInput) usernameInput.value = data.username || "";
+                if (phoneInput) phoneInput.value = data.phone || "";
+            }
+        } catch (e) {
+            console.error("Load profile error:", e);
         }
     }
 
@@ -170,13 +188,16 @@ async function loadUserDonationHistory(email) {
     }
 }
 
-// Simpan & Verifikasi Username Unik (Wajib & Anti-Kembar)
+// Simpan & Verifikasi Username Unik
 const saveProfileBtn = document.getElementById("saveProfileBtn");
 if (saveProfileBtn && supabaseClient) {
     saveProfileBtn.addEventListener("click", async () => {
         if (!currentUserSession) return;
-        const newUsername = document.getElementById("accUsernameInput").value.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
-        const newPhone = document.getElementById("accPhoneInput").value.trim();
+        const usernameInput = document.getElementById("accUsernameInput");
+        const phoneInput = document.getElementById("accPhoneInput");
+        
+        const newUsername = usernameInput ? usernameInput.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, "") : "";
+        const newPhone = phoneInput ? phoneInput.value.trim() : "";
 
         if (!newUsername || newUsername.length < 3) {
             showToast("Username minimal 3 karakter (alfanumerik/underscore)!");
@@ -186,39 +207,44 @@ if (saveProfileBtn && supabaseClient) {
         saveProfileBtn.textContent = "Memverifikasi...";
         saveProfileBtn.disabled = true;
 
-        // Cek duplikasi username di database profiles
-        const { data: existingUser } = await supabaseClient
-            .from('profiles')
-            .select('id')
-            .eq('username', newUsername)
-            .neq('id', currentUserSession.user.id)
-            .single();
+        try {
+            const { data: existingUser } = await supabaseClient
+                .from('profiles')
+                .select('id')
+                .eq('username', newUsername)
+                .neq('id', currentUserSession.user.id)
+                .single();
 
-        if (existingUser) {
-            showToast("Username sudah dipakai orang lain! Pilih yang lain.");
+            if (existingUser) {
+                showToast("Username sudah dipakai orang lain! Pilih yang lain.");
+                saveProfileBtn.textContent = "Simpan & Verifikasi Username";
+                saveProfileBtn.disabled = false;
+                return;
+            }
+
+            const { error } = await supabaseClient
+                .from('profiles')
+                .upsert({ 
+                    id: currentUserSession.user.id, 
+                    username: newUsername, 
+                    phone: newPhone, 
+                    updated_at: new Date() 
+                });
+
             saveProfileBtn.textContent = "Simpan & Verifikasi Username";
             saveProfileBtn.disabled = false;
-            return;
-        }
 
-        const { error } = await supabaseClient
-            .from('profiles')
-            .upsert({ 
-                id: currentUserSession.user.id, 
-                username: newUsername, 
-                phone: newPhone, 
-                updated_at: new Date() 
-            });
-
-        saveProfileBtn.textContent = "Simpan & Verifikasi Username";
-        saveProfileBtn.disabled = false;
-
-        if (error) {
-            showToast("Gagal menyimpan: " + error.message);
-        } else {
-            userProfileCache = { id: currentUserSession.user.id, username: newUsername, phone: newPhone };
-            showToast("Username berhasil diverifikasi & disimpan! ✨");
-            closeInfoModal("accountModal");
+            if (error) {
+                showToast("Gagal menyimpan: " + error.message);
+            } else {
+                userProfileCache = { id: currentUserSession.user.id, username: newUsername, phone: newPhone };
+                showToast("Username berhasil diverifikasi & disimpan! ✨");
+                closeInfoModal("accountModal");
+            }
+        } catch (err) {
+            saveProfileBtn.textContent = "Simpan & Verifikasi Username";
+            saveProfileBtn.disabled = false;
+            showToast("Terjadi kesalahan jaringan.");
         }
     });
 }
@@ -292,15 +318,9 @@ setInterval(updateAge, 1000);
 
 
 /* =========================================================
-NAVIGATION, HEADER, THEME & CAROUSEL
+NAVIGATION, HEADER & THEME
 ========================================================= */
-function closeMobileMenu() {
-    if (!navMenu || !mobileMenuButton) return;
-    navMenu.classList.remove("open");
-    mobileMenuButton.setAttribute("aria-expanded", "false");
-}
-
-if (mobileMenuButton) {
+if (mobileMenuButton && navMenu) {
     mobileMenuButton.addEventListener("click", (e) => {
         e.stopPropagation();
         const isOpen = navMenu.classList.toggle("open");
@@ -308,7 +328,11 @@ if (mobileMenuButton) {
     });
 }
 
-navLinks.forEach((link) => link.addEventListener("click", closeMobileMenu));
+navLinks.forEach((link) => {
+    link.addEventListener("click", () => {
+        if (navMenu) navMenu.classList.remove("open");
+    });
+});
 
 window.addEventListener("scroll", () => {
     if (header) {
@@ -328,7 +352,7 @@ if (themeToggle) {
 
 
 /* =========================================================
-MODAL SYSTEM & AUTHENTICATION CLEAN FLOW
+MODAL SYSTEM & AUTHENTICATION
 ========================================================= */
 window.openInfoModal = function(modalId) {
     const modal = document.getElementById(modalId);
@@ -352,7 +376,6 @@ if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOver
 if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
 if (hobbyCard) hobbyCard.addEventListener("click", () => openInfoModal("hobbyModalOverlay"));
 
-// Tombol Dukung (Support) dengan Validasi Wajib Login & Username Terverifikasi
 if (supportButton) supportButton.addEventListener("click", async () => {
     if (!currentUserSession) {
         showToast("Silakan masuk/login terlebih dahulu untuk traktir!");
@@ -412,14 +435,16 @@ function updateAuthModalUI() {
         promptEl.innerHTML = `Belum punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Daftar sekarang</a>`;
     }
 
-    const rebindLink = document.getElementById("toggleAuthModeLink");
-    if (rebindLink) {
-        rebindLink.addEventListener("click", (ev) => {
-            ev.preventDefault();
-            isRegisterMode = !isRegisterMode;
-            updateAuthModalUI();
-        });
-    }
+    setTimeout(() => {
+        const rebindLink = document.getElementById("toggleAuthModeLink");
+        if (rebindLink) {
+            rebindLink.addEventListener("click", (ev) => {
+                ev.preventDefault();
+                isRegisterMode = !isRegisterMode;
+                updateAuthModalUI();
+            });
+        }
+    }, 10);
 }
 
 window.switchAccTab = function(tabName) {
@@ -441,13 +466,15 @@ window.switchAccTab = function(tabName) {
     }
 };
 
-// Proses Login / Registrasi Email & Password Murni
 if (submitLoginEmailBtn && supabaseClient) {
     submitLoginEmailBtn.addEventListener("click", async () => {
-        const emailInput = document.getElementById("authEmailInput").value.trim();
-        const passwordInput = document.getElementById("authPasswordInput").value;
+        const emailInput = document.getElementById("authEmailInput");
+        const passwordInput = document.getElementById("authPasswordInput");
 
-        if (!emailInput || !passwordInput) {
+        const emailVal = emailInput ? emailInput.value.trim() : "";
+        const passVal = passwordInput ? passwordInput.value : "";
+
+        if (!emailVal || !passVal) {
             showToast("Email dan Password wajib diisi.");
             return;
         }
@@ -455,29 +482,35 @@ if (submitLoginEmailBtn && supabaseClient) {
         submitLoginEmailBtn.textContent = isRegisterMode ? "Mendaftarkan..." : "Memeriksa...";
         submitLoginEmailBtn.disabled = true;
 
-        let result;
-        if (isRegisterMode) {
-            result = await supabaseClient.auth.signUp({ email: emailInput, password: passwordInput });
-        } else {
-            result = await supabaseClient.auth.signInWithPassword({ email: emailInput, password: passwordInput });
-        }
-
-        submitLoginEmailBtn.textContent = isRegisterMode ? "Daftar Sekarang" : "Masuk Sekarang";
-        submitLoginEmailBtn.disabled = false;
-
-        if (result.error) {
-            showToast(result.error.message);
-        } else {
-            showToast(isRegisterMode ? "Registrasi berhasil! Silakan atur username unikmu." : "Berhasil masuk! ☺");
-            closeInfoModal("authModal");
-            await checkUserSession();
-            
-            if (isRegisterMode && result.data && result.data.user) {
-                setTimeout(() => {
-                    loadUserProfileData(result.data.user);
-                    openInfoModal("accountModal");
-                }, 400);
+        try {
+            let result;
+            if (isRegisterMode) {
+                result = await supabaseClient.auth.signUp({ email: emailVal, password: passVal });
+            } else {
+                result = await supabaseClient.auth.signInWithPassword({ email: emailVal, password: passVal });
             }
+
+            submitLoginEmailBtn.textContent = isRegisterMode ? "Daftar Sekarang" : "Masuk Sekarang";
+            submitLoginEmailBtn.disabled = false;
+
+            if (result.error) {
+                showToast(result.error.message);
+            } else {
+                showToast(isRegisterMode ? "Registrasi berhasil! Silakan atur username unikmu." : "Berhasil masuk! ☺");
+                closeInfoModal("authModal");
+                await checkUserSession();
+                
+                if (isRegisterMode && result.data && result.data.user) {
+                    setTimeout(() => {
+                        loadUserProfileData(result.data.user);
+                        openInfoModal("accountModal");
+                    }, 400);
+                }
+            }
+        } catch (err) {
+            submitLoginEmailBtn.textContent = isRegisterMode ? "Daftar Sekarang" : "Masuk Sekarang";
+            submitLoginEmailBtn.disabled = false;
+            showToast("Gagal terhubung ke server auth.");
         }
     });
 }
@@ -512,32 +545,6 @@ function savePendingPayment(orderId, username, amount, token) {
     localStorage.setItem("gepa_active_payment", orderId);
 }
 
-function getPendingPayment(orderId) {
-    if (!orderId) return null;
-    const key = getPaymentStorageKey(orderId);
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    try {
-        const data = JSON.parse(raw);
-        if (Date.now() - data.createdAt > PAYMENT_MAX_AGE) {
-            localStorage.removeItem(key);
-            return null;
-        }
-        return data;
-    } catch (e) {
-        localStorage.removeItem(key);
-        return null;
-    }
-}
-
-function clearPendingPayment(orderId) {
-    if (!orderId) return;
-    localStorage.removeItem(getPaymentStorageKey(orderId));
-    if (localStorage.getItem("gepa_active_payment") === orderId) {
-        localStorage.removeItem("gepa_active_payment");
-    }
-}
-
 async function checkPaymentStatus(orderId) {
     if (!orderId) return null;
     try {
@@ -570,7 +577,8 @@ async function handlePaymentResult(orderId) {
         if (resultUsername) resultUsername.textContent = username;
         if (resultPaymentType) resultPaymentType.textContent = (statusData.payment_type || "ONLINE").replace(/_/g, " ").toUpperCase();
 
-        clearPendingPayment(orderId);
+        localStorage.removeItem(getPaymentStorageKey(orderId));
+        localStorage.removeItem("gepa_active_payment");
         openInfoModal("successPaymentModal");
         await fetchRankings();
     }
@@ -613,7 +621,7 @@ function launchSnapPayment(token, orderId) {
     window.snap.pay(token, {
         onSuccess: async () => { await handlePaymentResult(orderId); },
         onPending: async () => { await handlePaymentResult(orderId); },
-        onError: () => { clearPendingPayment(orderId); openInfoModal("errorPaymentModal"); },
+        onError: () => { openInfoModal("errorPaymentModal"); },
         onClose: async () => { await handlePaymentResult(orderId); }
     });
 }
