@@ -109,21 +109,26 @@ async function loadUserProfileData(user) {
     const phoneInput = document.getElementById("accPhoneInput");
     const usernameInput = document.getElementById("accUsernameInput");
     const avatarPreview = document.getElementById("userAvatarPreview");
+    const avatarFallback = document.getElementById("userAvatarFallback");
 
     if (emailDisplay) emailDisplay.textContent = user.email;
 
-    // Ambil data profil dari tabel profiles
-    const { data } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+    // Ambil data profil dari tabel profiles Supabase
+    if (supabaseClient) {
+        const { data } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-    if (data) {
-        if (usernameInput) usernameInput.value = data.username || "";
-        if (phoneInput) phoneInput.value = data.phone || "";
-        if (data.avatar_url && avatarPreview) {
-            avatarPreview.src = data.avatar_url;
+        if (data) {
+            if (usernameInput) usernameInput.value = data.username || "";
+            if (phoneInput) phoneInput.value = data.phone || "";
+            if (data.avatar_url && avatarPreview) {
+                avatarPreview.src = data.avatar_url;
+                avatarPreview.style.display = "block";
+                if (avatarFallback) avatarFallback.style.display = "none";
+            }
         }
     }
 
