@@ -69,6 +69,18 @@ let currentUserSession = null;
 let isRegisterMode = false;
 let userProfileCache = null;
 
+// STEP 2 (auth state refactor): flag ini true selama pengecekan sesi awal
+// berjalan, supaya tombol auth tidak diklik di tengah kondisi belum pasti.
+let authLoading = true;
+
+// STEP 2 (auth state refactor): promise fetch profil yang sedang berjalan.
+// Kode lain (misal supportButton) bisa `await` promise ini sebelum membaca
+// userProfileCache, supaya tidak lagi baca cache yang belum sempat terisi
+// (race condition yang ditemukan saat audit).
+let profileFetchPromise = null;
+
+if (openAuthModalBtn) openAuthModalBtn.disabled = true;
+
 function updateAuthButtonState(session) {
     currentUserSession = session;
     if (session && openAuthModalBtn) {
@@ -77,7 +89,7 @@ function updateAuthButtonState(session) {
             loadUserProfileData(session.user);
             openInfoModal("accountModal");
         };
-        fetchUserProfile(session.user.id);
+        profileFetchPromise = fetchAndCacheProfile(session.user.id);
     } else if (openAuthModalBtn) {
         openAuthModalBtn.textContent = "✨ Masuk";
         openAuthModalBtn.onclick = () => {
@@ -86,11 +98,17 @@ function updateAuthButtonState(session) {
             openInfoModal("authModal");
         };
         userProfileCache = null;
+        profileFetchPromise = null;
     }
 }
 
-async function fetchUserProfile(userId) {
-    if (!supabaseClient) return;
+// STEP 2 (auth state refactor): satu-satunya tempat yang melakukan query
+// SELECT ke tabel profiles. Sebelumnya ada 2 implementasi terpisah
+// (fetchUserProfile + query duplikat di loadUserProfileData) yang bisa
+// saling tidak sinkron. Perilaku query (select('*').eq('id', userId).single())
+// persis sama seperti sebelumnya, tidak ada perubahan pada data yang diambil.
+async function fetchAndCacheProfile(userId) {
+    if (!supabaseClient) return null;
     const { data } = await supabaseClient
         .from('profiles')
         .select('*')
@@ -99,13 +117,21 @@ async function fetchUserProfile(userId) {
     if (data) {
         userProfileCache = data;
     }
+    return data || null;
 }
 
 async function checkUserSession() {
-    if (!supabaseClient) return;
-    
+    if (!supabaseClient) {
+        authLoading = false;
+        if (openAuthModalBtn) openAuthModalBtn.disabled = false;
+        return;
+    }
+
     const { data: { session } } = await supabaseClient.auth.getSession();
     updateAuthButtonState(session);
+    if (profileFetchPromise) await profileFetchPromise;
+    authLoading = false;
+    if (openAuthModalBtn) openAuthModalBtn.disabled = false;
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
         updateAuthButtonState(session);
@@ -126,22 +152,14 @@ async function loadUserProfileData(user) {
 
     if (emailDisplay) emailDisplay.textContent = user.email;
 
-    if (supabaseClient) {
-        const { data } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-        if (data) {
-            userProfileCache = data;
-            if (usernameInput) usernameInput.value = data.username || "";
-            if (phoneInput) phoneInput.value = data.phone || "";
-            if (data.avatar_url && avatarPreview) {
-                avatarPreview.src = data.avatar_url;
-                avatarPreview.style.display = "block";
-                if (avatarFallback) avatarFallback.style.display = "none";
-            }
+    const data = await fetchAndCacheProfile(user.id);
+    if (data) {
+        if (usernameInput) usernameInput.value = data.username || "";
+        if (phoneInput) phoneInput.value = data.phone || "";
+        if (data.avatar_url && avatarPreview) {
+            avatarPreview.src = data.avatar_url;
+            avatarPreview.style.display = "block";
+            if (avatarFallback) avatarFallback.style.display = "none";
         }
     }
 
@@ -612,7 +630,7 @@ if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOver
 if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
 if (hobbyCard) hobbyCard.addEventListener("click", () => openInfoModal("hobbyModalOverlay"));
 
-if (supportButton) supportButton.addEventListener("click", () => {
+if (supportButton) supportButton.addEventListener("click", async () => {
     // Wajib login & punya username terintegrasi sebelum donasi
     if (!currentUserSession) {
         showToast("Silakan masuk/login terlebih dahulu untuk traktir!");
@@ -621,6 +639,10 @@ if (supportButton) supportButton.addEventListener("click", () => {
         openInfoModal("authModal");
         return;
     }
+
+    // STEP 2: kalau fetch profil masih berjalan (misal user baru saja login),
+    // tunggu dulu sebelum menyimpulkan username belum ada.
+    if (profileFetchPromise) await profileFetchPromise;
 
     if (!userProfileCache || !userProfileCache.username) {
         showToast("Silakan atur & verifikasi username akun kamu terlebih dahulu!");
