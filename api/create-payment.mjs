@@ -153,13 +153,13 @@ export default async function handler(req, res) {
 
                             callbacks: {
                                 finish:
-                                    "https://gepa-we-vercel-version.vercel.app/",
+                                    "https://gepacorner.my.id/",
 
                                 error:
-                                    "https://gepa-we-vercel-version.vercel.app/",
+                                    "https://gepacorner.my.id/",
 
                                 pending:
-                                    "https://gepa-we-vercel-version.vercel.app/"
+                                    "https://gepacorner.my.id/"
                             },
 
                             /* =================================
@@ -178,7 +178,7 @@ export default async function handler(req, res) {
                                     true,
 
                                 callback_url:
-                                    "https://gepa-we-vercel-version.vercel.app/"
+                                    "https://gepacorner.my.id/"
                             }
                         })
                 }
