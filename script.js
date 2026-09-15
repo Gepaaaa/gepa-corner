@@ -626,16 +626,15 @@ function updateAuthModalUI() {
         promptEl.innerHTML = `Belum punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Daftar sekarang</a>`;
     }
 
-    setTimeout(() => {
-        const rebindLink = document.getElementById("toggleAuthModeLink");
-        if (rebindLink) {
-            rebindLink.addEventListener("click", (ev) => {
-                ev.preventDefault();
-                isRegisterMode = !isRegisterMode;
-                updateAuthModalUI();
-            });
-        }
-    }, 10);
+    // Re-bind event listener ke link baru yang di-render via innerHTML
+    const rebindLink = document.getElementById("toggleAuthModeLink");
+    if (rebindLink) {
+        rebindLink.addEventListener("click", (ev) => {
+            ev.preventDefault();
+            isRegisterMode = !isRegisterMode;
+            updateAuthModalUI();
+        });
+    }
 }
 
 // Auth Tab Switcher (Social vs Email)
@@ -724,7 +723,7 @@ if (submitLoginEmailBtn && supabaseClient) {
         if (result.error) {
             showToast(result.error.message);
         } else {
-            showToast(isRegisterMode ? "Registrasi berhasil!" : "Berhasil masuk! ☺");
+            showToast(isRegisterMode ? "Registrasi berhasil! Silakan cek email jika butuh konfirmasi." : "Berhasil masuk! ☺");
             closeInfoModal("authModal");
             checkUserSession();
         }
