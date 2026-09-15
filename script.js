@@ -1,10 +1,10 @@
 // @ts-nocheck
 
 /* =========================================================
-GEPA PERSONAL WEBSITE
+GEPA PERSONAL WEBSITE - SCRIPT.JS
 Vanilla JavaScript
 
-Payment System & Supabase Auth Integration (Sign In & Sign Up)
+Payment System & Supabase Auth Integration (Sign In, Sign Up, Profile, History)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -59,13 +59,14 @@ const ageSeconds = document.getElementById("ageSeconds");
 
 
 /* =========================================================
-SUPABASE AUTH INITIALIZATION & SESSION CHECK (ANTI-LOOP)
+SUPABASE AUTH INITIALIZATION & SESSION CHECK
 ========================================================= */
 const SUPABASE_URL = "https://dkybfxbhlwyrjcycpatp.supabase.co"; 
 const SUPABASE_ANON_KEY = "sb_publishable_Av4YqKP2rl2BePcsms8wGA_JqUmHpCX"; 
 
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let currentUserSession = null;
+let isRegisterMode = false;
 
 function updateAuthButtonState(session) {
     currentUserSession = session;
@@ -88,9 +89,11 @@ function updateAuthButtonState(session) {
 async function checkUserSession() {
     if (!supabaseClient) return;
     
+    // Cek sesi aktif saat halaman dimuat
     const { data: { session } } = await supabaseClient.auth.getSession();
     updateAuthButtonState(session);
 
+    // Pantau perubahan sesi secara real-time
     supabaseClient.auth.onAuthStateChange((event, session) => {
         updateAuthButtonState(session);
     });
@@ -109,6 +112,7 @@ async function loadUserProfileData(user) {
 
     if (emailDisplay) emailDisplay.textContent = user.email;
 
+    // Ambil data profil dari tabel profiles
     const { data } = await supabaseClient
         .from('profiles')
         .select('*')
@@ -158,6 +162,7 @@ async function loadUserDonationHistory(email) {
     }
 }
 
+// Simpan Perubahan Profil (Username Unik & No HP)
 const saveProfileBtn = document.getElementById("saveProfileBtn");
 if (saveProfileBtn && supabaseClient) {
     saveProfileBtn.addEventListener("click", async () => {
@@ -173,6 +178,7 @@ if (saveProfileBtn && supabaseClient) {
         saveProfileBtn.textContent = "Menyimpan...";
         saveProfileBtn.disabled = true;
 
+        // Cek duplikasi username
         const { data: existingUser } = await supabaseClient
             .from('profiles')
             .select('id')
@@ -203,41 +209,7 @@ if (saveProfileBtn && supabaseClient) {
     });
 }
 
-const avatarUploadInput = document.getElementById("avatarUploadInput");
-if (avatarUploadInput && supabaseClient) {
-    avatarUploadInput.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
-        if (!file || !currentUserSession) return;
-
-        showToast("Mengupload foto...");
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${currentUserSession.user.id}-${Math.random()}.${fileExt}`;
-
-        const { error: uploadError } = await supabaseClient.storage
-            .from('avatars')
-            .upload(fileName, file);
-
-        if (uploadError) {
-            showToast("Gagal upload foto: " + uploadError.message);
-            return;
-        }
-
-        const { data: publicURLData } = supabaseClient.storage
-            .from('avatars')
-            .getPublicUrl(fileName);
-
-        const avatarUrl = publicURLData.publicUrl;
-
-        await supabaseClient
-            .from('profiles')
-            .update({ avatar_url: avatarUrl })
-            .eq('id', currentUserSession.user.id);
-
-        document.getElementById("userAvatarPreview").src = avatarUrl;
-        showToast("Foto profil berhasil diubah! 📸");
-    });
-}
-
+// Logout Handler
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn && supabaseClient) {
     logoutBtn.addEventListener("click", () => {
@@ -595,10 +567,8 @@ updateDots();
 
 
 /* =========================================================
-MODAL SYSTEM & URL HASH ROUTING (PRIVACY & TERMS)
+MODAL SYSTEM & AUTH TOGGLE (MASUK / DAFTAR)
 ========================================================= */
-let isRegisterMode = false;
-
 window.openInfoModal = function(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -616,52 +586,6 @@ window.closeInfoModal = function(modalId) {
         }
     }
 };
-
-window.closePrivacyModal = function() {
-    closeInfoModal('privacyModal');
-    if (window.location.hash === '#privacy-policy') {
-        history.pushState("", document.title, window.location.pathname + window.location.search);
-    }
-};
-
-window.closeTermsModal = function() {
-    closeInfoModal('termsModal');
-    if (window.location.hash === '#terms-of-service') {
-        history.pushState("", document.title, window.location.pathname + window.location.search);
-    }
-};
-
-// Cek URL Hash saat halaman dimuat atau di-tap (Contoh: gepacorner.my.id/#privacy-policy)
-function handleUrlHash() {
-    const hash = window.location.hash;
-    if (hash === '#privacy-policy') {
-        openInfoModal('privacyModal');
-    } else if (hash === '#terms-of-service') {
-        openInfoModal('termsModal');
-    }
-}
-
-window.addEventListener('hashchange', handleUrlHash);
-setTimeout(handleUrlHash, 200);
-
-const privacyLink = document.getElementById("privacyLink");
-const termsLink = document.getElementById("termsLink");
-
-if (privacyLink) {
-    privacyLink.addEventListener("click", (e) => {
-        e.preventDefault();
-        history.pushState(null, null, '#privacy-policy');
-        openInfoModal('privacyModal');
-    });
-}
-
-if (termsLink) {
-    termsLink.addEventListener("click", (e) => {
-        e.preventDefault();
-        history.pushState(null, null, '#terms-of-service');
-        openInfoModal('termsModal');
-    });
-}
 
 if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOverlay"));
 if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
@@ -714,6 +638,7 @@ function updateAuthModalUI() {
     }, 10);
 }
 
+// Auth Tab Switcher (Social vs Email)
 window.switchAuthTab = function(tabName) {
     const tabSocialBtn = document.getElementById("tabSocialBtn");
     const tabEmailBtn = document.getElementById("tabEmailBtn");
@@ -733,6 +658,27 @@ window.switchAuthTab = function(tabName) {
     }
 };
 
+// Account Modal Tab Switcher (Edit Profil vs Riwayat Donasi)
+window.switchAccTab = function(tabName) {
+    const profileBtn = document.getElementById("accTabProfileBtn");
+    const historyBtn = document.getElementById("accTabHistoryBtn");
+    const profileContent = document.getElementById("accProfileContent");
+    const historyContent = document.getElementById("accHistoryContent");
+
+    if (tabName === 'profile') {
+        if (profileBtn) { profileBtn.style.background = "var(--sage-700)"; profileBtn.style.color = "#fff"; }
+        if (historyBtn) { historyBtn.style.background = "transparent"; historyBtn.style.color = "var(--text-soft)"; }
+        if (profileContent) profileContent.style.display = "flex";
+        if (historyContent) historyContent.style.display = "none";
+    } else {
+        if (historyBtn) { historyBtn.style.background = "var(--sage-700)"; historyBtn.style.color = "#fff"; }
+        if (profileBtn) { profileBtn.style.background = "transparent"; profileBtn.style.color = "var(--text-soft)"; }
+        if (historyContent) historyContent.style.display = "flex";
+        if (profileContent) profileContent.style.display = "none";
+    }
+};
+
+// Supabase Google & Email Actions
 if (loginGoogleBtn && supabaseClient) {
     loginGoogleBtn.addEventListener("click", async () => {
         const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -1057,6 +1003,9 @@ if (yesCancelBtn) {
     });
 }
 
+/* =========================================================
+CHECK INVOICE HANDLER
+========================================================= */
 const checkInvoiceBtn = document.getElementById("checkInvoiceBtn");
 const checkOrderIdInput = document.getElementById("checkOrderIdInput");
 const invOrderId = document.getElementById("invOrderId");
@@ -1180,7 +1129,7 @@ async function handlePaymentReturn() {
 
     if (!orderId) return;
     if (window.location.search) {
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
     await new Promise((resolve) => setTimeout(resolve, 1500));
     await handlePaymentResult(orderId);
@@ -1188,6 +1137,9 @@ async function handlePaymentReturn() {
 
 setTimeout(() => { handlePaymentReturn(); }, 500);
 
+/* =========================================================
+AUTO-CLOSE MOBILE MENU ON OUTSIDE TAP OR SCROLL
+========================================================= */
 document.addEventListener("click", (e) => {
     if (navMenu && navMenu.classList.contains("open")) {
         if (!navMenu.contains(e.target) && !mobileMenuButton.contains(e.target)) {
