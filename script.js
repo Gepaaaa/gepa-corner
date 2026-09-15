@@ -1,17 +1,11 @@
 // @ts-nocheck
 
 /* =========================================================
-GEPA PERSONAL WEBSITE - SCRIPT.JS
-Vanilla JavaScript
-
-Payment System & Supabase Auth Integration (Sign In, Sign Up, Profile, History)
+GEPA PERSONAL WEBSITE - SCRIPT.JS (FINAL CLEAN VERSION)
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
 
-/* =========================
-ELEMENTS
-========================= */
 const body = document.body;
 const header = document.querySelector(".site-header");
 const mobileMenuButton = document.getElementById("mobileMenuButton");
@@ -26,8 +20,6 @@ const revealElements = document.querySelectorAll(".reveal");
 
 // Auth Elements
 const openAuthModalBtn = document.getElementById("openAuthModalBtn");
-const loginGoogleBtn = document.getElementById("loginGoogleBtn");
-const loginPhoneBtn = document.getElementById("loginPhoneBtn");
 const submitLoginEmailBtn = document.getElementById("submitLoginEmailBtn");
 const toggleAuthModeLink = document.getElementById("toggleAuthModeLink");
 
@@ -44,7 +36,7 @@ const usernameError = document.getElementById("usernameError");
 const rankTabs = document.querySelectorAll(".rank-tab");
 const rankingList = document.getElementById("rankingList");
 
-// Info Cards Clickable
+// Info Cards
 const ageCard = document.getElementById("ageCard");
 const locationCard = document.getElementById("locationCard");
 const hobbyCard = document.getElementById("hobbyCard");
@@ -69,7 +61,7 @@ let currentUserSession = null;
 let isRegisterMode = false;
 let userProfileCache = null;
 
-function updateAuthButtonState(session) {
+async function updateAuthButtonState(session) {
     currentUserSession = session;
     if (session && openAuthModalBtn) {
         openAuthModalBtn.textContent = "✨ Akun";
@@ -77,7 +69,7 @@ function updateAuthButtonState(session) {
             loadUserProfileData(session.user);
             openInfoModal("accountModal");
         };
-        fetchUserProfile(session.user.id);
+        await fetchUserProfile(session.user.id);
     } else if (openAuthModalBtn) {
         openAuthModalBtn.textContent = "✨ Masuk";
         openAuthModalBtn.onclick = () => {
@@ -104,11 +96,16 @@ async function fetchUserProfile(userId) {
 async function checkUserSession() {
     if (!supabaseClient) return;
     
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    updateAuthButtonState(session);
+    // Bersihkan URL dari sisa parameter error jika ada
+    if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
-    supabaseClient.auth.onAuthStateChange((event, session) => {
-        updateAuthButtonState(session);
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    await updateAuthButtonState(session);
+
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        await updateAuthButtonState(session);
     });
 }
 checkUserSession();
@@ -121,8 +118,6 @@ async function loadUserProfileData(user) {
     const emailDisplay = document.getElementById("accEmailDisplay");
     const phoneInput = document.getElementById("accPhoneInput");
     const usernameInput = document.getElementById("accUsernameInput");
-    const avatarPreview = document.getElementById("userAvatarPreview");
-    const avatarFallback = document.getElementById("userAvatarFallback");
 
     if (emailDisplay) emailDisplay.textContent = user.email;
 
@@ -137,11 +132,6 @@ async function loadUserProfileData(user) {
             userProfileCache = data;
             if (usernameInput) usernameInput.value = data.username || "";
             if (phoneInput) phoneInput.value = data.phone || "";
-            if (data.avatar_url && avatarPreview) {
-                avatarPreview.src = data.avatar_url;
-                avatarPreview.style.display = "block";
-                if (avatarFallback) avatarFallback.style.display = "none";
-            }
         }
     }
 
@@ -180,7 +170,7 @@ async function loadUserDonationHistory(email) {
     }
 }
 
-// Simpan Perubahan Profil (Username Unik & Wajib Terverifikasi)
+// Simpan & Verifikasi Username Unik (Wajib & Anti-Kembar)
 const saveProfileBtn = document.getElementById("saveProfileBtn");
 if (saveProfileBtn && supabaseClient) {
     saveProfileBtn.addEventListener("click", async () => {
@@ -189,11 +179,11 @@ if (saveProfileBtn && supabaseClient) {
         const newPhone = document.getElementById("accPhoneInput").value.trim();
 
         if (!newUsername || newUsername.length < 3) {
-            showToast("Username minimal 3 karakter dan valid!");
+            showToast("Username minimal 3 karakter (alfanumerik/underscore)!");
             return;
         }
 
-        saveProfileBtn.textContent = "Memeriksa...";
+        saveProfileBtn.textContent = "Memverifikasi...";
         saveProfileBtn.disabled = true;
 
         // Cek duplikasi username di database profiles
@@ -206,24 +196,27 @@ if (saveProfileBtn && supabaseClient) {
 
         if (existingUser) {
             showToast("Username sudah dipakai orang lain! Pilih yang lain.");
-            saveProfileBtn.textContent = "Simpan Perubahan";
+            saveProfileBtn.textContent = "Simpan & Verifikasi Username";
             saveProfileBtn.disabled = false;
             return;
         }
 
         const { error } = await supabaseClient
             .from('profiles')
-            .update({ username: newUsername, phone: newPhone, updated_at: new Date() })
-            .eq('id', currentUserSession.user.id);
+            .upsert({ 
+                id: currentUserSession.user.id, 
+                username: newUsername, 
+                phone: newPhone, 
+                updated_at: new Date() 
+            });
 
-        saveProfileBtn.textContent = "Simpan Perubahan";
+        saveProfileBtn.textContent = "Simpan & Verifikasi Username";
         saveProfileBtn.disabled = false;
 
         if (error) {
             showToast("Gagal menyimpan: " + error.message);
         } else {
-            userProfileCache.username = newUsername;
-            userProfileCache.phone = newPhone;
+            userProfileCache = { id: currentUserSession.user.id, username: newUsername, phone: newPhone };
             showToast("Username berhasil diverifikasi & disimpan! ✨");
             closeInfoModal("accountModal");
         }
@@ -244,16 +237,12 @@ if (logoutBtn && supabaseClient) {
 
 
 /* =========================================================
-CURRENT YEAR
+CURRENT YEAR & REAL-TIME AGE
 ========================================================= */
 if (currentYear) {
     currentYear.textContent = new Date().getFullYear();
 }
 
-
-/* =========================================================
-REAL-TIME AGE
-========================================================= */
 const birthDate = new Date(2006, 4, 17, 0, 0, 0);
 
 function calculateFullAge() {
@@ -303,7 +292,7 @@ setInterval(updateAge, 1000);
 
 
 /* =========================================================
-MOBILE NAVIGATION
+NAVIGATION, HEADER, THEME & CAROUSEL
 ========================================================= */
 function closeMobileMenu() {
     if (!navMenu || !mobileMenuButton) return;
@@ -311,284 +300,35 @@ function closeMobileMenu() {
     mobileMenuButton.setAttribute("aria-expanded", "false");
 }
 
-function toggleMobileMenu(e) {
-    if (!navMenu || !mobileMenuButton) return;
-    if (e) e.stopPropagation();
-    const isOpen = navMenu.classList.toggle("open");
-    mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
-}
-
 if (mobileMenuButton) {
-    mobileMenuButton.addEventListener("click", toggleMobileMenu);
-}
-
-navLinks.forEach((link) => {
-    link.addEventListener("click", closeMobileMenu);
-});
-
-
-/* =========================================================
-HEADER SCROLL & ACTIVE NAVIGATION
-========================================================= */
-function updateHeader() {
-    if (!header) return;
-    if (window.scrollY > 20) {
-        header.classList.add("scrolled");
-    } else {
-        header.classList.remove("scrolled");
-    }
-}
-
-const sections = document.querySelectorAll("main section[id]");
-
-function updateActiveNavigation() {
-    const scrollPosition = window.scrollY + 150;
-    let currentSection = "home";
-
-    sections.forEach((section) => {
-        const sectionTop = section.offsetTop;
-        const sectionBottom = sectionTop + section.offsetHeight;
-        if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
-            currentSection = section.id;
-        }
-    });
-
-    navLinks.forEach((link) => {
-        const href = link.getAttribute("href");
-        link.classList.toggle("active", href === `#${currentSection}`);
+    mobileMenuButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = navMenu.classList.toggle("open");
+        mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
     });
 }
+
+navLinks.forEach((link) => link.addEventListener("click", closeMobileMenu));
 
 window.addEventListener("scroll", () => {
-    updateHeader();
-    updateActiveNavigation();
+    if (header) {
+        header.classList.toggle("scrolled", window.scrollY > 20);
+    }
 }, { passive: true });
 
-updateHeader();
-updateActiveNavigation();
-
-
-/* =========================================================
-THEME
-========================================================= */
-function applyInitialTheme() {
-    const savedTheme = localStorage.getItem("gepa-theme");
-    if (savedTheme === "dark") {
-        body.classList.add("dark-mode");
-    } else if (savedTheme === "light") {
-        body.classList.remove("dark-mode");
-    } else {
-        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        if (prefersDark) body.classList.add("dark-mode");
-    }
-    updateThemeIcon();
-}
-
-function updateThemeIcon() {
-    if (!themeIcon) return;
-    const isDark = body.classList.contains("dark-mode");
-    themeIcon.textContent = isDark ? "☀" : "☾";
-}
-
+const savedTheme = localStorage.getItem("gepa-theme");
+if (savedTheme === "dark") body.classList.add("dark-mode");
 if (themeToggle) {
     themeToggle.addEventListener("click", () => {
         const isDark = body.classList.toggle("dark-mode");
         localStorage.setItem("gepa-theme", isDark ? "dark" : "light");
-        updateThemeIcon();
+        if (themeIcon) themeIcon.textContent = isDark ? "☀" : "☾";
     });
-}
-
-applyInitialTheme();
-
-
-/* =========================================================
-REVEAL ON SCROLL
-========================================================= */
-if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver((entries, obs) => {
-        entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add("visible");
-                obs.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.12, rootMargin: "0px 0px -30px 0px" });
-
-    revealElements.forEach((el) => observer.observe(el));
-} else {
-    revealElements.forEach((el) => el.classList.add("visible"));
 }
 
 
 /* =========================================================
-PHOTO CAROUSEL
-========================================================= */
-const photoTrack = document.getElementById("photoTrack");
-const photoCarousel = document.getElementById("photoCarousel");
-const prevPhoto = document.getElementById("prevPhoto");
-const nextPhoto = document.getElementById("nextPhoto");
-const carouselDots = document.getElementById("carouselDots");
-
-const photoList = [
-    "assets/foto-1.jpg",
-    "assets/foto-6.jpg"
-];
-
-let currentPhoto = 1;
-let isMoving = false;
-let startX = 0;
-let currentX = 0;
-let isDragging = false;
-
-function createPhotoSlides() {
-    if (!photoTrack) return;
-    photoTrack.innerHTML = "";
-
-    const createSlide = (photo, index, isClone) => {
-        const slide = document.createElement("div");
-        slide.className = "photo-slide";
-        if (isClone) slide.classList.add("clone");
-
-        const image = document.createElement("img");
-        image.src = photo;
-        image.alt = `Foto Gepa ${index + 1}`;
-        image.loading = "eager";
-        image.draggable = false;
-        image.addEventListener("error", () => {
-            slide.innerHTML = `
-                <div class="photo-fallback"><span>G</span></div>
-                <span class="photo-caption">foto ${index + 1}</span>
-            `;
-        });
-        slide.appendChild(image);
-
-        if (!isClone && index === 0) {
-            const caption = document.createElement("span");
-            caption.className = "photo-caption";
-            caption.textContent = "that's me :)";
-            slide.appendChild(caption);
-        }
-        photoTrack.appendChild(slide);
-    };
-
-    createSlide(photoList[photoList.length - 1], photoList.length - 1, true);
-    photoList.forEach((photo, index) => createSlide(photo, index, false));
-    createSlide(photoList[0], 0, true);
-
-    photoTrack.style.transition = "none";
-    photoTrack.style.transform = "translate3d(-100%, 0, 0)";
-}
-
-function createCarouselDots() {
-    if (!carouselDots) return;
-    carouselDots.innerHTML = "";
-    photoList.forEach((_, index) => {
-        const dot = document.createElement("button");
-        dot.type = "button";
-        dot.className = "carousel-dot";
-        dot.addEventListener("click", () => goToPhoto(index));
-        carouselDots.appendChild(dot);
-    });
-}
-
-function updateDots() {
-    if (!carouselDots) return;
-    const dots = carouselDots.querySelectorAll(".carousel-dot");
-    let activeIndex = currentPhoto - 1;
-    if (currentPhoto === 0) activeIndex = photoList.length - 1;
-    else if (currentPhoto === photoList.length + 1) activeIndex = 0;
-
-    dots.forEach((dot, index) => {
-        dot.classList.toggle("active", index === activeIndex);
-    });
-}
-
-function moveCarousel(direction) {
-    if (photoList.length <= 1 || isMoving || !photoTrack) return;
-    isMoving = true;
-    photoTrack.style.transition = "transform 420ms cubic-bezier(.22,.61,.36,1)";
-
-    if (direction === "next") {
-        currentPhoto++;
-        photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
-        updateDots();
-        setTimeout(() => {
-            if (currentPhoto === photoList.length + 1) {
-                photoTrack.style.transition = "none";
-                currentPhoto = 1;
-                photoTrack.style.transform = "translate3d(-100%, 0, 0)";
-            }
-            isMoving = false;
-        }, 430);
-    } else {
-        currentPhoto--;
-        photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
-        updateDots();
-        setTimeout(() => {
-            if (currentPhoto === 0) {
-                photoTrack.style.transition = "none";
-                currentPhoto = photoList.length;
-                photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
-            }
-            isMoving = false;
-        }, 430);
-    }
-}
-
-function goToPhoto(index) {
-    if (!photoTrack) return;
-    const targetPhoto = index + 1;
-    if (isMoving || currentPhoto === targetPhoto) return;
-    isMoving = true;
-    currentPhoto = targetPhoto;
-    photoTrack.style.transition = "transform 420ms cubic-bezier(.22,.61,.36,1)";
-    photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
-    updateDots();
-    setTimeout(() => { isMoving = false; }, 430);
-}
-
-if (prevPhoto) prevPhoto.addEventListener("click", () => moveCarousel("prev"));
-if (nextPhoto) nextPhoto.addEventListener("click", () => moveCarousel("next"));
-
-if (photoCarousel) {
-    photoCarousel.addEventListener("touchstart", (e) => {
-        if (e.touches.length !== 1) return;
-        startX = e.touches[0].clientX;
-        currentX = startX;
-        isDragging = true;
-        if (photoTrack) photoTrack.style.transition = "none";
-    }, { passive: true });
-
-    photoCarousel.addEventListener("touchmove", (e) => {
-        if (!isDragging || !photoTrack) return;
-        currentX = e.touches[0].clientX;
-        const diff = currentX - startX;
-        const width = photoCarousel.offsetWidth;
-        const dragPercent = width > 0 ? (diff / width) * 100 : 0;
-        const base = -(currentPhoto * 100);
-        photoTrack.style.transform = `translate3d(${base + dragPercent}%, 0, 0)`;
-    }, { passive: true });
-
-    photoCarousel.addEventListener("touchend", () => {
-        if (!isDragging || !photoTrack) return;
-        isDragging = false;
-        const diff = currentX - startX;
-        if (Math.abs(diff) >= 45) {
-            diff < 0 ? moveCarousel("next") : moveCarousel("prev");
-        } else {
-            photoTrack.style.transition = "transform 420ms cubic-bezier(.22,.61,.36,1)";
-            photoTrack.style.transform = `translate3d(-${currentPhoto * 100}%, 0, 0)`;
-        }
-    }, { passive: true });
-}
-
-createPhotoSlides();
-createCarouselDots();
-updateDots();
-
-
-/* =========================================================
-MODAL SYSTEM & AUTH TOGGLE (MASUK / DAFTAR)
+MODAL SYSTEM & AUTHENTICATION CLEAN FLOW
 ========================================================= */
 window.openInfoModal = function(modalId) {
     const modal = document.getElementById(modalId);
@@ -612,8 +352,8 @@ if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOver
 if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
 if (hobbyCard) hobbyCard.addEventListener("click", () => openInfoModal("hobbyModalOverlay"));
 
-if (supportButton) supportButton.addEventListener("click", () => {
-    // Wajib login & punya username terintegrasi sebelum donasi
+// Tombol Dukung (Support) dengan Validasi Wajib Login & Username Terverifikasi
+if (supportButton) supportButton.addEventListener("click", async () => {
     if (!currentUserSession) {
         showToast("Silakan masuk/login terlebih dahulu untuk traktir!");
         isRegisterMode = false;
@@ -622,18 +362,17 @@ if (supportButton) supportButton.addEventListener("click", () => {
         return;
     }
 
+    await fetchUserProfile(currentUserSession.user.id);
     if (!userProfileCache || !userProfileCache.username) {
-        showToast("Silakan atur & verifikasi username akun kamu terlebih dahulu!");
+        showToast("Akun kamu wajib memiliki username unik! Silakan lengkapi profil.");
         loadUserProfileData(currentUserSession.user);
         openInfoModal("accountModal");
         return;
     }
 
-    // Set otomatis username dari akun yang terintegrasi dan kunci
     if (supporterUsername) {
         supporterUsername.value = userProfileCache.username;
         supporterUsername.readOnly = true;
-        supporterUsername.style.background = "var(--bg-secondary)";
     }
 
     openInfoModal("supportModal");
@@ -663,7 +402,7 @@ function updateAuthModalUI() {
 
     if (isRegisterMode) {
         titleEl.textContent = "Daftar Akun Baru";
-        descEl.textContent = "Buat akun baru buat mulai nyimpen riwayat traktiranmu.";
+        descEl.textContent = "Buat akun baru dengan email & password.";
         submitBtn.textContent = "Daftar Sekarang";
         promptEl.innerHTML = `Sudah punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Masuk sekarang</a>`;
     } else {
@@ -683,27 +422,6 @@ function updateAuthModalUI() {
     }
 }
 
-// Auth Tab Switcher (Social vs Email)
-window.switchAuthTab = function(tabName) {
-    const tabSocialBtn = document.getElementById("tabSocialBtn");
-    const tabEmailBtn = document.getElementById("tabEmailBtn");
-    const socialContent = document.getElementById("socialAuthContent");
-    const emailContent = document.getElementById("emailAuthContent");
-
-    if (tabName === 'social') {
-        if (tabSocialBtn) { tabSocialBtn.style.background = "var(--sage-700)"; tabSocialBtn.style.color = "#fff"; }
-        if (tabEmailBtn) { tabEmailBtn.style.background = "transparent"; tabEmailBtn.style.color = "var(--text-soft)"; }
-        if (socialContent) socialContent.style.display = "flex";
-        if (emailContent) emailContent.style.display = "none";
-    } else {
-        if (tabEmailBtn) { tabEmailBtn.style.background = "var(--sage-700)"; tabEmailBtn.style.color = "#fff"; }
-        if (tabSocialBtn) { tabSocialBtn.style.background = "transparent"; tabSocialBtn.style.color = "var(--text-soft)"; }
-        if (emailContent) emailContent.style.display = "flex";
-        if (socialContent) socialContent.style.display = "none";
-    }
-};
-
-// Account Modal Tab Switcher (Edit Profil vs Riwayat Donasi)
 window.switchAccTab = function(tabName) {
     const profileBtn = document.getElementById("accTabProfileBtn");
     const historyBtn = document.getElementById("accTabHistoryBtn");
@@ -723,44 +441,25 @@ window.switchAccTab = function(tabName) {
     }
 };
 
-// Supabase Google & Email Actions
-if (loginGoogleBtn && supabaseClient) {
-    loginGoogleBtn.addEventListener("click", async () => {
-        const { error } = await supabaseClient.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: window.location.origin }
-        });
-        if (error) showToast("Gagal login Google: " + error.message);
-    });
-}
-
-if (loginPhoneBtn) {
-    loginPhoneBtn.addEventListener("click", () => {
-        showToast("Login WhatsApp menggunakan verifikasi OTP Supabase.");
-    });
-}
-
+// Proses Login / Registrasi Email & Password Murni
 if (submitLoginEmailBtn && supabaseClient) {
     submitLoginEmailBtn.addEventListener("click", async () => {
         const emailInput = document.getElementById("authEmailInput").value.trim();
         const passwordInput = document.getElementById("authPasswordInput").value;
 
         if (!emailInput || !passwordInput) {
-            showToast("Email/No. HP dan Password wajib diisi.");
+            showToast("Email dan Password wajib diisi.");
             return;
         }
 
         submitLoginEmailBtn.textContent = isRegisterMode ? "Mendaftarkan..." : "Memeriksa...";
         submitLoginEmailBtn.disabled = true;
 
-        const isEmail = emailInput.includes("@");
-        const identifier = isEmail ? emailInput : `${emailInput.replace(/[^0-9]/g, "")}@phone.local`;
-
         let result;
         if (isRegisterMode) {
-            result = await supabaseClient.auth.signUp({ email: identifier, password: passwordInput });
+            result = await supabaseClient.auth.signUp({ email: emailInput, password: passwordInput });
         } else {
-            result = await supabaseClient.auth.signInWithPassword({ email: identifier, password: passwordInput });
+            result = await supabaseClient.auth.signInWithPassword({ email: emailInput, password: passwordInput });
         }
 
         submitLoginEmailBtn.textContent = isRegisterMode ? "Daftar Sekarang" : "Masuk Sekarang";
@@ -769,14 +468,15 @@ if (submitLoginEmailBtn && supabaseClient) {
         if (result.error) {
             showToast(result.error.message);
         } else {
-            showToast(isRegisterMode ? "Registrasi berhasil! Silakan atur username profilmu." : "Berhasil masuk! ☺");
+            showToast(isRegisterMode ? "Registrasi berhasil! Silakan atur username unikmu." : "Berhasil masuk! ☺");
             closeInfoModal("authModal");
-            checkUserSession();
+            await checkUserSession();
+            
             if (isRegisterMode && result.data && result.data.user) {
                 setTimeout(() => {
                     loadUserProfileData(result.data.user);
                     openInfoModal("accountModal");
-                }, 500);
+                }, 400);
             }
         }
     });
@@ -791,7 +491,7 @@ modals.forEach((modal) => {
 
 
 /* =========================================================
-SUPPORT PAYMENT & RANKING
+SUPPORT PAYMENT & RANKING SYSTEM
 ========================================================= */
 let selectedValue = 0;
 function formatRupiah(value) {
@@ -807,13 +507,7 @@ function getPaymentStorageKey(orderId) {
 
 function savePendingPayment(orderId, username, amount, token) {
     if (!orderId) return;
-    const paymentData = {
-        orderId: orderId,
-        username: username || "Anonim",
-        amount: Number(amount) || 0,
-        token: token || "",
-        createdAt: Date.now()
-    };
+    const paymentData = { orderId, username: username || "Anonim", amount: Number(amount) || 0, token: token || "", createdAt: Date.now() };
     localStorage.setItem(getPaymentStorageKey(orderId), JSON.stringify(paymentData));
     localStorage.setItem("gepa_active_payment", orderId);
 }
@@ -825,15 +519,12 @@ function getPendingPayment(orderId) {
     if (!raw) return null;
     try {
         const data = JSON.parse(raw);
-        if (!data.createdAt || Date.now() - data.createdAt > PAYMENT_MAX_AGE) {
+        if (Date.now() - data.createdAt > PAYMENT_MAX_AGE) {
             localStorage.removeItem(key);
-            if (localStorage.getItem("gepa_active_payment") === orderId) {
-                localStorage.removeItem("gepa_active_payment");
-            }
             return null;
         }
         return data;
-    } catch (error) {
+    } catch (e) {
         localStorage.removeItem(key);
         return null;
     }
@@ -847,22 +538,12 @@ function clearPendingPayment(orderId) {
     }
 }
 
-function getActivePaymentOrder() {
-    const orderId = localStorage.getItem("gepa_active_payment");
-    if (!orderId) return null;
-    const payment = getPendingPayment(orderId);
-    if (!payment) return null;
-    return orderId;
-}
-
 async function checkPaymentStatus(orderId) {
     if (!orderId) return null;
     try {
         const response = await fetch(`/api/check-payment?order_id=${encodeURIComponent(orderId)}`, { cache: "no-store" });
-        const data = await response.json();
-        if (!response.ok) return null;
-        return data;
-    } catch (error) {
+        return await response.json();
+    } catch (e) {
         return null;
     }
 }
@@ -872,16 +553,12 @@ async function handlePaymentResult(orderId) {
     const payment = getPendingPayment(orderId);
     const statusData = await checkPaymentStatus(orderId);
 
-    if (!statusData) {
-        showPendingModal(orderId, payment);
-        return;
-    }
-
+    if (!statusData) return;
     const status = statusData.transaction_status;
 
     if (status === "settlement" || status === "capture") {
-        const username = payment && payment.username ? payment.username : "Supporter";
-        const amount = payment && Number(payment.amount) > 0 ? Number(payment.amount) : Number(statusData.gross_amount);
+        const username = payment?.username || "Supporter";
+        const amount = payment?.amount || statusData.gross_amount;
 
         const resultOrderId = document.getElementById("resOrderId");
         const resultAmount = document.getElementById("resAmount");
@@ -891,68 +568,26 @@ async function handlePaymentResult(orderId) {
         if (resultOrderId) resultOrderId.textContent = statusData.order_id || orderId;
         if (resultAmount) resultAmount.textContent = `Rp${formatRupiah(amount)}`;
         if (resultUsername) resultUsername.textContent = username;
-        if (resultPaymentType) {
-            resultPaymentType.textContent = statusData.payment_type ? statusData.payment_type.replace(/_/g, " ").toUpperCase() : "ONLINE PAYMENT";
-        }
+        if (resultPaymentType) resultPaymentType.textContent = (statusData.payment_type || "ONLINE").replace(/_/g, " ").toUpperCase();
 
         clearPendingPayment(orderId);
         openInfoModal("successPaymentModal");
         await fetchRankings();
-        return;
     }
-
-    if (status === "cancel" || status === "expire" || status === "deny" || status === "failure") {
-        clearPendingPayment(orderId);
-        openInfoModal("errorPaymentModal");
-        return;
-    }
-
-    showPendingModal(orderId, payment);
-}
-
-function showPendingModal(orderId, payment) {
-    const pendingResUsername = document.getElementById("pendingResUsername");
-    const pendingResOrderId = document.getElementById("pendingResOrderId");
-    const pendingResAmount = document.getElementById("pendingResAmount");
-
-    if (pendingResUsername) pendingResUsername.textContent = payment ? payment.username : "Supporter";
-    if (pendingResOrderId) pendingResOrderId.textContent = orderId;
-    if (pendingResAmount) pendingResAmount.textContent = `Rp${formatRupiah(payment ? payment.amount : 0)}`;
-
-    openInfoModal("pendingPaymentModal");
 }
 
 function validateInput() {
-    if (!supporterUsername || !usernameError) return true;
-    const username = supporterUsername.value.trim();
-    
-    // Pastikan username mengikuti akun terintegrasi
+    if (!supporterUsername) return true;
     if (userProfileCache && userProfileCache.username) {
         supporterUsername.value = userProfileCache.username;
     }
-
-    if (username === "") {
-        continueSupport.disabled = true;
-        if (selectedValue > 0) usernameError.style.display = "block";
-        return false;
-    } else {
-        usernameError.style.display = "none";
-        if (selectedValue > 0) {
-            continueSupport.disabled = false;
-            return true;
-        }
-    }
-    return false;
+    return selectedValue >= 1000 && supporterUsername.value.trim() !== "";
 }
 
 function updateSupportAmount() {
     if (!selectedAmount) return;
-    if (selectedValue > 0) {
-        selectedAmount.textContent = `Nominal: Rp${formatRupiah(selectedValue)}`;
-    } else {
-        selectedAmount.textContent = "Belum memilih nominal";
-    }
-    validateInput();
+    selectedAmount.textContent = selectedValue > 0 ? `Nominal: Rp${formatRupiah(selectedValue)}` : "Belum memilih nominal";
+    if (continueSupport) continueSupport.disabled = !validateInput();
 }
 
 amountButtons.forEach((button) => {
@@ -974,16 +609,12 @@ if (customAmount) {
     });
 }
 
-if (supporterUsername) {
-    supporterUsername.addEventListener("input", validateInput);
-}
-
 function launchSnapPayment(token, orderId) {
     window.snap.pay(token, {
-        onSuccess: async function () { await handlePaymentResult(orderId); },
-        onPending: async function () { await handlePaymentResult(orderId); },
-        onError: async function () { clearPendingPayment(orderId); openInfoModal("errorPaymentModal"); },
-        onClose: async function () { await handlePaymentResult(orderId); }
+        onSuccess: async () => { await handlePaymentResult(orderId); },
+        onPending: async () => { await handlePaymentResult(orderId); },
+        onError: () => { clearPendingPayment(orderId); openInfoModal("errorPaymentModal"); },
+        onClose: async () => { await handlePaymentResult(orderId); }
     });
 }
 
@@ -991,7 +622,12 @@ if (continueSupport) {
     continueSupport.addEventListener("click", async () => {
         if (!validateInput() || selectedValue < 1000) return;
         const amount = selectedValue;
-        const username = userProfileCache && userProfileCache.username ? userProfileCache.username : supporterUsername.value.trim();
+        const username = userProfileCache?.username;
+
+        if (!username) {
+            showToast("Username akun belum terverifikasi.");
+            return;
+        }
 
         continueSupport.disabled = true;
         continueSupport.textContent = "Memproses...";
@@ -1024,80 +660,28 @@ if (continueSupport) {
     });
 }
 
-const resumePaymentBtn = document.getElementById("resumePaymentBtn");
-if (resumePaymentBtn) {
-    resumePaymentBtn.addEventListener("click", () => {
-        const orderId = getActivePaymentOrder();
-        if (!orderId) {
-            closeInfoModal("pendingPaymentModal");
-            showToast("Tidak ada transaksi aktif.");
-            return;
-        }
-        const payment = getPendingPayment(orderId);
-        closeInfoModal("pendingPaymentModal");
-        if (payment && payment.token) launchSnapPayment(payment.token, orderId);
-    });
-}
-
-const cancelPaymentBtn = document.getElementById("cancelPaymentBtn");
-if (cancelPaymentBtn) {
-    cancelPaymentBtn.addEventListener("click", () => {
-        closeInfoModal("pendingPaymentModal");
-        openInfoModal("confirmCancelModal");
-    });
-}
-
-const yesCancelBtn = document.getElementById("yesCancelBtn");
-if (yesCancelBtn) {
-    yesCancelBtn.addEventListener("click", () => {
-        const orderId = getActivePaymentOrder();
-        clearPendingPayment(orderId);
-        closeInfoModal("confirmCancelModal");
-        showToast("Pembayaran dibatalkan.");
-    });
-}
-
-/* =========================================================
-CHECK INVOICE HANDLER
-========================================================= */
+// Cek Invoice
 const checkInvoiceBtn = document.getElementById("checkInvoiceBtn");
 const checkOrderIdInput = document.getElementById("checkOrderIdInput");
-const invOrderId = document.getElementById("invOrderId");
-const invStatus = document.getElementById("invStatus");
-const invAmount = document.getElementById("invAmount");
-const invPaymentType = document.getElementById("invPaymentType");
-const invTime = document.getElementById("invTime");
-
 if (checkInvoiceBtn && checkOrderIdInput) {
     checkInvoiceBtn.addEventListener("click", async () => {
         const orderId = checkOrderIdInput.value.trim();
-        if (!orderId) {
-            showToast("Masukkan Order ID terlebih dahulu.");
-            return;
-        }
+        if (!orderId) { showToast("Masukkan Order ID."); return; }
         
         checkInvoiceBtn.textContent = "Mengecek...";
-        checkInvoiceBtn.disabled = true;
-
         const statusData = await checkPaymentStatus(orderId);
-        
         checkInvoiceBtn.textContent = "Cek Invoice";
-        checkInvoiceBtn.disabled = false;
 
         if (!statusData || !statusData.transaction_status) {
-            showToast("Invoice tidak ditemukan / belum ada transaksi.");
+            showToast("Invoice tidak ditemukan.");
             return;
         }
 
-        if (invOrderId) invOrderId.textContent = statusData.order_id || orderId;
-        if (invStatus) {
-            const st = statusData.transaction_status.toUpperCase();
-            invStatus.textContent = st;
-            invStatus.style.color = (st === "SETTLEMENT" || st === "CAPTURE") ? "var(--sage-700)" : "#d97706";
-        }
-        if (invAmount) invAmount.textContent = `Rp${formatRupiah(statusData.gross_amount || 0)}`;
-        if (invPaymentType) invPaymentType.textContent = statusData.payment_type ? statusData.payment_type.replace(/_/g, " ").toUpperCase() : "-";
-        if (invTime) invTime.textContent = statusData.transaction_time || "-";
+        document.getElementById("invOrderId").textContent = statusData.order_id || orderId;
+        document.getElementById("invStatus").textContent = statusData.transaction_status.toUpperCase();
+        document.getElementById("invAmount").textContent = `Rp${formatRupiah(statusData.gross_amount || 0)}`;
+        document.getElementById("invPaymentType").textContent = (statusData.payment_type || "-").replace(/_/g, " ").toUpperCase();
+        document.getElementById("invTime").textContent = statusData.transaction_time || "-";
 
         openInfoModal("invoiceModal");
     });
@@ -1105,8 +689,7 @@ if (checkInvoiceBtn && checkOrderIdInput) {
 
 window.scrollToRanking = function () {
     closeInfoModal("successPaymentModal");
-    const supportSec = document.getElementById("support");
-    if (supportSec) supportSec.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("support")?.scrollIntoView({ behavior: "smooth" });
 };
 
 let currentRankTab = "daily";
@@ -1116,11 +699,10 @@ async function fetchRankings() {
     if (!rankingList) return;
     try {
         const res = await fetch("/api/ranking", { cache: "no-store" });
-        if (!res.ok) throw new Error("Ranking request failed");
-        const data = await res.json();
-        rankingDataCache = data;
+        if (!res.ok) throw new Error();
+        rankingDataCache = await res.json();
         renderRanking(currentRankTab);
-    } catch (error) {
+    } catch (e) {
         rankingList.innerHTML = `<li class="ranking-empty">Gagal memuat ranking.</li>`;
     }
 }
@@ -1174,38 +756,5 @@ function showToast(msg) {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove("show"), 3000);
 }
-
-async function handlePaymentReturn() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const incomingOrderId = urlParams.get("order_id");
-    const activeOrderId = getActivePaymentOrder();
-    let orderId = incomingOrderId || activeOrderId;
-
-    if (!orderId) return;
-    if (window.location.search) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    await handlePaymentResult(orderId);
-}
-
-setTimeout(() => { handlePaymentReturn(); }, 500);
-
-/* =========================================================
-AUTO-CLOSE MOBILE MENU ON OUTSIDE TAP OR SCROLL
-========================================================= */
-document.addEventListener("click", (e) => {
-    if (navMenu && navMenu.classList.contains("open")) {
-        if (!navMenu.contains(e.target) && !mobileMenuButton.contains(e.target)) {
-            closeMobileMenu();
-        }
-    }
-});
-
-window.addEventListener("scroll", () => {
-    if (navMenu && navMenu.classList.contains("open")) {
-        closeMobileMenu();
-    }
-}, { passive: true });
 
 });
