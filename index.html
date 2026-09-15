@@ -262,27 +262,11 @@
                 <p id="authModalDesc" style="font-size: 0.88rem; color: var(--text-soft);">Hubungkan akunmu buat lihat riwayat traktir & kelola profil.</p>
             </div>
 
-            <!-- Tab Switcher -->
-            <div style="display: flex; background: var(--bg-secondary); padding: 4px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border);">
-                <button type="button" id="tabSocialBtn" class="auth-tab active-tab" onclick="switchAuthTab('social')" style="flex: 1; padding: 10px; border: none; background: var(--sage-700); color: #fff; font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.88rem; transition: all 0.2s;">Social</button>
-                <button type="button" id="tabEmailBtn" class="auth-tab" onclick="switchAuthTab('email')" style="flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-soft); font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.88rem; transition: all 0.2s;">Email / HP</button>
-            </div>
-
-            <!-- Tab Content: Social -->
-            <div id="socialAuthContent" style="display: flex; flex-direction: column; gap: 10px;">
-                <button type="button" id="loginGoogleBtn" class="modal-support-button" style="background: #ffffff; color: #333; border: 1px solid var(--border); margin-top: 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span style="font-size: 1.1rem;">🌐</span> Lanjut dengan Google
-                </button>
-                <button type="button" id="loginPhoneBtn" class="modal-support-button" style="background: #25d366; color: #fff; margin-top: 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span style="font-size: 1.1rem;">📱</span> Lanjut dengan WhatsApp
-                </button>
-            </div>
-
-            <!-- Tab Content: Email / HP -->
-            <div id="emailAuthContent" style="display: none; flex-direction: column; gap: 12px;">
+            <!-- Form Email / Password Clean Auth -->
+            <div id="emailAuthContent" style="display: flex; flex-direction: column; gap: 12px;">
                 <div class="custom-amount" style="margin-top: 0;">
-                    <label for="authEmailInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Email / No. WhatsApp</label>
-                    <input type="text" id="authEmailInput" placeholder="nama@email.com atau 0812..." style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+                    <label for="authEmailInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Email</label>
+                    <input type="email" id="authEmailInput" placeholder="nama@email.com" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
                 </div>
                 <div class="custom-amount" style="margin-top: 0;">
                     <label for="authPasswordInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Password</label>
@@ -312,23 +296,20 @@
             
             <div style="text-align: center; margin-bottom: 20px;">
                 <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--sage-100); display: grid; place-items: center; margin: 0 auto 10px; overflow: hidden; border: 2px solid var(--sage-350);">
-                    <img id="userAvatarPreview" src="" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: none;">
-                    <span id="userAvatarFallback" style="font-size: 1.5rem; color: var(--sage-700);">👤</span>
+                    <span style="font-size: 1.5rem; color: var(--sage-700);">👤</span>
                 </div>
                 <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 2px;">Kelola Akun</h2>
                 <p id="accEmailDisplay" style="font-size: 0.82rem; color: var(--text-soft);">-</p>
             </div>
 
-            <!-- Tab Switcher Akun -->
             <div style="display: flex; background: var(--bg-secondary); padding: 4px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border);">
                 <button type="button" id="accTabProfileBtn" class="acc-tab" onclick="switchAccTab('profile')" style="flex: 1; padding: 10px; border: none; background: var(--sage-700); color: #fff; font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.85rem;">Profil</button>
                 <button type="button" id="accTabHistoryBtn" class="acc-tab" onclick="switchAccTab('history')" style="flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-soft); font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.85rem;">Riwayat Traktir</button>
             </div>
 
-            <!-- Content: Profile Settings -->
             <div id="accProfileContent" style="display: flex; flex-direction: column; gap: 12px;">
                 <div class="custom-amount" style="margin-top: 0;">
-                    <label for="accUsernameInput" style="font-size: 0.81rem; margin-bottom: 4px; display: block;">Username (Untuk Leaderboard)</label>
+                    <label for="accUsernameInput" style="font-size: 0.81rem; margin-bottom: 4px; display: block;">Username Unik (Wajib untuk Leaderboard)</label>
                     <div class="amount-input-wrap">
                         <span>@</span>
                         <input type="text" id="accUsernameInput" maxlength="15" placeholder="username_unik" style="width: 100%; background: var(--bg-secondary); border: 0; padding: 11px 12px 11px 2px; color: var(--text); outline: none;">
@@ -339,14 +320,13 @@
                     <input type="text" id="accPhoneInput" placeholder="08123456789" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
                 </div>
                 <button type="button" id="saveProfileBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff; margin-top: 4px;">
-                    Simpan Perubahan
+                    Simpan & Verifikasi Username
                 </button>
                 <button type="button" id="logoutBtn" class="modal-support-button" style="background: #dc2626; color: #fff; margin-top: 4px;">
                     Keluar (Logout)
                 </button>
             </div>
 
-            <!-- Content: History Traktiran -->
             <div id="accHistoryContent" style="display: none; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;">
                 <div id="userHistoryList">
                     <div style="text-align: center; color: var(--text-soft); padding: 20px; font-size: 0.85rem;">Memuat riwayat...</div>
@@ -407,12 +387,12 @@
             <p class="modal-description">Kalau mau support, pilih nominalnya. Nggak wajib kok.</p>
 
             <div class="custom-amount" style="margin-top: 20px;">
-                <label for="supporterUsername">Username (Wajib diisi)</label>
+                <label for="supporterUsername">Username Akun (Terkunci Otomatis)</label>
                 <div class="amount-input-wrap">
                     <span>@</span>
-                    <input type="text" id="supporterUsername" maxlength="15" placeholder="Masukkan username kamu" autocomplete="off">
+                    <input type="text" id="supporterUsername" readonly placeholder="Username akun kamu" style="background: var(--bg-secondary); cursor: not-allowed;">
                 </div>
-                <p class="input-error" id="usernameError" style="display:none; color:#d9534f; font-size:0.75rem; margin-top:5px;">Username tidak boleh kosong atau mengandung HTML.</p>
+                <p class="input-error" id="usernameError" style="display:none; color:#d9534f; font-size:0.75rem; margin-top:5px;">Username wajib terverifikasi.</p>
             </div>
 
             <div class="amount-grid">
