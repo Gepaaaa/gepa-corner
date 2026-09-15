@@ -241,13 +241,18 @@
                 <p>Thanks for visiting! ☺</p>
             </div>
             <div class="footer-right">
+                <div class="footer-links-tiny">
+                    <a href="#" onclick="openInfoModal('privacyModal'); return false;">Privacy Policy</a>
+                    <span>•</span>
+                    <a href="#" onclick="openInfoModal('termsModal'); return false;">Terms of Service</a>
+                </div>
                 <span>Made with patience & a little caffeine.</span>
                 <span>© <span id="currentYear"></span> Gepa</span>
             </div>
         </div>
     </footer>
 
-    <!-- Auth / Login & Register Modal (Tabbed Style) -->
+    <!-- Auth / Login & Register Modal -->
     <div class="modal-overlay" id="authModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 420px; text-align: left; padding: 28px 24px;">
             <button class="modal-close" type="button" onclick="closeInfoModal('authModal')">×</button>
@@ -287,18 +292,52 @@
                     Masuk Sekarang
                 </button>
                 
-                <!-- Teks Tautan Daftar Sekarang (Bersih dari warning deprecated) -->
                 <div id="authSwitchPrompt" style="text-align: center; margin-top: 8px; font-size: 0.82rem; color: var(--text-soft);">
                     Belum punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Daftar sekarang</a>
                 </div>
             </div>
 
-            <!-- Footer Cancel Button -->
             <div style="text-align: center; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px;">
                 <button type="button" onclick="closeInfoModal('authModal')" style="background: transparent; border: none; color: var(--text-soft); font-weight: 600; font-size: 0.9rem; cursor: pointer;">
                     Cancel
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Privacy Policy Modal -->
+    <div class="modal-overlay" id="privacyModal">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 520px; text-align: left;">
+            <button class="modal-close" type="button" onclick="closeInfoModal('privacyModal')">×</button>
+            <div class="modal-icon" style="background: var(--sage-100); color: var(--sage-700); width: 48px; height: 48px; font-size: 1.3rem;">🔒</div>
+            <p class="section-kicker">legal information</p>
+            <h2 style="font-size: 1.4rem; margin-bottom: 12px;">Privacy Policy</h2>
+            <div style="font-size: 0.85rem; color: var(--text-soft); line-height: 1.6; max-height: 280px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;">
+                <p>Terakhir diperbarui: September 2026</p>
+                <p>Gepa Corner ("kami") sangat menghargai privasi kamu. Halaman Kebijakan Privasi ini menjelaskan bagaimana informasi kamu dikumpulkan dan digunakan di <strong>gepacorner.my.id</strong>.</p>
+                <p><strong>1. Informasi yang Kami Kumpulkan:</strong> Kami dapat mengumpulkan informasi dasar seperti username atau email yang kamu berikan saat mendaftar akun atau saat memberikan dukungan (traktiran) melalui sistem pembayaran pihak ketiga (Midtrans).</p>
+                <p><strong>2. Penggunaan Informasi:</strong> Informasi yang dikumpulkan hanya digunakan untuk menampilkan nama di daftar Top Supporters (ranking), memproses transaksi, dan meningkatkan kenyamanan pengalamanmu di website ini.</p>
+                <p><strong>3. Keamanan Data:</strong> Kami berkomitmen menjaga keamanan data kamu melalui integrasi sistem autentikasi terpercaya (Supabase) dan payment gateway resmi (Midtrans).</p>
+            </div>
+            <button class="modal-support-button" type="button" onclick="closeInfoModal('privacyModal')" style="background: var(--sage-700); margin-top: 20px;">Tutup</button>
+        </div>
+    </div>
+
+    <!-- Terms of Service Modal -->
+    <div class="modal-overlay" id="termsModal">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 520px; text-align: left;">
+            <button class="modal-close" type="button" onclick="closeInfoModal('termsModal')">×</button>
+            <div class="modal-icon" style="background: var(--sage-100); color: var(--sage-700); width: 48px; height: 48px; font-size: 1.3rem;">📄</div>
+            <p class="section-kicker">legal information</p>
+            <h2 style="font-size: 1.4rem; margin-bottom: 12px;">Terms of Service</h2>
+            <div style="font-size: 0.85rem; color: var(--text-soft); line-height: 1.6; max-height: 280px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;">
+                <p>Terakhir diperbarui: September 2026</p>
+                <p>Selamat datang di <strong>gepacorner.my.id</strong>. Dengan mengakses atau menggunakan website ini, kamu menyetujui syarat dan ketentuan berikut:</p>
+                <p><strong>1. Sifat Dukungan (Traktiran):</strong> Segala bentuk dukungan finansial atau traktiran bersifat sukarela (opsional) dan tidak bersifat mengikat atau dapat dikembalikan (non-refundable).</p>
+                <p><strong>2. Perilaku Pengguna:</strong> Pengguna dilarang menggunakan nama/username yang mengandung unsur SARA, kebencian, atau hal-hal menyinggung pada kolom dukungan atau leaderboard.</p>
+                <p><strong>3. Perubahan Layanan:</strong> Kami berhak sewaktu-waktu mengubah atau memperbarui konten, fitur, maupun ketentuan yang ada di website ini tanpa pemberitahuan sebelumnya.</p>
+            </div>
+            <button class="modal-support-button" type="button" onclick="closeInfoModal('termsModal')" style="background: var(--sage-700); margin-top: 20px;">Tutup</button>
         </div>
     </div>
 
