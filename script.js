@@ -67,6 +67,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_Av4YqKP2rl2BePcsms8wGA_JqUmHpCX";
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let currentUserSession = null;
 let isRegisterMode = false;
+let userProfileCache = null;
 
 function updateAuthButtonState(session) {
     currentUserSession = session;
@@ -76,6 +77,7 @@ function updateAuthButtonState(session) {
             loadUserProfileData(session.user);
             openInfoModal("accountModal");
         };
+        fetchUserProfile(session.user.id);
     } else if (openAuthModalBtn) {
         openAuthModalBtn.textContent = "✨ Masuk";
         openAuthModalBtn.onclick = () => {
@@ -83,17 +85,28 @@ function updateAuthButtonState(session) {
             updateAuthModalUI();
             openInfoModal("authModal");
         };
+        userProfileCache = null;
+    }
+}
+
+async function fetchUserProfile(userId) {
+    if (!supabaseClient) return;
+    const { data } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+    if (data) {
+        userProfileCache = data;
     }
 }
 
 async function checkUserSession() {
     if (!supabaseClient) return;
     
-    // Cek sesi aktif saat halaman dimuat
     const { data: { session } } = await supabaseClient.auth.getSession();
     updateAuthButtonState(session);
 
-    // Pantau perubahan sesi secara real-time
     supabaseClient.auth.onAuthStateChange((event, session) => {
         updateAuthButtonState(session);
     });
@@ -113,7 +126,6 @@ async function loadUserProfileData(user) {
 
     if (emailDisplay) emailDisplay.textContent = user.email;
 
-    // Ambil data profil dari tabel profiles Supabase
     if (supabaseClient) {
         const { data } = await supabaseClient
             .from('profiles')
@@ -122,6 +134,7 @@ async function loadUserProfileData(user) {
             .single();
 
         if (data) {
+            userProfileCache = data;
             if (usernameInput) usernameInput.value = data.username || "";
             if (phoneInput) phoneInput.value = data.phone || "";
             if (data.avatar_url && avatarPreview) {
@@ -167,7 +180,7 @@ async function loadUserDonationHistory(email) {
     }
 }
 
-// Simpan Perubahan Profil (Username Unik & No HP)
+// Simpan Perubahan Profil (Username Unik & Wajib Terverifikasi)
 const saveProfileBtn = document.getElementById("saveProfileBtn");
 if (saveProfileBtn && supabaseClient) {
     saveProfileBtn.addEventListener("click", async () => {
@@ -175,15 +188,15 @@ if (saveProfileBtn && supabaseClient) {
         const newUsername = document.getElementById("accUsernameInput").value.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
         const newPhone = document.getElementById("accPhoneInput").value.trim();
 
-        if (!newUsername) {
-            showToast("Username tidak boleh kosong!");
+        if (!newUsername || newUsername.length < 3) {
+            showToast("Username minimal 3 karakter dan valid!");
             return;
         }
 
-        saveProfileBtn.textContent = "Menyimpan...";
+        saveProfileBtn.textContent = "Memeriksa...";
         saveProfileBtn.disabled = true;
 
-        // Cek duplikasi username
+        // Cek duplikasi username di database profiles
         const { data: existingUser } = await supabaseClient
             .from('profiles')
             .select('id')
@@ -192,7 +205,7 @@ if (saveProfileBtn && supabaseClient) {
             .single();
 
         if (existingUser) {
-            showToast("Username sudah digunakan orang lain!");
+            showToast("Username sudah dipakai orang lain! Pilih yang lain.");
             saveProfileBtn.textContent = "Simpan Perubahan";
             saveProfileBtn.disabled = false;
             return;
@@ -209,7 +222,10 @@ if (saveProfileBtn && supabaseClient) {
         if (error) {
             showToast("Gagal menyimpan: " + error.message);
         } else {
-            showToast("Profil berhasil diperbarui! ✨");
+            userProfileCache.username = newUsername;
+            userProfileCache.phone = newPhone;
+            showToast("Username berhasil diverifikasi & disimpan! ✨");
+            closeInfoModal("accountModal");
         }
     });
 }
@@ -595,7 +611,33 @@ window.closeInfoModal = function(modalId) {
 if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOverlay"));
 if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
 if (hobbyCard) hobbyCard.addEventListener("click", () => openInfoModal("hobbyModalOverlay"));
-if (supportButton) supportButton.addEventListener("click", () => openInfoModal("supportModal"));
+
+if (supportButton) supportButton.addEventListener("click", () => {
+    // Wajib login & punya username terintegrasi sebelum donasi
+    if (!currentUserSession) {
+        showToast("Silakan masuk/login terlebih dahulu untuk traktir!");
+        isRegisterMode = false;
+        updateAuthModalUI();
+        openInfoModal("authModal");
+        return;
+    }
+
+    if (!userProfileCache || !userProfileCache.username) {
+        showToast("Silakan atur & verifikasi username akun kamu terlebih dahulu!");
+        loadUserProfileData(currentUserSession.user);
+        openInfoModal("accountModal");
+        return;
+    }
+
+    // Set otomatis username dari akun yang terintegrasi dan kunci
+    if (supporterUsername) {
+        supporterUsername.value = userProfileCache.username;
+        supporterUsername.readOnly = true;
+        supporterUsername.style.background = "var(--bg-secondary)";
+    }
+
+    openInfoModal("supportModal");
+});
 
 if (openAuthModalBtn) openAuthModalBtn.addEventListener("click", () => {
     isRegisterMode = false; 
@@ -631,7 +673,6 @@ function updateAuthModalUI() {
         promptEl.innerHTML = `Belum punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Daftar sekarang</a>`;
     }
 
-    // Re-bind event listener ke link baru yang di-render via innerHTML
     const rebindLink = document.getElementById("toggleAuthModeLink");
     if (rebindLink) {
         rebindLink.addEventListener("click", (ev) => {
@@ -728,9 +769,15 @@ if (submitLoginEmailBtn && supabaseClient) {
         if (result.error) {
             showToast(result.error.message);
         } else {
-            showToast(isRegisterMode ? "Registrasi berhasil! Silakan cek email jika butuh konfirmasi." : "Berhasil masuk! ☺");
+            showToast(isRegisterMode ? "Registrasi berhasil! Silakan atur username profilmu." : "Berhasil masuk! ☺");
             closeInfoModal("authModal");
             checkUserSession();
+            if (isRegisterMode && result.data && result.data.user) {
+                setTimeout(() => {
+                    loadUserProfileData(result.data.user);
+                    openInfoModal("accountModal");
+                }, 500);
+            }
         }
     });
 }
@@ -878,9 +925,13 @@ function showPendingModal(orderId, payment) {
 function validateInput() {
     if (!supporterUsername || !usernameError) return true;
     const username = supporterUsername.value.trim();
-    const hasHtml = /<[a-z][\s\S]*>/i.test(username);
+    
+    // Pastikan username mengikuti akun terintegrasi
+    if (userProfileCache && userProfileCache.username) {
+        supporterUsername.value = userProfileCache.username;
+    }
 
-    if (username === "" || hasHtml) {
+    if (username === "") {
         continueSupport.disabled = true;
         if (selectedValue > 0) usernameError.style.display = "block";
         return false;
@@ -940,7 +991,7 @@ if (continueSupport) {
     continueSupport.addEventListener("click", async () => {
         if (!validateInput() || selectedValue < 1000) return;
         const amount = selectedValue;
-        const username = supporterUsername.value.trim();
+        const username = userProfileCache && userProfileCache.username ? userProfileCache.username : supporterUsername.value.trim();
 
         continueSupport.disabled = true;
         continueSupport.textContent = "Memproses...";
@@ -965,7 +1016,6 @@ if (continueSupport) {
         } finally {
             continueSupport.disabled = false;
             continueSupport.textContent = "Proses Payment →";
-            if (supporterUsername) supporterUsername.value = "";
             selectedValue = 0;
             amountButtons.forEach((btn) => btn.classList.remove("selected"));
             if (customAmount) customAmount.value = "";
