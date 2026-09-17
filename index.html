@@ -262,32 +262,31 @@
                 <p id="authModalDesc" style="font-size: 0.88rem; color: var(--text-soft);">Hubungkan akunmu buat lihat riwayat traktir & kelola profil.</p>
             </div>
 
-            <!-- Tab Switcher -->
-            <div style="display: flex; background: var(--bg-secondary); padding: 4px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border);">
-                <button type="button" id="tabSocialBtn" class="auth-tab active-tab" onclick="switchAuthTab('social')" style="flex: 1; padding: 10px; border: none; background: var(--sage-700); color: #fff; font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.88rem; transition: all 0.2s;">Social</button>
-                <button type="button" id="tabEmailBtn" class="auth-tab" onclick="switchAuthTab('email')" style="flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-soft); font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.88rem; transition: all 0.2s;">Email / HP</button>
-            </div>
-
-            <!-- Tab Content: Social -->
-            <div id="socialAuthContent" style="display: flex; flex-direction: column; gap: 10px;">
-                <button type="button" id="loginGoogleBtn" class="modal-support-button" style="background: #ffffff; color: #333; border: 1px solid var(--border); margin-top: 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span style="font-size: 1.1rem;">🌐</span> Lanjut dengan Google
-                </button>
-                <button type="button" id="loginPhoneBtn" class="modal-support-button" style="background: #25d366; color: #fff; margin-top: 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span style="font-size: 1.1rem;">📱</span> Lanjut dengan WhatsApp
-                </button>
-            </div>
-
-            <!-- Tab Content: Email / HP -->
-            <div id="emailAuthContent" style="display: none; flex-direction: column; gap: 12px;">
+            <!-- Auth Form: Email + Username + Password -->
+            <div id="authFormContent" style="display: flex; flex-direction: column; gap: 12px;">
                 <div class="custom-amount" style="margin-top: 0;">
-                    <label for="authEmailInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Email / No. WhatsApp</label>
-                    <input type="text" id="authEmailInput" placeholder="nama@email.com atau 0812..." style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+                    <label for="authEmailInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Email</label>
+                    <input type="email" id="authEmailInput" placeholder="nama@email.com" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
                 </div>
+                
+                <!-- Username field - hanya tampil di register mode -->
+                <div id="authUsernameField" class="custom-amount" style="margin-top: 0; display: none;">
+                    <label for="authUsernameInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Username</label>
+                    <input type="text" id="authUsernameInput" placeholder="username_unik" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+                    <div id="authUsernameError" style="font-size: 0.75rem; color: #dc2626; margin-top: 4px; display: none;"></div>
+                </div>
+                
                 <div class="custom-amount" style="margin-top: 0;">
                     <label for="authPasswordInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Password</label>
                     <input type="password" id="authPasswordInput" placeholder="••••••••" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
                 </div>
+                
+                <!-- Confirm password field - hanya tampil di register mode -->
+                <div id="authConfirmPasswordField" class="custom-amount" style="margin-top: 0; display: none;">
+                    <label for="authConfirmPasswordInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Konfirmasi Password</label>
+                    <input type="password" id="authConfirmPasswordInput" placeholder="••••••••" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+                </div>
+                
                 <button type="button" id="submitLoginEmailBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff; margin-top: 4px;">
                     Masuk Sekarang
                 </button>
@@ -406,13 +405,22 @@
             <h2 id="modalTitle">Traktir Gepa ☕</h2>
             <p class="modal-description">Kalau mau support, pilih nominalnya. Nggak wajib kok.</p>
 
-            <div class="custom-amount" style="margin-top: 20px;">
-                <label for="supporterUsername">Username (Wajib diisi)</label>
+            <!-- Username field untuk authenticated user -->
+            <div id="authenticatedUsernameField" class="custom-amount" style="margin-top: 20px; display: none;">
+                <label for="supporterUsername">Username Anda</label>
                 <div class="amount-input-wrap">
                     <span>@</span>
-                    <input type="text" id="supporterUsername" maxlength="15" placeholder="Masukkan username kamu" autocomplete="off">
+                    <input type="text" id="supporterUsername" maxlength="15" placeholder="username" autocomplete="off" readonly style="background: var(--bg-secondary); cursor: not-allowed;">
                 </div>
-                <p class="input-error" id="usernameError" style="display:none; color:#d9534f; font-size:0.75rem; margin-top:5px;">Username tidak boleh kosong atau mengandung HTML.</p>
+                <p class="input-error" id="usernameError" style="display:none; color:#d9534f; font-size:0.75rem; margin-top:5px;"></p>
+            </div>
+            
+            <!-- Username field untuk guest user -->
+            <div id="guestUsernameField" class="custom-amount" style="margin-top: 20px;">
+                <label for="guestUsernameInfo">Status Donasi</label>
+                <div class="amount-input-wrap" style="background: var(--bg-secondary); padding: 11px 14px; border-radius: 12px; color: var(--text-soft); font-size: 0.9rem;">
+                    <span style="font-size: 0.9rem;">Anonim · <a href="#" id="loginForUsernameLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Login untuk pakai username</a></span>
+                </div>
             </div>
 
             <div class="amount-grid">
