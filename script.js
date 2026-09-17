@@ -26,10 +26,16 @@ const revealElements = document.querySelectorAll(".reveal");
 
 // Auth Elements
 const openAuthModalBtn = document.getElementById("openAuthModalBtn");
-const loginGoogleBtn = document.getElementById("loginGoogleBtn");
-const loginPhoneBtn = document.getElementById("loginPhoneBtn");
 const submitLoginEmailBtn = document.getElementById("submitLoginEmailBtn");
 const toggleAuthModeLink = document.getElementById("toggleAuthModeLink");
+const authUsernameField = document.getElementById("authUsernameField");
+const authUsernameInput = document.getElementById("authUsernameInput");
+const authConfirmPasswordField = document.getElementById("authConfirmPasswordField");
+const authConfirmPasswordInput = document.getElementById("authConfirmPasswordInput");
+const authUsernameError = document.getElementById("authUsernameError");
+const authenticatedUsernameField = document.getElementById("authenticatedUsernameField");
+const guestUsernameField = document.getElementById("guestUsernameField");
+const loginForUsernameLink = document.getElementById("loginForUsernameLink");
 
 // Support & Payment Elements
 const supportButton = document.getElementById("supportButton");
@@ -69,18 +75,6 @@ let currentUserSession = null;
 let isRegisterMode = false;
 let userProfileCache = null;
 
-// STEP 2 (auth state refactor): flag ini true selama pengecekan sesi awal
-// berjalan, supaya tombol auth tidak diklik di tengah kondisi belum pasti.
-let authLoading = true;
-
-// STEP 2 (auth state refactor): promise fetch profil yang sedang berjalan.
-// Kode lain (misal supportButton) bisa `await` promise ini sebelum membaca
-// userProfileCache, supaya tidak lagi baca cache yang belum sempat terisi
-// (race condition yang ditemukan saat audit).
-let profileFetchPromise = null;
-
-if (openAuthModalBtn) openAuthModalBtn.disabled = true;
-
 function updateAuthButtonState(session) {
     currentUserSession = session;
     if (session && openAuthModalBtn) {
@@ -89,7 +83,7 @@ function updateAuthButtonState(session) {
             loadUserProfileData(session.user);
             openInfoModal("accountModal");
         };
-        profileFetchPromise = fetchAndCacheProfile(session.user.id);
+        fetchUserProfile(session.user.id);
     } else if (openAuthModalBtn) {
         openAuthModalBtn.textContent = "✨ Masuk";
         openAuthModalBtn.onclick = () => {
@@ -98,17 +92,11 @@ function updateAuthButtonState(session) {
             openInfoModal("authModal");
         };
         userProfileCache = null;
-        profileFetchPromise = null;
     }
 }
 
-// STEP 2 (auth state refactor): satu-satunya tempat yang melakukan query
-// SELECT ke tabel profiles. Sebelumnya ada 2 implementasi terpisah
-// (fetchUserProfile + query duplikat di loadUserProfileData) yang bisa
-// saling tidak sinkron. Perilaku query (select('*').eq('id', userId).single())
-// persis sama seperti sebelumnya, tidak ada perubahan pada data yang diambil.
-async function fetchAndCacheProfile(userId) {
-    if (!supabaseClient) return null;
+async function fetchUserProfile(userId) {
+    if (!supabaseClient) return;
     const { data } = await supabaseClient
         .from('profiles')
         .select('*')
@@ -117,21 +105,13 @@ async function fetchAndCacheProfile(userId) {
     if (data) {
         userProfileCache = data;
     }
-    return data || null;
 }
 
 async function checkUserSession() {
-    if (!supabaseClient) {
-        authLoading = false;
-        if (openAuthModalBtn) openAuthModalBtn.disabled = false;
-        return;
-    }
-
+    if (!supabaseClient) return;
+    
     const { data: { session } } = await supabaseClient.auth.getSession();
     updateAuthButtonState(session);
-    if (profileFetchPromise) await profileFetchPromise;
-    authLoading = false;
-    if (openAuthModalBtn) openAuthModalBtn.disabled = false;
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
         updateAuthButtonState(session);
@@ -152,26 +132,41 @@ async function loadUserProfileData(user) {
 
     if (emailDisplay) emailDisplay.textContent = user.email;
 
-    const data = await fetchAndCacheProfile(user.id);
-    if (data) {
-        if (usernameInput) usernameInput.value = data.username || "";
-        if (phoneInput) phoneInput.value = data.phone || "";
-        if (data.avatar_url && avatarPreview) {
-            avatarPreview.src = data.avatar_url;
-            avatarPreview.style.display = "block";
-            if (avatarFallback) avatarFallback.style.display = "none";
+    if (supabaseClient) {
+        const { data } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        if (data) {
+            userProfileCache = data;
+            if (usernameInput) usernameInput.value = data.username || "";
+            if (phoneInput) phoneInput.value = data.phone || "";
+            if (data.avatar_url && avatarPreview) {
+                avatarPreview.src = data.avatar_url;
+                avatarPreview.style.display = "block";
+                if (avatarFallback) avatarFallback.style.display = "none";
+            }
         }
     }
 
-    loadUserDonationHistory(user.email);
+    loadUserDonationHistory();
 }
 
-async function loadUserDonationHistory(email) {
+async function loadUserDonationHistory() {
     const historyList = document.getElementById("userHistoryList");
-    if (!historyList) return;
+    if (!historyList || !currentUserSession) return;
     
     try {
-        const res = await fetch(`/api/user-donations?email=${encodeURIComponent(email)}`, { cache: "no-store" });
+        const token = currentUserSession.access_token;
+        const res = await fetch("/api/user-donations", {
+            cache: "no-store",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
         if (!res.ok) throw new Error();
         const donations = await res.json();
 
@@ -187,7 +182,7 @@ async function loadUserDonationHistory(email) {
             div.innerHTML = `
                 <div>
                     <div style="font-weight: 600; font-size: 0.85rem;">Rp${formatRupiah(item.amount)}</div>
-                    <div style="font-size: 0.72rem; color: var(--text-soft);">${new Date(item.created_at).toLocaleDateString("id-ID")}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-soft);">${new Date(item.transaction_time).toLocaleDateString("id-ID")}</div>
                 </div>
                 <span style="font-size: 0.75rem; padding: 3px 8px; background: var(--sage-700); color: #fff; border-radius: 6px;">Berhasil</span>
             `;
@@ -630,34 +625,27 @@ if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOver
 if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
 if (hobbyCard) hobbyCard.addEventListener("click", () => openInfoModal("hobbyModalOverlay"));
 
-if (supportButton) supportButton.addEventListener("click", async () => {
-    // Wajib login & punya username terintegrasi sebelum donasi
-    if (!currentUserSession) {
-        showToast("Silakan masuk/login terlebih dahulu untuk traktir!");
-        isRegisterMode = false;
-        updateAuthModalUI();
-        openInfoModal("authModal");
-        return;
+if (supportButton) supportButton.addEventListener("click", () => {
+    // Update donation form berdasarkan auth status
+    if (currentUserSession && userProfileCache && userProfileCache.username) {
+        // ===== AUTHENTICATED USER WITH USERNAME =====
+        // Tampilkan field username authenticated, sembunyikan guest field
+        if (authenticatedUsernameField) authenticatedUsernameField.style.display = "block";
+        if (guestUsernameField) guestUsernameField.style.display = "none";
+        // Isi username dari profile, readonly
+        if (supporterUsername) {
+            supporterUsername.value = userProfileCache.username;
+            supporterUsername.readOnly = true;
+            supporterUsername.style.background = "var(--bg-secondary)";
+            supporterUsername.style.cursor = "not-allowed";
+        }
+    } else {
+        // ===== GUEST USER (tidak login atau tidak ada username) =====
+        // Tampilkan field guest (anonim dengan link login), sembunyikan authenticated field
+        if (guestUsernameField) guestUsernameField.style.display = "flex";
+        if (authenticatedUsernameField) authenticatedUsernameField.style.display = "none";
     }
-
-    // STEP 2: kalau fetch profil masih berjalan (misal user baru saja login),
-    // tunggu dulu sebelum menyimpulkan username belum ada.
-    if (profileFetchPromise) await profileFetchPromise;
-
-    if (!userProfileCache || !userProfileCache.username) {
-        showToast("Silakan atur & verifikasi username akun kamu terlebih dahulu!");
-        loadUserProfileData(currentUserSession.user);
-        openInfoModal("accountModal");
-        return;
-    }
-
-    // Set otomatis username dari akun yang terintegrasi dan kunci
-    if (supporterUsername) {
-        supporterUsername.value = userProfileCache.username;
-        supporterUsername.readOnly = true;
-        supporterUsername.style.background = "var(--bg-secondary)";
-    }
-
+    
     openInfoModal("supportModal");
 });
 
@@ -666,6 +654,16 @@ if (openAuthModalBtn) openAuthModalBtn.addEventListener("click", () => {
     updateAuthModalUI();
     openInfoModal("authModal");
 });
+
+if (loginForUsernameLink) {
+    loginForUsernameLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        closeInfoModal("supportModal");
+        isRegisterMode = false;
+        updateAuthModalUI();
+        openInfoModal("authModal");
+    });
+}
 
 if (toggleAuthModeLink) {
     toggleAuthModeLink.addEventListener("click", (e) => {
@@ -688,11 +686,19 @@ function updateAuthModalUI() {
         descEl.textContent = "Buat akun baru buat mulai nyimpen riwayat traktiranmu.";
         submitBtn.textContent = "Daftar Sekarang";
         promptEl.innerHTML = `Sudah punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Masuk sekarang</a>`;
+        // Tampilkan field register-only
+        if (authUsernameField) authUsernameField.style.display = "flex";
+        if (authConfirmPasswordField) authConfirmPasswordField.style.display = "flex";
+        // Clear error message
+        if (authUsernameError) authUsernameError.style.display = "none";
     } else {
         titleEl.textContent = "Masuk ke Corner";
         descEl.textContent = "Hubungkan akunmu buat lihat riwayat traktir & kelola profil.";
         submitBtn.textContent = "Masuk Sekarang";
         promptEl.innerHTML = `Belum punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Daftar sekarang</a>`;
+        // Sembunyikan field register-only
+        if (authUsernameField) authUsernameField.style.display = "none";
+        if (authConfirmPasswordField) authConfirmPasswordField.style.display = "none";
     }
 
     const rebindLink = document.getElementById("toggleAuthModeLink");
@@ -704,26 +710,6 @@ function updateAuthModalUI() {
         });
     }
 }
-
-// Auth Tab Switcher (Social vs Email)
-window.switchAuthTab = function(tabName) {
-    const tabSocialBtn = document.getElementById("tabSocialBtn");
-    const tabEmailBtn = document.getElementById("tabEmailBtn");
-    const socialContent = document.getElementById("socialAuthContent");
-    const emailContent = document.getElementById("emailAuthContent");
-
-    if (tabName === 'social') {
-        if (tabSocialBtn) { tabSocialBtn.style.background = "var(--sage-700)"; tabSocialBtn.style.color = "#fff"; }
-        if (tabEmailBtn) { tabEmailBtn.style.background = "transparent"; tabEmailBtn.style.color = "var(--text-soft)"; }
-        if (socialContent) socialContent.style.display = "flex";
-        if (emailContent) emailContent.style.display = "none";
-    } else {
-        if (tabEmailBtn) { tabEmailBtn.style.background = "var(--sage-700)"; tabEmailBtn.style.color = "#fff"; }
-        if (tabSocialBtn) { tabSocialBtn.style.background = "transparent"; tabSocialBtn.style.color = "var(--text-soft)"; }
-        if (emailContent) emailContent.style.display = "flex";
-        if (socialContent) socialContent.style.display = "none";
-    }
-};
 
 // Account Modal Tab Switcher (Edit Profil vs Riwayat Donasi)
 window.switchAccTab = function(tabName) {
@@ -745,61 +731,134 @@ window.switchAccTab = function(tabName) {
     }
 };
 
-// Supabase Google & Email Actions
-if (loginGoogleBtn && supabaseClient) {
-    loginGoogleBtn.addEventListener("click", async () => {
-        const { error } = await supabaseClient.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: window.location.origin }
-        });
-        if (error) showToast("Gagal login Google: " + error.message);
-    });
-}
-
-if (loginPhoneBtn) {
-    loginPhoneBtn.addEventListener("click", () => {
-        showToast("Login WhatsApp menggunakan verifikasi OTP Supabase.");
-    });
-}
-
+// Supabase Auth with Username/Email Login
 if (submitLoginEmailBtn && supabaseClient) {
     submitLoginEmailBtn.addEventListener("click", async () => {
         const emailInput = document.getElementById("authEmailInput").value.trim();
         const passwordInput = document.getElementById("authPasswordInput").value;
-
+        
+        // Validasi dasar
         if (!emailInput || !passwordInput) {
-            showToast("Email/No. HP dan Password wajib diisi.");
+            showToast("Email dan Password wajib diisi.");
             return;
         }
 
         submitLoginEmailBtn.textContent = isRegisterMode ? "Mendaftarkan..." : "Memeriksa...";
         submitLoginEmailBtn.disabled = true;
-
-        const isEmail = emailInput.includes("@");
-        const identifier = isEmail ? emailInput : `${emailInput.replace(/[^0-9]/g, "")}@phone.local`;
-
-        let result;
-        if (isRegisterMode) {
-            result = await supabaseClient.auth.signUp({ email: identifier, password: passwordInput });
-        } else {
-            result = await supabaseClient.auth.signInWithPassword({ email: identifier, password: passwordInput });
-        }
-
-        submitLoginEmailBtn.textContent = isRegisterMode ? "Daftar Sekarang" : "Masuk Sekarang";
-        submitLoginEmailBtn.disabled = false;
-
-        if (result.error) {
-            showToast(result.error.message);
-        } else {
-            showToast(isRegisterMode ? "Registrasi berhasil! Silakan atur username profilmu." : "Berhasil masuk! ☺");
-            closeInfoModal("authModal");
-            checkUserSession();
-            if (isRegisterMode && result.data && result.data.user) {
-                setTimeout(() => {
-                    loadUserProfileData(result.data.user);
-                    openInfoModal("accountModal");
-                }, 500);
+        
+        try {
+            if (isRegisterMode) {
+                // ========== REGISTER MODE ==========
+                const usernameInput = (document.getElementById("authUsernameInput") || {}).value?.trim();
+                const confirmPasswordInput = (document.getElementById("authConfirmPasswordInput") || {}).value;
+                
+                // Validasi register-specific
+                if (!usernameInput) {
+                    showToast("Username wajib diisi.");
+                    submitLoginEmailBtn.textContent = "Daftar Sekarang";
+                    submitLoginEmailBtn.disabled = false;
+                    return;
+                }
+                
+                if (usernameInput.length < 3) {
+                    showToast("Username minimal 3 karakter.");
+                    submitLoginEmailBtn.textContent = "Daftar Sekarang";
+                    submitLoginEmailBtn.disabled = false;
+                    return;
+                }
+                
+                if (passwordInput !== confirmPasswordInput) {
+                    showToast("Password dan konfirmasi tidak cocok.");
+                    submitLoginEmailBtn.textContent = "Daftar Sekarang";
+                    submitLoginEmailBtn.disabled = false;
+                    return;
+                }
+                
+                // Check username availability (via simple query, atau tanpa check karena DB ada UNIQUE constraint)
+                // Untuk saat ini, kita skip availability check dan andalkan database constraint
+                
+                // Sign up
+                const result = await supabaseClient.auth.signUp({
+                    email: emailInput,
+                    password: passwordInput
+                });
+                
+                if (result.error) {
+                    showToast(result.error.message);
+                    submitLoginEmailBtn.textContent = "Daftar Sekarang";
+                    submitLoginEmailBtn.disabled = false;
+                    return;
+                }
+                
+                // User berhasil diciptakan, sekarang buat profile dengan username
+                if (result.data && result.data.user) {
+                    const profileResult = await supabaseClient
+                        .from('profiles')
+                        .insert([{
+                            id: result.data.user.id,
+                            username: usernameInput,
+                            phone: "",
+                            avatar_url: null
+                        }]);
+                    
+                    if (profileResult.error && profileResult.error.code !== 'PGRST116') {
+                        // PGRST116 = duplicate key error, tapi user sudah punya profile dari trigger/insert
+                        console.warn("Profile insert error (mungkin sudah ada):", profileResult.error);
+                    }
+                }
+                
+                showToast("Registrasi berhasil! Silakan verifikasi email kamu.");
+                closeInfoModal("authModal");
+                // Tidak langsung buka Account Modal karena user belum verifikasi email
+                // (email confirmation ON, jadi session masih null sampai email verified)
+                checkUserSession();
+                
+            } else {
+                // ========== LOGIN MODE ==========
+                // emailInput bisa email atau username
+                let loginEmail = emailInput;
+                
+                if (!emailInput.includes("@")) {
+                    // Kemungkinan username, query endpoint untuk dapatkan email
+                    const res = await fetch("/api/username-login", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ username: emailInput })
+                    });
+                    
+                    if (!res.ok) {
+                        showToast("Username tidak ditemukan.");
+                        submitLoginEmailBtn.textContent = "Masuk Sekarang";
+                        submitLoginEmailBtn.disabled = false;
+                        return;
+                    }
+                    
+                    const data = await res.json();
+                    loginEmail = data.email;
+                }
+                
+                // Sign in dengan email
+                const result = await supabaseClient.auth.signInWithPassword({
+                    email: loginEmail,
+                    password: passwordInput
+                });
+                
+                if (result.error) {
+                    showToast(result.error.message);
+                    submitLoginEmailBtn.textContent = "Masuk Sekarang";
+                    submitLoginEmailBtn.disabled = false;
+                    return;
+                }
+                
+                showToast("Berhasil masuk! ☺");
+                closeInfoModal("authModal");
+                checkUserSession();
             }
+        } catch (err) {
+            console.error("Auth error:", err);
+            showToast("Terjadi kesalahan. Silakan coba lagi.");
+            submitLoginEmailBtn.textContent = isRegisterMode ? "Daftar Sekarang" : "Masuk Sekarang";
+            submitLoginEmailBtn.disabled = false;
         }
     });
 }
@@ -945,26 +1004,19 @@ function showPendingModal(orderId, payment) {
 }
 
 function validateInput() {
-    if (!supporterUsername || !usernameError) return true;
-    const username = supporterUsername.value.trim();
-    
-    // Pastikan username mengikuti akun terintegrasi
+    // Untuk authenticated user, pastikan username terisi (readonly, auto-filled)
     if (userProfileCache && userProfileCache.username) {
         supporterUsername.value = userProfileCache.username;
     }
 
-    if (username === "") {
-        continueSupport.disabled = true;
-        if (selectedValue > 0) usernameError.style.display = "block";
-        return false;
+    // Validation: hanya cek jika ada nominal yang dipilih
+    if (selectedValue > 0) {
+        continueSupport.disabled = false;
+        return true;
     } else {
-        usernameError.style.display = "none";
-        if (selectedValue > 0) {
-            continueSupport.disabled = false;
-            return true;
-        }
+        continueSupport.disabled = true;
+        return false;
     }
-    return false;
 }
 
 function updateSupportAmount() {
@@ -1013,16 +1065,27 @@ if (continueSupport) {
     continueSupport.addEventListener("click", async () => {
         if (!validateInput() || selectedValue < 1000) return;
         const amount = selectedValue;
-        const username = userProfileCache && userProfileCache.username ? userProfileCache.username : supporterUsername.value.trim();
+        
+        // Tentukan username dan apakah authenticated
+        const isAuthenticated = currentUserSession && userProfileCache && userProfileCache.username;
+        const username = isAuthenticated ? userProfileCache.username : "Anonim";
 
         continueSupport.disabled = true;
         continueSupport.textContent = "Memproses...";
 
         try {
+            const body = { amount, username };
+            const headers = { "Content-Type": "application/json" };
+            
+            // Jika authenticated, kirim JWT untuk server-side verification
+            if (isAuthenticated && currentUserSession.access_token) {
+                headers["Authorization"] = `Bearer ${currentUserSession.access_token}`;
+            }
+            
             const response = await fetch("/api/create-payment", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ amount, username })
+                headers,
+                body: JSON.stringify(body)
             });
 
             const data = await response.json();
