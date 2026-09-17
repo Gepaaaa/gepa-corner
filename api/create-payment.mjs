@@ -3,9 +3,14 @@
 /* =========================================================
    GEPA - CREATE PAYMENT
    Midtrans Snap + Secure Payment Session
+   Support: Guest (anonymous) & Authenticated User Donations
 ========================================================= */
 
 import crypto from "crypto";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export default async function handler(req, res) {
 
@@ -46,6 +51,37 @@ export default async function handler(req, res) {
             amount,
             username
         } = req.body || {};
+        
+        // Try to verify user from JWT (Authorization header)
+        let userId = null;
+        let authenticatedUsername = null;
+        
+        const authHeader = req.headers.authorization;
+        if (authHeader && SUPABASE_URL && SUPABASE_SERVICE_ROLE) {
+            try {
+                const token = authHeader.replace('Bearer ', '');
+                const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+                const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+                
+                if (user && !error) {
+                    userId = user.id;
+                    
+                    // Query profile untuk dapatkan username authenticated user
+                    const { data: profile } = await supabaseAdmin
+                        .from('profiles')
+                        .select('username')
+                        .eq('id', userId)
+                        .single();
+                    
+                    if (profile && profile.username) {
+                        authenticatedUsername = profile.username;
+                    }
+                }
+            } catch (authErr) {
+                console.warn("Auth verification failed (continuing as guest):", authErr.message);
+                // Continue sebagai guest jika auth gagal
+            }
+        }
 
         const numAmount =
             Number(amount);
@@ -65,15 +101,21 @@ export default async function handler(req, res) {
         }
 
         /* =================================================
-           CLEAN USERNAME
+           DETERMINE USERNAME
+           
+           Prioritas:
+           1. Username dari authenticated user (verified via JWT)
+           2. Username dari request body (guest)
+           3. Default "Anonim"
         ================================================= */
         const cleanUsername =
-            typeof username === "string" &&
+            authenticatedUsername ||
+            (typeof username === "string" &&
             username.trim()
                 ? username
                     .trim()
                     .substring(0, 15)
-                : "Anonim";
+                : "Anonim");
 
         /* =================================================
            GENERATE ORDER ID
@@ -150,6 +192,9 @@ export default async function handler(req, res) {
 
                             custom_field1:
                                 cleanUsername,
+                            
+                            // Store user_id jika authenticated (untuk webhook)
+                            ...(userId && { custom_field2: userId }),
 
                             callbacks: {
                                 finish:
