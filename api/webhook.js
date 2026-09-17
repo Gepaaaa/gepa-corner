@@ -85,7 +85,7 @@ export default async function handler(req, res) {
         }
 
         // ==========================================
-        // 4. BERSIHKAN USERNAME
+        // 4. BERSIHKAN USERNAME & EXTRACT USER_ID
         // ==========================================
 
         const username =
@@ -93,6 +93,9 @@ export default async function handler(req, res) {
             data.custom_field1.trim()
                 ? data.custom_field1.trim().substring(0, 15)
                 : 'Anonim';
+        
+        // user_id dari custom_field2 (jika authenticated user)
+        const userId = data.custom_field2 || null;
 
         // ==========================================
         // 5. VALIDASI NOMINAL
@@ -155,7 +158,8 @@ export default async function handler(req, res) {
                     username: username,
                     amount: amount,
                     transaction_time: transactionTime,
-                    status: data.transaction_status
+                    status: data.transaction_status,
+                    user_id: userId  // null untuk guest, UUID untuk authenticated
                 })
             }
         );
