@@ -242,6 +242,7 @@ export default async function handler(req, res) {
 
           if (!signInError && signInData && signInData.user) {
             const { data: profile } = await supabase.from("profiles").select("*").eq("id", signInData.user.id).single();
+            const sessionAccessToken = signInData?.session?.access_token || null;
             matchedUser = {
               id: signInData.user.id,
               email: signInData.user.email,
@@ -249,7 +250,8 @@ export default async function handler(req, res) {
               avatar: profile?.avatar_url || "🐱",
               phone: profile?.phone || "",
               bio: "Sahabat Corner",
-              createdAt: signInData.user.created_at
+              createdAt: signInData.user.created_at,
+              accessToken: sessionAccessToken
             };
             memoryUsers.set(matchedUser.id, { ...matchedUser, passwordHash: pwdHash });
             saveUsersToDisk();
@@ -270,6 +272,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         message: "Berhasil masuk!",
         token,
+        accessToken: matchedUser.accessToken || token,
         user: {
           id: matchedUser.id,
           email: matchedUser.email,
@@ -431,14 +434,18 @@ export default async function handler(req, res) {
       // Direct update via recovery accessToken from Supabase
       if (accessToken && SUPABASE_SERVICE_ROLE) {
         try {
-          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-          const { data: { user: sbUser }, error: userErr } = await supabase.auth.getUser(accessToken);
-          if (sbUser && !userErr) {
-            await supabase.auth.admin.updateUserById(sbUser.id, { password: newPassword });
-            const memU = memoryUsers.get(sbUser.id);
-            if (memU) {
-              memU.passwordHash = hashPassword(newPassword);
-              saveUsersToDisk();
+          const userSb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+            global: { headers: { Authorization: `Bearer ${accessToken}` } }
+          });
+          const { error: updErr } = await userSb.auth.updateUser({ password: newPassword });
+          if (!updErr) {
+            const { data: { user: sbUser } } = await userSb.auth.getUser();
+            if (sbUser) {
+              const memU = memoryUsers.get(sbUser.id);
+              if (memU) {
+                memU.passwordHash = hashPassword(newPassword);
+                saveUsersToDisk();
+              }
             }
             return res.status(200).json({
               success: true,
@@ -452,29 +459,26 @@ export default async function handler(req, res) {
 
       const cleanId = String(identifier || "").trim().toLowerCase();
       let targetUser = null;
+      let targetEmail = null;
 
       for (const [_, u] of memoryUsers.entries()) {
         if (u.email?.toLowerCase() === cleanId || u.username?.toLowerCase() === cleanId) {
           targetUser = u;
+          targetEmail = u.email;
           break;
         }
       }
 
-      if (!targetUser && SUPABASE_SERVICE_ROLE && cleanId) {
-        try {
-          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-          const { data: { users } } = await supabase.auth.admin.listUsers();
-          const found = users?.find(u => u.email?.toLowerCase() === cleanId);
-          if (found) {
-            targetUser = { id: found.id, email: found.email, username: cleanId };
-          }
-        } catch (e) {
-          console.warn("Supabase user search error:", e.message);
-        }
+      if (cleanId.includes("@")) {
+        targetEmail = cleanId;
       }
 
-      if (!targetUser) {
-        return res.status(404).json({ error: "Akun tidak ditemukan." });
+      if (!targetUser && cleanId) {
+        targetUser = {
+          id: "usr_" + cleanId.replace(/[^a-z0-9_]/g, ""),
+          email: targetEmail || cleanId,
+          username: cleanId.replace(/[^a-z0-9_]/g, "")
+        };
       }
 
       // Require code if accessToken was not valid
@@ -483,48 +487,67 @@ export default async function handler(req, res) {
       }
 
       let otpValid = false;
-      const activeOtp = resetOtps.get(targetUser.id) || resetOtps.get(targetUser.email?.toLowerCase());
-      if (activeOtp && activeOtp.code === String(code).trim() && Date.now() <= activeOtp.expiresAt) {
-        otpValid = true;
-      }
+      let sessionToken = null;
 
-      // Fallback verification with Supabase if applicable
-      if (!otpValid && SUPABASE_SERVICE_ROLE && targetUser.email) {
+      // 1. Verifikasi kode OTP langsung ke Supabase Auth
+      if (SUPABASE_SERVICE_ROLE && (targetEmail || targetUser?.email)) {
+        const verifyEmail = targetEmail || targetUser.email;
         try {
-          const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE);
-          const { data: vData, error: vErr } = await supabaseAnon.auth.verifyOtp({
-            email: targetUser.email,
+          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+          const { data: vData, error: vErr } = await supabase.auth.verifyOtp({
+            email: verifyEmail,
             token: String(code).trim(),
             type: "recovery"
           });
           if (!vErr && vData?.user) {
             otpValid = true;
+            sessionToken = vData.session?.access_token || null;
+            if (targetUser) targetUser.id = vData.user.id;
+          } else if (vErr) {
+            console.warn("Supabase verifyOtp message:", vErr.message);
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn("Supabase verifyOtp error:", e.message);
+        }
+      }
+
+      // 2. Fallback memory OTP
+      const activeOtp = (targetUser && resetOtps.get(targetUser.id)) || (targetEmail && resetOtps.get(targetEmail.toLowerCase()));
+      if (activeOtp && activeOtp.code === String(code).trim() && Date.now() <= activeOtp.expiresAt) {
+        otpValid = true;
       }
 
       if (!otpValid) {
-        return res.status(400).json({ error: "Kode verifikasi salah atau sudah kedaluwarsa. Silakan minta instruksi baru." });
+        return res.status(400).json({ error: "Kode verifikasi salah atau sudah kedaluwarsa. Silakan periksa kembali email Anda." });
       }
 
-      // Update password hash
-      targetUser.passwordHash = hashPassword(newPassword);
-      memoryUsers.set(targetUser.id, targetUser);
-      saveUsersToDisk();
+      // Update password hash lokal
+      if (targetUser) {
+        targetUser.passwordHash = hashPassword(newPassword);
+        memoryUsers.set(targetUser.id, targetUser);
+        saveUsersToDisk();
+      }
 
-      // Update di Supabase
-      if (SUPABASE_SERVICE_ROLE && !targetUser.id.startsWith("demo_")) {
+      // Update di Supabase dengan session token hasil verifyOtp atau admin
+      if (SUPABASE_SERVICE_ROLE) {
         try {
-          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-          await supabase.auth.admin.updateUserById(targetUser.id, { password: newPassword });
+          if (sessionToken) {
+            const userSb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+              global: { headers: { Authorization: `Bearer ${sessionToken}` } }
+            });
+            await userSb.auth.updateUser({ password: newPassword });
+          } else if (targetUser?.id && !targetUser.id.startsWith("demo_")) {
+            const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+            await supabase.auth.admin.updateUserById(targetUser.id, { password: newPassword });
+          }
         } catch (sbErr) {
           console.warn("Supabase reset password update:", sbErr.message);
         }
       }
 
       // Invalidate OTP
-      resetOtps.delete(targetUser.id);
-      if (targetUser.email) resetOtps.delete(targetUser.email.toLowerCase());
+      if (targetUser?.id) resetOtps.delete(targetUser.id);
+      if (targetEmail) resetOtps.delete(targetEmail.toLowerCase());
 
       return res.status(200).json({
         success: true,
@@ -587,17 +610,23 @@ export default async function handler(req, res) {
         saveTransactionsToDisk();
       }
 
-      // Sync ke Supabase jika aktif
+      // Sync ke Supabase jika aktif (sertakan bearer token jika dikirim oleh client)
       if (SUPABASE_SERVICE_ROLE && !userId.startsWith("demo_")) {
         try {
-          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+          const authHeader = req.headers.authorization;
+          const userToken = authHeader ? authHeader.replace("Bearer ", "").trim() : null;
+          const clientHeaders = userToken && userToken.length > 50 ? { Authorization: `Bearer ${userToken}` } : {};
+
+          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+            global: { headers: clientHeaders }
+          });
+          
           await supabase.from("profiles").upsert({
             id: userId,
             username: user.username,
             avatar_url: user.avatar,
             phone: user.phone,
-            bio: user.bio,
-            updated_at: new Date()
+            updated_at: new Date().toISOString()
           });
         } catch (e) {
           console.warn("Supabase update profile error:", e.message);

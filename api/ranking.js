@@ -13,8 +13,38 @@ export default async function handler(req, res) {
 
     try {
         let transactions = [];
+        const profileAvatarMap = new Map();
 
-        // 1. Ambil dari Supabase jika credentials tersedia
+        // 1. Ambil profiles dari Supabase untuk sinkronisasi avatar resmi
+        if (supabaseUrl && supabaseServiceRoleKey) {
+            try {
+                const profRes = await fetch(
+                    `${supabaseUrl}/rest/v1/profiles?select=id,username,avatar_url`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'apikey': supabaseServiceRoleKey,
+                            'Authorization': `Bearer ${supabaseServiceRoleKey}`
+                        }
+                    }
+                );
+                if (profRes.ok) {
+                    const profData = await profRes.json();
+                    if (Array.isArray(profData)) {
+                        profData.forEach(p => {
+                            if (p && p.username && p.avatar_url) {
+                                const clean = String(p.username).trim().replace(/^@/, "").toLowerCase();
+                                profileAvatarMap.set(clean, p.avatar_url);
+                            }
+                        });
+                    }
+                }
+            } catch (profErr) {
+                console.warn("Supabase profiles ranking fetch fallback:", profErr.message);
+            }
+        }
+
+        // 2. Ambil donasi dari Supabase (status settlement atau capture)
         if (supabaseUrl && supabaseServiceRoleKey) {
             try {
                 const response = await fetch(
@@ -39,7 +69,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 2. Gabungkan dengan transaksi in-memory (status settlement / capture)
+        // 3. Gabungkan dengan transaksi in-memory (status settlement / capture)
         const orderIds = new Set(transactions.map(t => t.order_id));
         for (const [orderId, tx] of memoryTransactions.entries()) {
             const status = (tx.transaction_status || "").toLowerCase();
@@ -55,22 +85,30 @@ export default async function handler(req, res) {
             }
         }
 
-        // Helper untuk mencari avatar pengguna
-        const getAvatarForUsername = (username) => {
-            if (!username) return "✨";
-            const clean = username.trim().toLowerCase();
-            // Cari di memoryUsers
+        // Helper untuk mencari avatar pengguna yang akurat
+        const getAvatarForUsername = (rawUsername) => {
+            if (!rawUsername) return "✨";
+            const clean = String(rawUsername).trim().replace(/^@/, "").toLowerCase();
+
+            // 1. Cek dari profil Supabase
+            if (profileAvatarMap.has(clean)) {
+                return profileAvatarMap.get(clean);
+            }
+
+            // 2. Cek di memoryUsers
             for (const [_, u] of memoryUsers.entries()) {
-                if (u && u.username && u.username.toLowerCase() === clean) {
-                    return u.avatar || "✨";
+                if (u && u.username && String(u.username).trim().replace(/^@/, "").toLowerCase() === clean) {
+                    if (u.avatar) return u.avatar;
                 }
             }
-            // Cari di memoryTransactions
+
+            // 3. Cek di memoryTransactions
             for (const [_, tx] of memoryTransactions.entries()) {
-                if (tx && tx.username && tx.username.toLowerCase() === clean && tx.avatar) {
+                if (tx && tx.username && String(tx.username).trim().replace(/^@/, "").toLowerCase() === clean && tx.avatar) {
                     return tx.avatar;
                 }
             }
+
             return "✨";
         };
 
@@ -130,30 +168,37 @@ export default async function handler(req, res) {
             }
         };
 
-        // Pengelompokan & Agregasi Ranking
+        // Pengelompokan & Agregasi Ranking (Case-Insensitive & Normalized @)
         const aggregateData = (txList) => {
             const map = {};
 
             txList.forEach(tx => {
-                const username =
+                const rawUsername =
                     typeof tx.username === 'string' && tx.username.trim()
-                        ? tx.username.trim()
+                        ? tx.username.trim().replace(/^@/, '')
                         : 'Anonim';
 
-                if (!map[username]) {
-                    map[username] = {
-                        username: username,
-                        avatar: tx.avatar || getAvatarForUsername(username),
+                const key = rawUsername.toLowerCase();
+
+                if (!map[key]) {
+                    map[key] = {
+                        username: rawUsername,
+                        avatar: tx.avatar || getAvatarForUsername(rawUsername),
                         totalAmount: 0,
                         txCount: 0
                     };
                 }
 
-                map[username].totalAmount += Number(tx.amount) || 0;
-                map[username].txCount += 1;
+                map[key].totalAmount += Number(tx.amount) || 0;
+                map[key].txCount += 1;
+
                 // Update avatar jika ada avatar lebih spesifik
-                if (tx.avatar && map[username].avatar === "✨") {
-                    map[username].avatar = tx.avatar;
+                if (tx.avatar && (map[key].avatar === "✨" || !map[key].avatar)) {
+                    map[key].avatar = tx.avatar;
+                }
+                const profileAvatar = getAvatarForUsername(rawUsername);
+                if (profileAvatar && profileAvatar !== "✨") {
+                    map[key].avatar = profileAvatar;
                 }
             });
 

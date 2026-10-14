@@ -282,7 +282,7 @@ async function loadUserDonationHistoryAndStats(user) {
         }
 
         const amount = Number(d.amount || d.gross_amount) || 0;
-        const rawStatus = String(d.status || d.transaction_status || "settlement").toLowerCase();
+        const rawStatus = String(d.status || d.transaction_status || "pending").toLowerCase();
         const isSuccess = rawStatus === "settlement" || rawStatus === "capture" || rawStatus === "success" || rawStatus === "200";
         const status = isSuccess ? "settlement" : rawStatus;
         const paymentType = d.payment_type || d.paymentType || "ONLINE PAYMENT";
@@ -307,20 +307,22 @@ async function loadUserDonationHistoryAndStats(user) {
                 existing.status = "settlement";
                 existing.transaction_status = "settlement";
             }
-            if (amount > 0 && existing.amount === 0) existing.amount = amount;
+            if (amount > 0 && (existing.amount === 0 || !existing.amount)) existing.amount = amount;
             if (!existing.transaction_time && time) existing.transaction_time = time;
         }
     }
 
     try {
-        // Source 1: User-specific local storage
-        const userKey = "gepa_user_donations_" + targetUsername;
-        const rawUserHistory = localStorage.getItem(userKey);
-        if (rawUserHistory) {
-            try {
-                const list = JSON.parse(rawUserHistory);
-                if (Array.isArray(list)) list.forEach(ingestItem);
-            } catch (e) {}
+        // Source 1: Authoritative server /api/user-donations (Supabase & memory sync)
+        const queryUrl = `/api/user-donations?username=${encodeURIComponent(user.username)}&userId=${encodeURIComponent(user.id || "")}`;
+        const token = currentUserSession ? (currentUserSession.accessToken || currentUserSession.token) : null;
+        const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+        const res = await fetch(queryUrl, { headers }).catch(() => null);
+        if (res && res.ok) {
+            const apiData = await res.json().catch(() => []);
+            if (Array.isArray(apiData)) {
+                apiData.forEach(ingestItem);
+            }
         }
 
         // Source 2: Main completed history array from localStorage
@@ -332,32 +334,14 @@ async function loadUserDonationHistoryAndStats(user) {
             } catch (e) {}
         }
 
-        // Source 3: Individual localStorage transaction items
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && (key.startsWith("gepa_payment_completed_") || key.startsWith("gepa_payment_"))) {
-                try {
-                    const item = JSON.parse(localStorage.getItem(key));
-                    if (item && typeof item === "object") {
-                        if (Array.isArray(item)) {
-                            item.forEach(ingestItem);
-                        } else {
-                            ingestItem(item);
-                        }
-                    }
-                } catch (e) {}
-            }
-        }
-
-        // Source 4: Fetch from server /api/user-donations
-        const queryUrl = `/api/user-donations?username=${encodeURIComponent(user.username)}&userId=${encodeURIComponent(user.id || "")}`;
-        const headers = currentUserSession && currentUserSession.token ? { "Authorization": `Bearer ${currentUserSession.token}` } : {};
-        const res = await fetch(queryUrl, { headers }).catch(() => null);
-        if (res && res.ok) {
-            const apiData = await res.json().catch(() => []);
-            if (Array.isArray(apiData)) {
-                apiData.forEach(ingestItem);
-            }
+        // Source 3: User-specific local storage
+        const userKey = "gepa_user_donations_" + targetUsername;
+        const rawUserHistory = localStorage.getItem(userKey);
+        if (rawUserHistory) {
+            try {
+                const list = JSON.parse(rawUserHistory);
+                if (Array.isArray(list)) list.forEach(ingestItem);
+            } catch (e) {}
         }
     } catch (err) {
         console.warn("History fetch error:", err);
@@ -366,17 +350,35 @@ async function loadUserDonationHistoryAndStats(user) {
     const donations = Array.from(donationMap.values());
     donations.sort((a, b) => new Date(b.transaction_time || 0).getTime() - new Date(a.transaction_time || 0).getTime());
 
-    // Save user-specific donation history without overwriting or truncating global list
+    // Save user-specific donation history
     try {
         const userKey = "gepa_user_donations_" + targetUsername;
         localStorage.setItem(userKey, JSON.stringify(donations.slice(0, 100)));
     } catch (e) {}
 
-    // Calculate stats
-    const totalAmount = donations
-        .filter(d => d.status === "settlement" || d.status === "capture" || d.status === "success")
-        .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
-    const txCount = donations.length;
+    // Calculate stats strictly from verified successful transactions
+    const successfulDonations = donations.filter(d => {
+        const s = String(d.status || d.transaction_status || "").toLowerCase();
+        return s === "settlement" || s === "capture" || s === "success" || s === "200";
+    });
+
+    let totalAmount = successfulDonations.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+    let txCount = successfulDonations.length;
+
+    // Check with leaderboard cache to guarantee 100% data consistency
+    if (window.rankingDataCache && window.rankingDataCache.lifetime) {
+        const lifetime = window.rankingDataCache.lifetime || [];
+        const rankItem = lifetime.find(item => item.username && item.username.replace(/^@/, "").toLowerCase() === targetUsername);
+        const index = lifetime.findIndex(item => item.username && item.username.replace(/^@/, "").toLowerCase() === targetUsername);
+        
+        if (statRankPos) {
+            statRankPos.textContent = index >= 0 ? `#${index + 1}` : "-";
+        }
+        if (rankItem) {
+            if (rankItem.totalAmount > totalAmount) totalAmount = rankItem.totalAmount;
+            if (rankItem.txCount > txCount) txCount = rankItem.txCount;
+        }
+    }
 
     if (statTotalAmount) statTotalAmount.textContent = `Rp${formatRupiah(totalAmount)}`;
     if (statTxCount) statTxCount.textContent = `${txCount}x`;
@@ -396,13 +398,6 @@ async function loadUserDonationHistoryAndStats(user) {
             tierBadge.innerHTML = `<span>✨ Pendukung Baru</span>`;
             tierBadge.style.background = "var(--sage-500)";
         }
-    }
-
-    // Rank position check against current leaderboard
-    if (statRankPos && window.rankingDataCache) {
-        const lifetime = window.rankingDataCache.lifetime || [];
-        const index = lifetime.findIndex(item => item.username && item.username.replace(/^@/, "").toLowerCase() === targetUsername);
-        statRankPos.textContent = index >= 0 ? `#${index + 1}` : "-";
     }
 
     // Render history list
@@ -507,9 +502,13 @@ if (saveProfileBtn) {
         saveProfileBtn.disabled = true;
 
         try {
+            const authHeaders = { "Content-Type": "application/json" };
+            const token = currentUserSession.accessToken || currentUserSession.token;
+            if (token) authHeaders["Authorization"] = `Bearer ${token}`;
+
             const res = await fetch("/api/auth", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: authHeaders,
                 body: JSON.stringify({
                     action: "update-profile",
                     userId: currentUserSession.user.id,
@@ -530,7 +529,20 @@ if (saveProfileBtn) {
             currentUserSession.user.avatar = newAvatar;
             applyUserSession(currentUserSession, true);
 
-            // Muat ulang data hero & refresh ranking
+            // Update avatar langsung di cache leaderboard agar sinkron 100% instan
+            if (window.rankingDataCache) {
+                ["daily", "weekly", "lifetime"].forEach(period => {
+                    const list = window.rankingDataCache[period] || [];
+                    list.forEach(item => {
+                        if (item.username && item.username.replace(/^@/, "").toLowerCase() === newUsername.toLowerCase()) {
+                            item.avatar = newAvatar;
+                        }
+                    });
+                });
+                renderRanking(currentRankTab);
+            }
+
+            // Muat ulang data hero & refresh ranking dari server
             loadUserProfileData(currentUserSession.user);
             fetchRankings();
 
@@ -2322,7 +2334,13 @@ function renderRanking(tab) {
         if (index === 1) medal = "🥈";
         if (index === 2) medal = "🥉";
 
-        const avatarVal = item.avatar || "✨";
+        let avatarVal = item.avatar || "✨";
+        const currentActiveUsername = (currentUserSession?.user?.username) || (userProfileCache?.username);
+        if (currentActiveUsername && item.username && item.username.replace(/^@/, "").toLowerCase() === currentActiveUsername.replace(/^@/, "").toLowerCase()) {
+            const activeUserAvatar = (currentUserSession?.user?.avatar) || (userProfileCache?.avatar);
+            if (activeUserAvatar) avatarVal = activeUserAvatar;
+        }
+
         const isImg = typeof avatarVal === "string" && (avatarVal.startsWith("http://") || avatarVal.startsWith("https://") || avatarVal.startsWith("data:image"));
         const avatarHtml = isImg
             ? `<img src="${avatarVal}" alt="${item.username}" class="rank-avatar-img" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'rank-avatar-emoji\\'>✨</span>';">`

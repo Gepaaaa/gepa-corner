@@ -21,7 +21,7 @@ export default async (req, res) => {
 
   try {
     const authHeader = req.headers.authorization;
-    let queryUsername = typeof req.query.username === "string" ? req.query.username.trim() : null;
+    let queryUsername = typeof req.query.username === "string" ? req.query.username.trim().replace(/^@/, '') : null;
     let userId = typeof req.query.userId === "string" ? req.query.userId.trim() : null;
 
     // Coba resolve user dari token jika ada
@@ -41,11 +41,11 @@ export default async (req, res) => {
               .eq('id', userId)
               .single();
             if (profile && profile.username) {
-              queryUsername = profile.username;
+              queryUsername = profile.username.replace(/^@/, '');
             }
           }
         } catch (e) {
-          // Token mungkin token in-memory internal
+          // Token mungkin token internal
         }
       }
     }
@@ -54,26 +54,29 @@ export default async (req, res) => {
     if (userId && !queryUsername) {
       const memUser = memoryUsers.get(userId);
       if (memUser && memUser.username) {
-        queryUsername = memUser.username;
+        queryUsername = memUser.username.replace(/^@/, '');
       }
     }
 
     const donations = [];
     const seenOrderIds = new Set();
 
-    // 1. Ambil dari Supabase jika ada userId atau queryUsername
+    // 1. Ambil dari Supabase mencakup username ATAU user_id (karena transaksi bisa tersimpan dengan user_id null)
     if (SUPABASE_SERVICE_ROLE && (userId || queryUsername)) {
       try {
-        const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-        let query = supabaseAdmin.from('donations').select('*');
-        if (userId) {
-          query = query.eq('user_id', userId);
+        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+        let query = supabase.from('donations').select('*');
+        
+        if (queryUsername && userId) {
+          query = query.or(`username.ilike.${queryUsername},user_id.eq.${userId}`);
         } else if (queryUsername) {
           query = query.ilike('username', queryUsername);
+        } else if (userId) {
+          query = query.eq('user_id', userId);
         }
         
-        const { data: sbDonations } = await query.order('transaction_time', { ascending: false });
-        if (Array.isArray(sbDonations)) {
+        const { data: sbDonations, error: sbErr } = await query.order('transaction_time', { ascending: false });
+        if (!sbErr && Array.isArray(sbDonations)) {
           sbDonations.forEach(d => {
             donations.push({
               order_id: d.order_id,
@@ -93,7 +96,7 @@ export default async (req, res) => {
 
     // 2. Gabungkan dengan memoryTransactions
     if (queryUsername) {
-      const targetUser = queryUsername.replace(/^@/, "").toLowerCase();
+      const targetUser = queryUsername.toLowerCase();
       for (const [orderId, tx] of memoryTransactions.entries()) {
         const txUser = String(tx?.username || "").replace(/^@/, "").toLowerCase();
         if (txUser === targetUser && !seenOrderIds.has(orderId)) {
