@@ -587,16 +587,37 @@
                     </div>
                 </div>
 
-                <!-- Custom Photo Profile / Image URL -->
-                <div class="auth-field" style="margin-bottom: 0;">
-                    <label for="accCustomAvatarUrl">Foto Profil Kustom (Link / URL Gambar)</label>
-                    <div class="auth-input-wrapper">
-                        <span class="auth-input-icon">🖼️</span>
-                        <input type="url" id="accCustomAvatarUrl" class="auth-input" placeholder="https://domain.com/foto-kamu.png">
-                        <button type="button" id="applyAvatarUrlBtn" style="background: var(--sage-700); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Terapkan</button>
+                <!-- Upload Avatar dari Galeri (Pilihan Utama) -->
+                <div style="background: var(--sage-50); border: 1.5px dashed var(--sage-300); border-radius: 14px; padding: 14px; text-align: center; margin-top: 4px;">
+                    <input type="file" id="accAvatarFileInput" accept="image/png, image/jpeg, image/webp, image/gif" style="display: none;">
+                    <div style="font-size: 0.86rem; font-weight: 700; color: var(--sage-800); margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <span>📸 Foto Profil dari Galeri</span>
                     </div>
-                    <small style="font-size: 0.72rem; color: var(--text-soft); margin-top: 3px; display: block;">Foto profil ini akan tampil di daftar ranking donasi saat kamu mentraktir.</small>
+                    <p style="font-size: 0.74rem; color: var(--text-soft); margin-bottom: 10px; line-height: 1.4;">
+                        Pilih foto dari galeri HP atau komputer kamu. Foto akan otomatis dioptimasi dan tersimpan permanen di ranking supporter & akun.
+                    </p>
+                    <div style="display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                        <button type="button" id="triggerAvatarUploadBtn" class="button button-primary" style="padding: 7px 16px; font-size: 0.8rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <span>📁 Pilih Foto dari Galeri</span>
+                        </button>
+                        <button type="button" id="removeUploadedAvatarBtn" style="display: none; background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; padding: 7px 12px; font-size: 0.75rem; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                            🗑️ Reset Foto
+                        </button>
+                    </div>
+                    <div id="avatarFileStatus" style="display: none; margin-top: 8px; font-size: 0.75rem; color: var(--sage-700); font-weight: 600;"></div>
                 </div>
+
+                <!-- Custom Photo Profile / Image URL (Sekunder) -->
+                <details style="margin-top: 2px; font-size: 0.8rem; color: var(--text-soft);">
+                    <summary style="cursor: pointer; font-weight: 600; color: var(--sage-700); padding: 4px 0;">🔗 Atau masukkan tautan / URL gambar</summary>
+                    <div class="auth-field" style="margin-top: 8px; margin-bottom: 0;">
+                        <div class="auth-input-wrapper">
+                            <span class="auth-input-icon">🖼️</span>
+                            <input type="url" id="accCustomAvatarUrl" class="auth-input" placeholder="https://domain.com/foto-kamu.png">
+                            <button type="button" id="applyAvatarUrlBtn" style="background: var(--sage-700); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Terapkan</button>
+                        </div>
+                    </div>
+                </details>
 
                 <!-- Avatar Preset Grid Picker -->
                 <div>

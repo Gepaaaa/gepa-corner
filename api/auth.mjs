@@ -265,6 +265,40 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: "Email/Username atau password salah." });
       }
 
+      // 3. Ambil avatar persisten dari Supabase jika ada (dari AVATAR_USER_* atau profiles)
+      if (SUPABASE_SERVICE_ROLE && matchedUser) {
+        try {
+          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+          const cleanUser = matchedUser.username.toLowerCase();
+          
+          // A. Cek dari record donasi AVATAR_USER_*
+          const { data: avRow } = await supabase
+            .from("donations")
+            .select("status")
+            .eq("order_id", `AVATAR_USER_${cleanUser}`)
+            .maybeSingle();
+
+          if (avRow && avRow.status && avRow.status.startsWith("AVATAR_DATA:")) {
+            const savedAvatar = avRow.status.slice("AVATAR_DATA:".length);
+            if (savedAvatar) {
+              matchedUser.avatar = savedAvatar;
+            }
+          } else {
+            // B. Fallback cek dari profiles table
+            const { data: prof } = await supabase
+              .from("profiles")
+              .select("avatar_url")
+              .ilike("username", cleanUser)
+              .maybeSingle();
+            if (prof && prof.avatar_url) {
+              matchedUser.avatar = prof.avatar_url;
+            }
+          }
+        } catch (avErr) {
+          console.warn("Avatar login restore fallback:", avErr.message);
+        }
+      }
+
       const token = createToken(matchedUser.id);
       matchedUser.lastToken = token;
       saveUsersToDisk();
@@ -613,21 +647,41 @@ export default async function handler(req, res) {
       // Sync ke Supabase jika aktif (sertakan bearer token jika dikirim oleh client)
       if (SUPABASE_SERVICE_ROLE && !userId.startsWith("demo_")) {
         try {
-          const authHeader = req.headers.authorization;
-          const userToken = authHeader ? authHeader.replace("Bearer ", "").trim() : null;
-          const clientHeaders = userToken && userToken.length > 50 ? { Authorization: `Bearer ${userToken}` } : {};
+          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
 
-          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-            global: { headers: clientHeaders }
-          });
-          
-          await supabase.from("profiles").upsert({
-            id: userId,
-            username: user.username,
-            avatar_url: user.avatar,
-            phone: user.phone,
-            updated_at: new Date().toISOString()
-          });
+          // 1. Simpan permanen ke Supabase donations table (AVATAR_USER_*)
+          // Mengatasi kendala RLS pada profiles table pada key anon/publishable
+          if (user.avatar) {
+            await supabase.from("donations").upsert({
+              order_id: `AVATAR_USER_${cleanUsername}`,
+              username: cleanUsername,
+              amount: 0,
+              status: `AVATAR_DATA:${user.avatar}`,
+              transaction_time: new Date().toISOString(),
+              user_id: !userId.startsWith("demo_") ? userId : null
+            }, { onConflict: "order_id" });
+          }
+
+          // 2. Coba simpan ke profiles table jika client menyertakan JWT auth token
+          try {
+            const authHeader = req.headers.authorization;
+            const userToken = authHeader ? authHeader.replace("Bearer ", "").trim() : null;
+            const clientHeaders = userToken && userToken.length > 50 ? { Authorization: `Bearer ${userToken}` } : {};
+
+            const clientSb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+              global: { headers: clientHeaders }
+            });
+            
+            await clientSb.from("profiles").upsert({
+              id: userId,
+              username: user.username,
+              avatar_url: user.avatar,
+              phone: user.phone,
+              updated_at: new Date().toISOString()
+            });
+          } catch (pErr) {
+            // Profile RLS fallback handled by step 1
+          }
         } catch (e) {
           console.warn("Supabase update profile error:", e.message);
         }

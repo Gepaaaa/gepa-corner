@@ -230,6 +230,7 @@ async function loadUserProfileData(user) {
     
     // Render Avatar
     const avatar = user.avatar || "👤";
+    pendingProfileAvatar = avatar;
     const isImageUrl = typeof avatar === "string" && (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("data:image"));
     if (isImageUrl && accHeroImg && accHeroEmoji) {
         accHeroImg.src = avatar;
@@ -241,13 +242,26 @@ async function loadUserProfileData(user) {
         accHeroImg.style.display = "none";
     }
 
+    const removeBtn = document.getElementById("removeUploadedAvatarBtn");
+    const fileStatus = document.getElementById("avatarFileStatus");
+    if (isImageUrl) {
+        if (removeBtn) removeBtn.style.display = "inline-flex";
+        if (fileStatus) {
+            fileStatus.innerHTML = `✅ Foto profil tersimpan aktif.`;
+            fileStatus.style.display = "block";
+        }
+    } else {
+        if (removeBtn) removeBtn.style.display = "none";
+        if (fileStatus) fileStatus.style.display = "none";
+    }
+
     if (accDisplayName) accDisplayName.textContent = `@${user.username}`;
     if (accBioDisplay) accBioDisplay.textContent = user.bio ? `"${user.bio}"` : `"Sahabat Corner"`;
     if (accEmailDisplay) accEmailDisplay.textContent = user.email || `${user.username}@gepacorner.my.id`;
     if (usernameInput) usernameInput.value = user.username || "";
     if (bioInput) bioInput.value = user.bio || "";
     if (phoneInput) phoneInput.value = user.phone || "";
-    if (customAvatarUrlInput) customAvatarUrlInput.value = isImageUrl ? avatar : "";
+    if (customAvatarUrlInput) customAvatarUrlInput.value = isImageUrl && (avatar.startsWith("http://") || avatar.startsWith("https://")) ? avatar : "";
     
     // Highlight currently selected avatar in account modal if emoji
     const accAvatarBtns = document.querySelectorAll("#accAvatarPicker .avatar-choice-btn");
@@ -448,6 +462,120 @@ async function loadUserDonationHistoryAndStats(user) {
     }
 }
 
+let pendingProfileAvatar = null;
+
+// Helper: Kompresi gambar dari Galeri (Canvas 256x256 square crop WebP/JPEG)
+function compressAndSetAvatar(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+        showToast("Mohon pilih file gambar (JPG, PNG, atau WebP).");
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        showToast("Ukuran file terlalu besar. Maksimal 10MB.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const maxDim = 256;
+            const canvas = document.createElement("canvas");
+            const width = img.width;
+            const height = img.height;
+            
+            // Center square crop
+            const size = Math.min(width, height);
+            const startX = (width - size) / 2;
+            const startY = (height - size) / 2;
+
+            canvas.width = maxDim;
+            canvas.height = maxDim;
+            const ctx = canvas.getContext("2d");
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, startX, startY, size, size, 0, 0, maxDim, maxDim);
+
+            let dataUrl = canvas.toDataURL("image/webp", 0.82);
+            if (!dataUrl.startsWith("data:image/webp")) {
+                dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+            }
+
+            pendingProfileAvatar = dataUrl;
+            
+            // Update preview hero
+            const accHeroImg = document.getElementById("accHeroImg");
+            const accHeroEmoji = document.getElementById("accHeroEmoji");
+            if (accHeroImg && accHeroEmoji) {
+                accHeroImg.src = dataUrl;
+                accHeroImg.style.display = "block";
+                accHeroEmoji.style.display = "none";
+            }
+
+            // Deselect preset emoji
+            document.querySelectorAll("#accAvatarPicker .avatar-choice-btn").forEach(b => b.classList.remove("selected"));
+            
+            const customUrlInput = document.getElementById("accCustomAvatarUrl");
+            if (customUrlInput) customUrlInput.value = "";
+
+            const removeBtn = document.getElementById("removeUploadedAvatarBtn");
+            if (removeBtn) removeBtn.style.display = "inline-flex";
+
+            const fileStatus = document.getElementById("avatarFileStatus");
+            if (fileStatus) {
+                fileStatus.innerHTML = `✅ Foto galeri terpilih (${Math.round(file.size / 1024)} KB). Siap disimpan!`;
+                fileStatus.style.display = "block";
+            }
+
+            showToast("Foto galeri terpilih! Klik 'Simpan Perubahan' untuk mengunci permanen. ✨");
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// Event Listeners untuk Upload Galeri
+const triggerAvatarUploadBtn = document.getElementById("triggerAvatarUploadBtn");
+const accAvatarFileInput = document.getElementById("accAvatarFileInput");
+if (triggerAvatarUploadBtn && accAvatarFileInput) {
+    triggerAvatarUploadBtn.addEventListener("click", () => {
+        accAvatarFileInput.click();
+    });
+    accAvatarFileInput.addEventListener("change", (e) => {
+        if (e.target.files && e.target.files[0]) {
+            compressAndSetAvatar(e.target.files[0]);
+        }
+    });
+}
+
+// Reset Foto Uploaded Button
+const removeUploadedAvatarBtn = document.getElementById("removeUploadedAvatarBtn");
+if (removeUploadedAvatarBtn) {
+    removeUploadedAvatarBtn.addEventListener("click", () => {
+        pendingProfileAvatar = "🐱";
+        const accHeroImg = document.getElementById("accHeroImg");
+        const accHeroEmoji = document.getElementById("accHeroEmoji");
+        if (accHeroImg && accHeroEmoji) {
+            accHeroImg.style.display = "none";
+            accHeroEmoji.textContent = "🐱";
+            accHeroEmoji.style.display = "block";
+        }
+        removeUploadedAvatarBtn.style.display = "none";
+        const fileStatus = document.getElementById("avatarFileStatus");
+        if (fileStatus) fileStatus.style.display = "none";
+        if (accAvatarFileInput) accAvatarFileInput.value = "";
+        
+        // Pilih emoji kucing
+        const catBtn = document.querySelector("#accAvatarPicker .avatar-choice-btn[data-avatar='🐱']");
+        if (catBtn) {
+            document.querySelectorAll("#accAvatarPicker .avatar-choice-btn").forEach(b => b.classList.remove("selected"));
+            catBtn.classList.add("selected");
+        }
+        showToast("Foto di-reset ke avatar default. Klik 'Simpan Perubahan' untuk menyimpan.");
+    });
+}
+
 // Preview / Terapkan Custom Avatar Image URL
 const applyAvatarUrlBtn = document.getElementById("applyAvatarUrlBtn");
 if (applyAvatarUrlBtn) {
@@ -459,12 +587,22 @@ if (applyAvatarUrlBtn) {
             return;
         }
 
+        pendingProfileAvatar = url;
         const accHeroImg = document.getElementById("accHeroImg");
         const accHeroEmoji = document.getElementById("accHeroEmoji");
         if (accHeroImg && accHeroEmoji) {
             accHeroImg.src = url;
             accHeroImg.style.display = "block";
             accHeroEmoji.style.display = "none";
+        }
+
+        const removeBtn = document.getElementById("removeUploadedAvatarBtn");
+        if (removeBtn) removeBtn.style.display = "inline-flex";
+
+        const fileStatus = document.getElementById("avatarFileStatus");
+        if (fileStatus) {
+            fileStatus.innerHTML = `✅ Link gambar diterapkan ke preview.`;
+            fileStatus.style.display = "block";
         }
 
         // Hapus seleksi preset avatar
@@ -482,14 +620,10 @@ if (saveProfileBtn) {
         const newBio = (document.getElementById("accBioInput")?.value || "").trim().substring(0, 60);
         const newPhone = (document.getElementById("accPhoneInput").value || "").trim();
         
-        // Cek apakah user menggunakan URL gambar kustom
-        const customUrl = (document.getElementById("accCustomAvatarUrl")?.value || "").trim();
+        // Prioritas avatar: 1. Galeri/Upload/Custom yang aktif, 2. Preset emoji selected, 3. Avatar lama
+        let newAvatar = pendingProfileAvatar || currentUserSession.user.avatar || "🐱";
         const selectedBtn = document.querySelector("#accAvatarPicker .avatar-choice-btn.selected");
-        
-        let newAvatar = currentUserSession.user.avatar || "🐱";
-        if (customUrl && (customUrl.startsWith("http://") || customUrl.startsWith("https://") || customUrl.startsWith("data:image"))) {
-            newAvatar = customUrl;
-        } else if (selectedBtn && selectedBtn.dataset.avatar) {
+        if (selectedBtn && selectedBtn.dataset.avatar && !pendingProfileAvatar?.startsWith("data:image") && !pendingProfileAvatar?.startsWith("http")) {
             newAvatar = selectedBtn.dataset.avatar;
         }
 
@@ -498,7 +632,7 @@ if (saveProfileBtn) {
             return;
         }
 
-        saveProfileBtn.textContent = "Menyimpan...";
+        saveProfileBtn.textContent = "Menyimpan ke Server...";
         saveProfileBtn.disabled = true;
 
         try {
@@ -546,7 +680,7 @@ if (saveProfileBtn) {
             loadUserProfileData(currentUserSession.user);
             fetchRankings();
 
-            showToast("Profil & foto avatar berhasil diperbarui! ✨");
+            showToast("Profil & foto avatar tersimpan permanen! ✨");
         } catch (err) {
             showToast(err.message || "Gagal memperbarui profil.");
         } finally {
@@ -563,6 +697,7 @@ if (logoutBtn) {
         applyUserSession(null, true);
         closeInfoModal("accountModal");
         showToast("Kamu telah keluar dari akun. Sampai jumpa! 👋");
+        fetchRankings(); // Tetap render ranking dengan avatar persisten dari server!
     });
 }
 
@@ -1100,12 +1235,29 @@ window.selectRegAvatar = function(emoji, label, btnEl) {
 
 // Avatar Selection in Account Modal
 window.selectAccAvatar = function(emoji, btnEl) {
+    pendingProfileAvatar = emoji;
     const heroEmoji = document.getElementById("accHeroEmoji");
-    if (heroEmoji) heroEmoji.textContent = emoji;
+    const heroImg = document.getElementById("accHeroImg");
+    if (heroEmoji) {
+        heroEmoji.textContent = emoji;
+        heroEmoji.style.display = "block";
+    }
+    if (heroImg) {
+        heroImg.style.display = "none";
+    }
 
     const allBtns = document.querySelectorAll("#accAvatarPicker .avatar-choice-btn");
     allBtns.forEach(b => b.classList.remove("selected"));
     if (btnEl) btnEl.classList.add("selected");
+
+    const removeBtn = document.getElementById("removeUploadedAvatarBtn");
+    if (removeBtn) removeBtn.style.display = "none";
+
+    const fileStatus = document.getElementById("avatarFileStatus");
+    if (fileStatus) fileStatus.style.display = "none";
+
+    const customUrlInput = document.getElementById("accCustomAvatarUrl");
+    if (customUrlInput) customUrlInput.value = "";
 };
 
 // Random Guest Name Generator

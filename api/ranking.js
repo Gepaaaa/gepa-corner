@@ -44,6 +44,39 @@ export default async function handler(req, res) {
             }
         }
 
+        // 1b. Ambil avatar persisten dari tabel donations (AVATAR_USER_*)
+        // Memastikan avatar gallery tetap tampil di ranking meski logout atau hapus cache!
+        if (supabaseUrl && supabaseServiceRoleKey) {
+            try {
+                const avRes = await fetch(
+                    `${supabaseUrl}/rest/v1/donations?order_id=like.AVATAR_USER_*&select=username,status`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'apikey': supabaseServiceRoleKey,
+                            'Authorization': `Bearer ${supabaseServiceRoleKey}`
+                        }
+                    }
+                );
+                if (avRes.ok) {
+                    const avData = await avRes.json();
+                    if (Array.isArray(avData)) {
+                        avData.forEach(row => {
+                            if (row && row.username && row.status && row.status.startsWith("AVATAR_DATA:")) {
+                                const clean = String(row.username).trim().replace(/^@/, "").toLowerCase();
+                                const avatarVal = row.status.slice("AVATAR_DATA:".length);
+                                if (avatarVal) {
+                                    profileAvatarMap.set(clean, avatarVal);
+                                }
+                            }
+                        });
+                    }
+                }
+            } catch (avErr) {
+                console.warn("Supabase avatar map fetch warning:", avErr.message);
+            }
+        }
+
         // 2. Ambil donasi dari Supabase (status settlement atau capture)
         if (supabaseUrl && supabaseServiceRoleKey) {
             try {
