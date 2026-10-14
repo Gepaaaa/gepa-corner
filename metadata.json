@@ -1,0 +1,8 @@
+{
+  "name": "Gepa — Personal Corner",
+  "description": "Personal website and corner for Gepa featuring links, profile info, and supporter donations.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

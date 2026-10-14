@@ -1,0 +1,7 @@
+node_modules/
+.env
+.env.local
+.dev.env.json
+.aistudio/
+*.log
+.DS_Store

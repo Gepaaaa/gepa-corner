@@ -1,0 +1,17 @@
+{
+  "name": "gepa-corner",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Personal website and corner for Gepa",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node -e \"process.exit(0)\"",
+    "lint": "node -c server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

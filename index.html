@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gepa — Personal Corner</title>
+    <meta name="description" content="Personal website and corner for Gepa featuring links, profile info, and supporter donations.">
+    <meta property="og:title" content="Gepa — Personal Corner">
+    <meta property="og:description" content="Personal website and corner for Gepa featuring links, profile info, and supporter donations.">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-l9Y2DBOBf5qo02s7"></script>
@@ -220,15 +223,18 @@
                     </div>
                 </div>
 
-                <!-- Cek Invoice Section -->
-                <div class="paper-card reveal" style="margin-top: 30px; padding: 28px;">
-                    <p class="section-kicker">track transaction</p>
-                    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">🔍 Cek Status Invoice</h3>
-                    <p style="font-size: 0.95rem; color: var(--text-soft); margin-bottom: 20px;">Masukkan Order ID transaksi kamu untuk melihat detail invoice secara langsung.</p>
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <input type="text" id="checkOrderIdInput" placeholder="Contoh: GEPA-178338..." style="flex: 1; min-width: 240px; background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px 16px; border-radius: 14px; color: var(--text-main); font-size: 0.95rem; outline: none;">
-                        <button type="button" id="checkInvoiceBtn" class="button button-primary" style="padding: 12px 24px; font-size: 0.95rem; border-radius: 14px;">Cek Invoice</button>
+                <!-- Akun & Riwayat Supporter Banner Note -->
+                <div class="paper-card reveal" style="margin-top: 25px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: var(--sage-50); border: 1px solid var(--border); border-radius: 16px;">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <span style="font-size: 1.8rem;">☕</span>
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.98rem; color: var(--text-main);">Kelola Profil & Cek Riwayat Traktiran</div>
+                            <div style="font-size: 0.82rem; color: var(--text-soft);">Lihat invoice resmi, ganti foto profil leaderboard, atau kelola akun langsung di Dashboard Akun.</div>
+                        </div>
                     </div>
+                    <button type="button" id="openAccountDashboardShortcut" class="button button-primary" style="padding: 10px 20px; font-size: 0.85rem; border-radius: 12px; white-space: nowrap;">
+                        Buka Dashboard Akun ✨
+                    </button>
                 </div>
             </div>
         </section>
@@ -252,104 +258,427 @@
         </div>
     </footer>
 
-    <!-- Auth / Login & Register Modal -->
+    <!-- Overhauled Auth / Login & Register & Quick VIP Modal -->
     <div class="modal-overlay" id="authModal">
-        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 420px; text-align: left; padding: 28px 24px;">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 440px; text-align: left; padding: 26px 22px;">
             <button class="modal-close" type="button" onclick="closeInfoModal('authModal')">×</button>
             
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h2 id="authModalTitle" style="font-size: 1.4rem; font-weight: 700; margin-bottom: 4px;">Masuk ke Corner</h2>
-                <p id="authModalDesc" style="font-size: 0.88rem; color: var(--text-soft);">Hubungkan akunmu buat lihat riwayat traktir & kelola profil.</p>
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: var(--sage-100); color: var(--sage-700); font-size: 1.3rem; margin-bottom: 8px;">
+                    ✨
+                </div>
+                <h2 id="authModalTitle" style="font-size: 1.35rem; font-weight: 700; margin-bottom: 3px;">Corner Account</h2>
+                <p id="authModalDesc" style="font-size: 0.82rem; color: var(--text-soft);">Kelola identitas pendukung, riwayat traktiran, & leaderboard.</p>
             </div>
 
-            <!-- Auth Form: Email + Username + Password -->
-            <div id="authFormContent" style="display: flex; flex-direction: column; gap: 12px;">
-                <div class="custom-amount" style="margin-top: 0;">
-                    <label for="authEmailInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Email</label>
-                    <input type="email" id="authEmailInput" placeholder="nama@email.com" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+            <!-- Segmented Auth Tabs (Eksklusif Berpassword) -->
+            <div class="auth-tabs" id="authSegmentTabs">
+                <button type="button" class="auth-tab active" data-tab="login" onclick="switchAuthTab('login')">Masuk</button>
+                <button type="button" class="auth-tab" data-tab="register" onclick="switchAuthTab('register')">Daftar Akun</button>
+            </div>
+
+            <!-- Supabase Recovery / Expired Link Error Banner -->
+            <div id="recoveryErrorBanner" class="recovery-alert-card" style="display: none;">
+                <div class="recovery-alert-title">
+                    <span>⚠️</span>
+                    <span id="recoveryErrorTitle">Tautan Pemulihan Kedaluwarsa</span>
                 </div>
-                
-                <!-- Username field - hanya tampil di register mode -->
-                <div id="authUsernameField" class="custom-amount" style="margin-top: 0; display: none;">
-                    <label for="authUsernameInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Username</label>
-                    <input type="text" id="authUsernameInput" placeholder="username_unik" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
-                    <div id="authUsernameError" style="font-size: 0.75rem; color: #dc2626; margin-top: 4px; display: none;"></div>
+                <div class="recovery-alert-desc" id="recoveryErrorDesc">
+                    Tautan email dari Supabase sudah tidak berlaku (mungkin telah kedaluwarsa atau dipindai otomatis oleh sistem keamanan email). Jangan panik, Anda dapat meminta kode atau tautan baru di bawah ini.
                 </div>
-                
-                <div class="custom-amount" style="margin-top: 0;">
-                    <label for="authPasswordInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Password</label>
-                    <input type="password" id="authPasswordInput" placeholder="••••••••" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+                <div class="recovery-alert-actions">
+                    <button type="button" class="recovery-btn-action" onclick="openResetPasswordView(event)">Minta Tautan / Kode Baru ✉️</button>
+                    <button type="button" class="recovery-btn-close" onclick="dismissRecoveryError()">Tutup</button>
                 </div>
-                
-                <!-- Confirm password field - hanya tampil di register mode -->
-                <div id="authConfirmPasswordField" class="custom-amount" style="margin-top: 0; display: none;">
-                    <label for="authConfirmPasswordInput" style="font-size: 0.82rem; margin-bottom: 4px; display: block;">Konfirmasi Password</label>
-                    <input type="password" id="authConfirmPasswordInput" placeholder="••••••••" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+            </div>
+
+            <!-- Unified Alert Message Banner -->
+            <div id="authAlertBanner" class="auth-alert">
+                <span id="authAlertIcon">⚠️</span>
+                <span id="authAlertText">Pesan error</span>
+            </div>
+
+            <!-- 1. TAB CONTENT: LOGIN -->
+            <form id="loginForm" onsubmit="return false;" style="display: flex; flex-direction: column;">
+                <div class="auth-field">
+                    <label for="authLoginIdentifier">Email atau Username</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">👤</span>
+                        <input type="text" id="authLoginIdentifier" class="auth-input" placeholder="kamu@email.com atau username" autocomplete="username" required>
+                    </div>
                 </div>
-                
-                <button type="button" id="submitLoginEmailBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff; margin-top: 4px;">
-                    Masuk Sekarang
+
+                <div class="auth-field">
+                    <label for="authLoginPassword">
+                        <span>Password</span>
+                    </label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">🔒</span>
+                        <input type="password" id="authLoginPassword" class="auth-input has-toggle" placeholder="Masukkan password" autocomplete="current-password" required>
+                        <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility('authLoginPassword', this)" title="Lihat password">👁️</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 0.8rem; color: var(--text-soft);">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="checkbox" id="authRememberMe" checked style="accent-color: var(--sage-700);"> Ingat saya
+                    </label>
+                    <a href="#" onclick="openResetPasswordView(event)" style="color: var(--sage-700); text-decoration: underline; font-weight: 600;">Lupa password?</a>
+                </div>
+
+                <button type="button" id="submitLoginBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff; margin-top: 2px;">
+                    Masuk Sekarang →
                 </button>
-                
-                <div id="authSwitchPrompt" style="text-align: center; margin-top: 8px; font-size: 0.82rem; color: var(--text-soft);">
-                    Belum punya akun? <a href="#" id="toggleAuthModeLink" style="color: var(--sage-700); font-weight: 700; text-decoration: underline;">Daftar sekarang</a>
+            </form>
+
+            <!-- 2. TAB CONTENT: REGISTER -->
+            <form id="registerForm" onsubmit="return false;" style="display: none; flex-direction: column;">
+                <div class="auth-field">
+                    <label for="regEmailInput">Email Aktif</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">✉️</span>
+                        <input type="email" id="regEmailInput" class="auth-input" placeholder="nama@email.com" autocomplete="email" required>
+                    </div>
+                </div>
+
+                <div class="auth-field">
+                    <label for="regUsernameInput">Username (Tampil di Leaderboard)</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">@</span>
+                        <input type="text" id="regUsernameInput" class="auth-input" maxlength="15" placeholder="username_kamu" autocomplete="username" required>
+                    </div>
+                </div>
+
+                <div class="auth-field">
+                    <label for="regPasswordInput">Password</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">🔒</span>
+                        <input type="password" id="regPasswordInput" class="auth-input has-toggle" placeholder="Minimal 6 karakter" autocomplete="new-password" required>
+                        <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility('regPasswordInput', this)" title="Lihat password">👁️</button>
+                    </div>
+                    <div class="pwd-strength-wrap" id="regPwdStrengthWrap">
+                        <div class="pwd-strength-bars">
+                            <div class="pwd-strength-segment" id="pwdBar1"></div>
+                            <div class="pwd-strength-segment" id="pwdBar2"></div>
+                            <div class="pwd-strength-segment" id="pwdBar3"></div>
+                        </div>
+                        <span class="pwd-strength-label" id="regPwdStrengthLabel">-</span>
+                    </div>
+                </div>
+
+                <div class="auth-field">
+                    <label for="regConfirmPasswordInput">Konfirmasi Password</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">🔐</span>
+                        <input type="password" id="regConfirmPasswordInput" class="auth-input has-toggle" placeholder="Ulangi password" autocomplete="new-password" required>
+                        <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility('regConfirmPasswordInput', this)" title="Lihat password">👁️</button>
+                    </div>
+                </div>
+
+                <!-- Avatar Selector -->
+                <div class="avatar-selector-label">
+                    <span>Pilih Avatar Pendukung:</span>
+                    <span id="selectedAvatarLabel" style="color: var(--sage-700);">🐱 Kucing</span>
+                </div>
+                <div class="avatar-grid-picker" id="regAvatarPicker">
+                    <button type="button" class="avatar-choice-btn selected" data-avatar="🐱" data-label="Kucing" onclick="selectRegAvatar('🐱', 'Kucing', this)">
+                        <span class="emoji">🐱</span><span class="name">Kucing</span>
+                    </button>
+                    <button type="button" class="avatar-choice-btn" data-avatar="☕" data-label="Kopi" onclick="selectRegAvatar('☕', 'Kopi', this)">
+                        <span class="emoji">☕</span><span class="name">Kopi</span>
+                    </button>
+                    <button type="button" class="avatar-choice-btn" data-avatar="🎮" data-label="Gamer" onclick="selectRegAvatar('🎮', 'Gamer', this)">
+                        <span class="emoji">🎮</span><span class="name">Gamer</span>
+                    </button>
+                    <button type="button" class="avatar-choice-btn" data-avatar="🚀" data-label="Dreamer" onclick="selectRegAvatar('🚀', 'Dreamer', this)">
+                        <span class="emoji">🚀</span><span class="name">Dreamer</span>
+                    </button>
+                    <button type="button" class="avatar-choice-btn" data-avatar="🎧" data-label="Music" onclick="selectRegAvatar('🎧', 'Music', this)">
+                        <span class="emoji">🎧</span><span class="name">Music</span>
+                    </button>
+                    <button type="button" class="avatar-choice-btn" data-avatar="🦊" data-label="Fox" onclick="selectRegAvatar('🦊', 'Fox', this)">
+                        <span class="emoji">🦊</span><span class="name">Fox</span>
+                    </button>
+                    <button type="button" class="avatar-choice-btn" data-avatar="⚡" data-label="Spark" onclick="selectRegAvatar('⚡', 'Spark', this)">
+                        <span class="emoji">⚡</span><span class="name">Spark</span>
+                    </button>
+                    <button type="button" class="avatar-choice-btn" data-avatar="🌟" data-label="Bintang" onclick="selectRegAvatar('🌟', 'Bintang', this)">
+                        <span class="emoji">🌟</span><span class="name">Bintang</span>
+                    </button>
+                </div>
+
+                <button type="button" id="submitRegisterBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff; margin-top: 2px;">
+                    Daftar & Masuk Otomatis ✨
+                </button>
+            </form>
+
+            <!-- 3. TAB CONTENT: RESET PASSWORD MANDIRI VIA SUPABASE AUTH -->
+            <div id="resetPasswordForm" style="display: none; flex-direction: column;">
+                <!-- Step 1: Input Identifier -->
+                <div id="resetStep1">
+                    <div style="background: var(--sage-50); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; font-size: 0.82rem; color: var(--text-soft); line-height: 1.5;">
+                        <strong style="color: var(--text-main); display: block; margin-bottom: 4px;">🔐 Pemulihan Kata Sandi Akun</strong>
+                        Masukkan email atau username akun yang terdaftar. Kami akan mengirimkan instruksi dan kode verifikasi ke alamat email Anda.
+                    </div>
+                    <div class="auth-field">
+                        <label for="resetIdentifierInput">Email atau Username Terdaftar</label>
+                        <div class="auth-input-wrapper">
+                            <span class="auth-input-icon">👤</span>
+                            <input type="text" id="resetIdentifierInput" class="auth-input" placeholder="kamu@email.com atau username" autocomplete="username">
+                        </div>
+                    </div>
+                    <button type="button" id="submitRequestOtpBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff; margin-top: 6px;">
+                        Kirim Instruksi & Kode Pemulihan ✉️
+                    </button>
+                    <div style="text-align: center; margin-top: 14px;">
+                        <a href="#" onclick="switchAuthTab('login'); return false;" style="font-size: 0.82rem; color: var(--sage-700); text-decoration: underline; font-weight: 600;">← Kembali ke Halaman Masuk</a>
+                    </div>
+                </div>
+
+                <!-- Step 2: Verification Code + New Password Combined Form -->
+                <div id="resetStep2" style="display: none;">
+                    <div style="background: var(--sage-50); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 0.82rem; color: var(--text-soft); line-height: 1.5;">
+                        <strong style="color: var(--sage-800); display: block; margin-bottom: 2px;">✉️ Instruksi Terkirim</strong>
+                        Kode verifikasi & tautan resmi telah dikirim ke <strong id="resetTargetEmailLabel" style="color: var(--text-main);">-</strong>.
+                    </div>
+
+                    <!-- Token link verified badge (shown if user arrived with valid token) -->
+                    <div id="resetLinkVerifiedNotice" style="display: none; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #065f46; font-weight: 600;">
+                        ✅ Tautan email terverifikasi! Anda dapat langsung membuat kata sandi baru di bawah ini.
+                    </div>
+
+                    <!-- 6-Digit OTP Field (shown when code verification is needed) -->
+                    <div class="auth-field" id="resetOtpGroup">
+                        <label for="resetOtpInput" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Kode Verifikasi 6-Digit (dari Email)</span>
+                            <span style="font-size: 0.72rem; color: var(--text-soft); font-weight: normal;">Cek Inbox / Spam</span>
+                        </label>
+                        <div class="otp-input-wrapper">
+                            <input type="text" id="resetOtpInput" class="otp-input-field" maxlength="6" inputmode="numeric" placeholder="123456" autocomplete="one-time-code">
+                        </div>
+                    </div>
+
+                    <!-- New Password -->
+                    <div class="auth-field">
+                        <label for="resetNewPasswordInput">Kata Sandi Baru</label>
+                        <div class="auth-input-wrapper">
+                            <span class="auth-input-icon">🔒</span>
+                            <input type="password" id="resetNewPasswordInput" class="auth-input has-toggle" placeholder="Minimal 6 karakter" autocomplete="new-password">
+                            <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility('resetNewPasswordInput', this)" title="Lihat password">👁️</button>
+                        </div>
+                        <div class="pwd-strength-wrap" id="resetPwdStrengthWrap">
+                            <div class="pwd-strength-bars">
+                                <div class="pwd-strength-segment" id="resetPwdBar1"></div>
+                                <div class="pwd-strength-segment" id="resetPwdBar2"></div>
+                                <div class="pwd-strength-segment" id="resetPwdBar3"></div>
+                            </div>
+                            <span class="pwd-strength-label" id="resetPwdStrengthLabel">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Confirm New Password -->
+                    <div class="auth-field">
+                        <label for="resetConfirmPasswordInput">Konfirmasi Kata Sandi Baru</label>
+                        <div class="auth-input-wrapper">
+                            <span class="auth-input-icon">🔐</span>
+                            <input type="password" id="resetConfirmPasswordInput" class="auth-input has-toggle" placeholder="Ulangi kata sandi baru" autocomplete="new-password">
+                            <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility('resetConfirmPasswordInput', this)" title="Lihat password">👁️</button>
+                        </div>
+                    </div>
+
+                    <!-- Resend & Back helpers -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 6px 0 14px 0; font-size: 0.78rem; color: var(--text-soft);">
+                        <span id="resetResendTimerWrap">Kirim ulang dalam <b id="resetCountdownVal">60</b>s</span>
+                        <button type="button" id="resetResendBtn" style="display: none; background: none; border: none; color: var(--sage-700); font-weight: 600; cursor: pointer; text-decoration: underline;" onclick="resendResetOtp()">Kirim Ulang Kode 🔄</button>
+                        <button type="button" style="background: none; border: none; color: var(--text-soft); cursor: pointer; text-decoration: underline;" onclick="backToResetStep1()">← Ganti Akun</button>
+                    </div>
+
+                    <button type="button" id="submitVerifyResetBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff;">
+                        Verifikasi & Simpan Kata Sandi Baru 🔐
+                    </button>
+
+                    <div style="text-align: center; margin-top: 14px;">
+                        <a href="#" onclick="switchAuthTab('login'); return false;" style="font-size: 0.82rem; color: var(--sage-700); text-decoration: underline; font-weight: 600;">← Batalkan & Kembali ke Halaman Masuk</a>
+                    </div>
                 </div>
             </div>
 
-            <div style="text-align: center; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px;">
-                <button type="button" onclick="closeInfoModal('authModal')" style="background: transparent; border: none; color: var(--text-soft); font-weight: 600; font-size: 0.9rem; cursor: pointer;">
-                    Cancel
+            <div style="text-align: center; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px;">
+                <button type="button" onclick="closeInfoModal('authModal')" style="background: transparent; border: none; color: var(--text-soft); font-weight: 600; font-size: 0.85rem; cursor: pointer;">
+                    Tutup
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Account Management Modal -->
+    <!-- Overhauled Account Management Modal -->
     <div class="modal-overlay" id="accountModal">
-        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 440px; text-align: left; padding: 28px 24px;">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left; padding: 26px 22px;">
             <button class="modal-close" type="button" onclick="closeInfoModal('accountModal')">×</button>
             
-            <div style="text-align: center; margin-bottom: 20px;">
-                <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--sage-100); display: grid; place-items: center; margin: 0 auto 10px; overflow: hidden; border: 2px solid var(--sage-350);">
-                    <img id="userAvatarPreview" src="" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: none;">
-                    <span id="userAvatarFallback" style="font-size: 1.5rem; color: var(--sage-700);">👤</span>
+            <!-- User Header Hero -->
+            <div class="acc-profile-hero">
+                <div class="acc-hero-avatar-wrap">
+                    <div class="acc-hero-avatar" id="accHeroAvatar" style="overflow: hidden; width: 68px; height: 68px; border-radius: 50%; border: 3px solid var(--sage-200); display: flex; align-items: center; justify-content: center; background: var(--sage-100); margin: 0 auto 10px;">
+                        <span id="accHeroEmoji" style="font-size: 2rem;">👤</span>
+                        <img id="accHeroImg" src="" alt="Avatar" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                    </div>
                 </div>
-                <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 2px;">Kelola Akun</h2>
-                <p id="accEmailDisplay" style="font-size: 0.82rem; color: var(--text-soft);">-</p>
+                <h2 id="accDisplayName" style="font-size: 1.35rem; font-weight: 700; margin-bottom: 2px; text-align: center;">@username</h2>
+                <p id="accBioDisplay" style="font-size: 0.82rem; color: var(--text-soft); font-style: italic; margin-bottom: 4px; text-align: center;">"Sahabat Corner"</p>
+                <p id="accEmailDisplay" style="font-size: 0.78rem; color: var(--text-soft); margin-bottom: 6px; text-align: center;">user@email.com</p>
+                <div style="display: flex; justify-content: center;">
+                    <div id="accTierBadge" class="acc-badge-tier" style="display: inline-block;">
+                        <span>🌟 Sahabat Corner</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="acc-stats-row">
+                <div class="acc-stat-box">
+                    <div class="acc-stat-val" id="accStatTotalAmount">Rp0</div>
+                    <div class="acc-stat-lbl">Total Traktiran</div>
+                </div>
+                <div class="acc-stat-box">
+                    <div class="acc-stat-val" id="accStatTxCount">0x</div>
+                    <div class="acc-stat-lbl">Frekuensi</div>
+                </div>
+                <div class="acc-stat-box">
+                    <div class="acc-stat-val" id="accStatRankPos">-</div>
+                    <div class="acc-stat-lbl">Peringkat</div>
+                </div>
             </div>
 
             <!-- Tab Switcher Akun -->
-            <div style="display: flex; background: var(--bg-secondary); padding: 4px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border);">
-                <button type="button" id="accTabProfileBtn" class="acc-tab" onclick="switchAccTab('profile')" style="flex: 1; padding: 10px; border: none; background: var(--sage-700); color: #fff; font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.85rem;">Profil</button>
-                <button type="button" id="accTabHistoryBtn" class="acc-tab" onclick="switchAccTab('history')" style="flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-soft); font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.85rem;">Riwayat Traktir</button>
+            <div style="display: flex; background: var(--bg-secondary); padding: 4px; border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border); gap: 4px;">
+                <button type="button" id="accTabProfileBtn" class="acc-tab" onclick="switchAccTab('profile')" style="flex: 1; padding: 9px; border: none; background: var(--sage-700); color: #fff; font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.82rem;">Profil & Ekspresi</button>
+                <button type="button" id="accTabHistoryBtn" class="acc-tab" onclick="switchAccTab('history')" style="flex: 1; padding: 9px; border: none; background: transparent; color: var(--text-soft); font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.82rem;">Riwayat Traktir</button>
+                <button type="button" id="accTabSecurityBtn" class="acc-tab" onclick="switchAccTab('security')" style="flex: 1; padding: 9px; border: none; background: transparent; color: var(--text-soft); font-weight: 600; border-radius: 9px; cursor: pointer; font-size: 0.82rem;">Keamanan & Sesi</button>
             </div>
 
-            <!-- Content: Profile Settings -->
+            <!-- Content 1: Profile & Expression Settings -->
             <div id="accProfileContent" style="display: flex; flex-direction: column; gap: 12px;">
-                <div class="custom-amount" style="margin-top: 0;">
-                    <label for="accUsernameInput" style="font-size: 0.81rem; margin-bottom: 4px; display: block;">Username (Untuk Leaderboard)</label>
-                    <div class="amount-input-wrap">
-                        <span>@</span>
-                        <input type="text" id="accUsernameInput" maxlength="15" placeholder="username_unik" style="width: 100%; background: var(--bg-secondary); border: 0; padding: 11px 12px 11px 2px; color: var(--text); outline: none;">
+                <div class="auth-field" style="margin-bottom: 0;">
+                    <label for="accUsernameInput">Username (Tampil di Leaderboard)</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">@</span>
+                        <input type="text" id="accUsernameInput" class="auth-input" maxlength="15" placeholder="username_unik">
                     </div>
                 </div>
-                <div class="custom-amount" style="margin-top: 0;">
-                    <label for="accPhoneInput" style="font-size: 0.81rem; margin-bottom: 4px; display: block;">Nomor WhatsApp</label>
-                    <input type="text" id="accPhoneInput" placeholder="08123456789" style="width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); padding: 11px 14px; border-radius: 12px; color: var(--text-main); font-size: 0.9rem; outline: none;">
+
+                <div class="auth-field" style="margin-bottom: 0;">
+                    <label for="accBioInput">Bio / Status Supporter (Maks 60 Karakter)</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">💬</span>
+                        <input type="text" id="accBioInput" class="auth-input" maxlength="60" placeholder="Contoh: Coffee lover & supporter setia Gepa ☕">
+                    </div>
                 </div>
+
+                <div class="auth-field" style="margin-bottom: 0;">
+                    <label for="accPhoneInput">Nomor WhatsApp (Opsional)</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">📱</span>
+                        <input type="text" id="accPhoneInput" class="auth-input" placeholder="08123456789">
+                    </div>
+                </div>
+
+                <!-- Custom Photo Profile / Image URL -->
+                <div class="auth-field" style="margin-bottom: 0;">
+                    <label for="accCustomAvatarUrl">Foto Profil Kustom (Link / URL Gambar)</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">🖼️</span>
+                        <input type="url" id="accCustomAvatarUrl" class="auth-input" placeholder="https://domain.com/foto-kamu.png">
+                        <button type="button" id="applyAvatarUrlBtn" style="background: var(--sage-700); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Terapkan</button>
+                    </div>
+                    <small style="font-size: 0.72rem; color: var(--text-soft); margin-top: 3px; display: block;">Foto profil ini akan tampil di daftar ranking donasi saat kamu mentraktir.</small>
+                </div>
+
+                <!-- Avatar Preset Grid Picker -->
+                <div>
+                    <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Atau Pilih Karakter Avatar:</label>
+                    <div class="avatar-grid-picker" id="accAvatarPicker" style="margin-bottom: 6px;">
+                        <button type="button" class="avatar-choice-btn" data-avatar="🐱" onclick="selectAccAvatar('🐱', this)"><span class="emoji">🐱</span><span class="name">Kucing</span></button>
+                        <button type="button" class="avatar-choice-btn" data-avatar="☕" onclick="selectAccAvatar('☕', this)"><span class="emoji">☕</span><span class="name">Kopi</span></button>
+                        <button type="button" class="avatar-choice-btn" data-avatar="🎮" onclick="selectAccAvatar('🎮', this)"><span class="emoji">🎮</span><span class="name">Gamer</span></button>
+                        <button type="button" class="avatar-choice-btn" data-avatar="🚀" onclick="selectAccAvatar('🚀', this)"><span class="emoji">🚀</span><span class="name">Dreamer</span></button>
+                        <button type="button" class="avatar-choice-btn" data-avatar="🎧" onclick="selectAccAvatar('🎧', this)"><span class="emoji">🎧</span><span class="name">Music</span></button>
+                        <button type="button" class="avatar-choice-btn" data-avatar="🦊" onclick="selectAccAvatar('🦊', this)"><span class="emoji">🦊</span><span class="name">Fox</span></button>
+                        <button type="button" class="avatar-choice-btn" data-avatar="⚡" onclick="selectAccAvatar('⚡', this)"><span class="emoji">⚡</span><span class="name">Spark</span></button>
+                        <button type="button" class="avatar-choice-btn" data-avatar="🌟" onclick="selectAccAvatar('🌟', this)"><span class="emoji">🌟</span><span class="name">Bintang</span></button>
+                        <button type="button" class="avatar-choice-btn" data-avatar="👑" onclick="selectAccAvatar('👑', this)"><span class="emoji">👑</span><span class="name">VIP</span></button>
+                        <button type="button" class="avatar-choice-btn" data-avatar="🔥" onclick="selectAccAvatar('🔥', this)"><span class="emoji">🔥</span><span class="name">Semangat</span></button>
+                    </div>
+                </div>
+
                 <button type="button" id="saveProfileBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff; margin-top: 4px;">
-                    Simpan Perubahan
-                </button>
-                <button type="button" id="logoutBtn" class="modal-support-button" style="background: #dc2626; color: #fff; margin-top: 4px;">
-                    Keluar (Logout)
+                    Simpan Perubahan ✨
                 </button>
             </div>
 
-            <!-- Content: History Traktiran -->
-            <div id="accHistoryContent" style="display: none; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;">
-                <div id="userHistoryList">
-                    <div style="text-align: center; color: var(--text-soft); padding: 20px; font-size: 0.85rem;">Memuat riwayat...</div>
+            <!-- Content 2: History Traktiran & Invoices -->
+            <div id="accHistoryContent" style="display: none; flex-direction: column; gap: 8px;">
+                <div style="font-size: 0.8rem; color: var(--text-soft); margin-bottom: 4px;">
+                    Setiap traktiran kamu tercatat di bawah ini. Klik transaksi untuk membuka bukti invoice resmi.
                 </div>
+                <div id="userHistoryList" style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
+                    <div style="text-align: center; color: var(--text-soft); padding: 25px; font-size: 0.85rem;">Memuat riwayat traktiran...</div>
+                </div>
+                <button type="button" class="modal-support-button" style="background: var(--sage-800); color: #fff; margin-top: 8px;" onclick="closeInfoModal('accountModal'); openSupportModal();">
+                    Traktir Gepa Lagi ☕
+                </button>
+            </div>
+
+            <!-- Content 3: Security & Session (Change Password + Logout) -->
+            <div id="accSecurityContent" style="display: none; flex-direction: column; gap: 14px;">
+                <!-- Change Password Form -->
+                <div style="background: var(--sage-50); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+                    <div style="font-weight: 700; color: var(--sage-800); font-size: 0.92rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                        <span>🔐 Ubah Password Akun</span>
+                    </div>
+
+                    <form id="changePasswordForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="auth-field" style="margin-bottom: 0;">
+                            <label for="oldPasswordInput">Password Saat Ini</label>
+                            <div class="auth-input-wrapper">
+                                <span class="auth-input-icon">🔒</span>
+                                <input type="password" id="oldPasswordInput" class="auth-input has-toggle" placeholder="Masukkan password saat ini">
+                                <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility('oldPasswordInput', this)" title="Lihat password">👁️</button>
+                            </div>
+                        </div>
+
+                        <div class="auth-field" style="margin-bottom: 0;">
+                            <label for="newPasswordInput">Password Baru</label>
+                            <div class="auth-input-wrapper">
+                                <span class="auth-input-icon">🔑</span>
+                                <input type="password" id="newPasswordInput" class="auth-input has-toggle" placeholder="Minimal 6 karakter">
+                                <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility('newPasswordInput', this)" title="Lihat password">👁️</button>
+                            </div>
+                        </div>
+
+                        <div class="auth-field" style="margin-bottom: 0;">
+                            <label for="confirmNewPasswordInput">Konfirmasi Password Baru</label>
+                            <div class="auth-input-wrapper">
+                                <span class="auth-input-icon">✨</span>
+                                <input type="password" id="confirmNewPasswordInput" class="auth-input has-toggle" placeholder="Ulangi password baru">
+                                <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility('confirmNewPasswordInput', this)" title="Lihat password">👁️</button>
+                            </div>
+                        </div>
+
+                        <button type="button" id="submitChangePasswordBtn" class="modal-support-button" style="background: var(--sage-700); color: #fff; margin-top: 4px;">
+                            Perbarui Password 🔐
+                        </button>
+                    </form>
+                </div>
+
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 14px; font-size: 0.85rem; color: var(--text-soft);">
+                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Status Sesi Perangkat</div>
+                    <p style="margin: 0; line-height: 1.45;">Kamu terhubung secara aman di browser ini. Traktiran kamu akan otomatis terhubung ke identitas akun ini.</p>
+                </div>
+
+                <button type="button" id="logoutBtn" class="modal-support-button" style="background: #dc2626; color: #fff; margin-top: 0;">
+                    Keluar dari Akun (Logout)
+                </button>
             </div>
 
             <div style="text-align: center; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px;">
@@ -407,10 +736,14 @@
 
             <!-- Username field untuk authenticated user -->
             <div id="authenticatedUsernameField" class="custom-amount" style="margin-top: 20px; display: none;">
-                <label for="supporterUsername">Username Anda</label>
-                <div class="amount-input-wrap">
-                    <span>@</span>
-                    <input type="text" id="supporterUsername" maxlength="15" placeholder="username" autocomplete="off" readonly style="background: var(--bg-secondary); cursor: not-allowed;">
+                <label for="supporterUsername" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span>Identitas Pendukung</span>
+                    <span id="supporterBadgeStatus" style="font-size: 0.72rem; color: var(--sage-700); font-weight: 700; background: var(--sage-100); padding: 2px 8px; border-radius: 6px;">✓ Terhubung ke Akun</span>
+                </label>
+                <div class="amount-input-wrap" style="display: flex; align-items: center; gap: 8px;">
+                    <span id="supporterAvatarPreview" style="font-size: 1.15rem; min-width: 24px; text-align: center;">👤</span>
+                    <span style="color: var(--text-soft); font-weight: 700;">@</span>
+                    <input type="text" id="supporterUsername" maxlength="15" placeholder="username" autocomplete="off" readonly style="background: var(--bg-secondary); cursor: not-allowed; font-weight: 600;">
                 </div>
                 <p class="input-error" id="usernameError" style="display:none; color:#d9534f; font-size:0.75rem; margin-top:5px;"></p>
             </div>
@@ -446,25 +779,39 @@
 
     <!-- Invoice Detail Popup Modal -->
     <div class="modal-overlay" id="invoiceModal">
-        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left;">
+        <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left; padding: 28px 24px;">
             <button class="modal-close" type="button" onclick="closeInfoModal('invoiceModal')">×</button>
             <div class="modal-icon" style="background: var(--sage-100); color: var(--sage-700);">📄</div>
             <p class="section-kicker">transaction receipt</p>
-            <h2 style="font-size: 1.6rem; margin-bottom: 6px;">Detail Invoice</h2>
-            <p class="modal-description" style="margin-bottom: 16px;">Berikut adalah informasi status transaksi langsung dari sistem Midtrans.</p>
+            <h2 style="font-size: 1.5rem; margin-bottom: 4px;">Detail Invoice & Bukti</h2>
+            <p class="modal-description" style="margin-bottom: 14px;">Berikut adalah informasi status transaksi dan invoice dukungan kamu.</p>
             
-            <div style="background: var(--sage-50); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 20px; font-size: 0.85rem; color: var(--text-soft);">
-                <div style="font-weight: 700; color: var(--sage-700); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">🧾 Informasi Invoice</div>
-                <div style="display: grid; gap: 6px;">
-                    <div><strong>Order ID:</strong> <span id="invOrderId">-</span></div>
+            <div id="invThankYouNote" style="background: var(--sage-100); color: var(--sage-800); border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px; margin-bottom: 16px; font-size: 0.82rem; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.1rem;">✨</span>
+                <span>Makasih banyak atas traktiranmu! Dukungan kamu bikin hari Gepa lebih hangat. ☺</span>
+            </div>
+
+            <div style="background: var(--sage-50); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 18px; font-size: 0.85rem; color: var(--text-soft);">
+                <div style="font-weight: 700; color: var(--sage-700); margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>🧾 Bukti Traktiran Resmi</span>
+                    <span id="invStatusBadge" style="padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: var(--sage-700); color: #fff;">BERHASIL</span>
+                </div>
+                <div style="display: grid; gap: 8px;">
+                    <div><strong>Supporter:</strong> @<span id="invUsername" style="font-weight: 700; color: var(--text-main);">-</span></div>
+                    <div><strong>Order ID:</strong> <span id="invOrderId" style="font-family: monospace;">-</span></div>
                     <div><strong>Status:</strong> <span id="invStatus" style="font-weight: 700;">-</span></div>
-                    <div><strong>Nominal:</strong> <span id="invAmount">-</span></div>
+                    <div><strong>Nominal:</strong> <span id="invAmount" style="font-weight: 700; color: var(--sage-800);">-</span></div>
                     <div><strong>Metode Pembayaran:</strong> <span id="invPaymentType">-</span></div>
                     <div><strong>Waktu Transaksi:</strong> <span id="invTime">-</span></div>
                 </div>
             </div>
             
-            <button class="modal-support-button" type="button" onclick="closeInfoModal('invoiceModal')" style="background: var(--sage-700); margin-top: 0;">Tutup</button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="modal-support-button" type="button" id="copyInvoiceBtn" style="background: var(--bg-secondary); color: var(--text-main); border: 1px solid var(--border); margin-top: 0; flex: 1; min-width: 120px;">Salin Bukti 📋</button>
+                <button class="modal-support-button" type="button" id="printInvoiceBtn" style="background: var(--bg-secondary); color: var(--text-main); border: 1px solid var(--border); margin-top: 0; flex: 1; min-width: 120px;">Cetak 🖨️</button>
+                <button class="modal-support-button" type="button" onclick="scrollToRanking()" style="background: var(--sage-600); margin-top: 0; flex: 1; min-width: 120px;">Lihat Ranking 🏆</button>
+                <button class="modal-support-button" type="button" onclick="closeInfoModal('invoiceModal')" style="background: var(--sage-700); margin-top: 0; flex: 1; min-width: 100px;">Tutup</button>
+            </div>
         </div>
     </div>
 
@@ -529,9 +876,10 @@
                     <div><strong>Metode:</strong> <span id="resPaymentType">-</span></div>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="modal-support-button" type="button" onclick="scrollToRanking()" style="background: var(--sage-600); margin-top: 0;">Lihat Ranking</button>
-                <button class="modal-support-button" type="button" onclick="closeInfoModal('successPaymentModal')" style="background: var(--sage-700); margin-top: 0;">Kembali</button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="modal-support-button" type="button" id="viewInvoiceFromSuccessBtn" style="background: var(--sage-800); margin-top: 0; flex: 1; min-width: 140px;">Lihat Invoice 📄</button>
+                <button class="modal-support-button" type="button" onclick="scrollToRanking()" style="background: var(--sage-600); margin-top: 0; flex: 1; min-width: 120px;">Lihat Ranking</button>
+                <button class="modal-support-button" type="button" onclick="closeInfoModal('successPaymentModal')" style="background: var(--sage-700); margin-top: 0; flex: 1; min-width: 90px;">Kembali</button>
             </div>
         </div>
     </div>

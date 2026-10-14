@@ -7,9 +7,11 @@
 ========================================================= */
 
 import crypto from "crypto";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from '@supabase/supabase-js';
+import { memoryTransactions, saveTransactionsToDisk } from "./transactions.mjs";
+import { memoryUsers } from "./auth.mjs";
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://dkybfxbhlwyrjcycpatp.supabase.co";
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export default async function handler(req, res) {
@@ -49,37 +51,47 @@ export default async function handler(req, res) {
 
         const {
             amount,
-            username
+            username,
+            avatar
         } = req.body || {};
         
-        // Try to verify user from JWT (Authorization header)
+        // Try to verify user from token (Authorization header)
         let userId = null;
         let authenticatedUsername = null;
         
         const authHeader = req.headers.authorization;
-        if (authHeader && SUPABASE_URL && SUPABASE_SERVICE_ROLE) {
-            try {
-                const token = authHeader.replace('Bearer ', '');
-                const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-                const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-                
-                if (user && !error) {
-                    userId = user.id;
-                    
-                    // Query profile untuk dapatkan username authenticated user
-                    const { data: profile } = await supabaseAdmin
-                        .from('profiles')
-                        .select('username')
-                        .eq('id', userId)
-                        .single();
-                    
-                    if (profile && profile.username) {
-                        authenticatedUsername = profile.username;
-                    }
+        if (authHeader) {
+            const token = authHeader.replace('Bearer ', '').trim();
+            // 1. Check local/memory user store
+            for (const [_, u] of memoryUsers.entries()) {
+                if (u.id === token || u.lastToken === token) {
+                    userId = u.id;
+                    authenticatedUsername = u.username;
+                    break;
                 }
-            } catch (authErr) {
-                console.warn("Auth verification failed (continuing as guest):", authErr.message);
-                // Continue sebagai guest jika auth gagal
+            }
+
+            // 2. Fallback to Supabase if not matched in memory
+            if (!userId && SUPABASE_URL && SUPABASE_SERVICE_ROLE) {
+                try {
+                    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+                    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+                    
+                    if (user && !error) {
+                        userId = user.id;
+                        const { data: profile } = await supabaseAdmin
+                            .from('profiles')
+                            .select('username')
+                            .eq('id', userId)
+                            .single();
+                        
+                        if (profile && profile.username) {
+                            authenticatedUsername = profile.username;
+                        }
+                    }
+                } catch (authErr) {
+                    console.warn("Supabase auth verification failed:", authErr.message);
+                }
             }
         }
 
@@ -198,13 +210,13 @@ export default async function handler(req, res) {
 
                             callbacks: {
                                 finish:
-                                    "https://gepacorner.my.id/",
+                                    req.headers.origin ? `${req.headers.origin}/` : (req.headers.referer || "https://gepacorner.my.id/"),
 
                                 error:
-                                    "https://gepacorner.my.id/",
+                                    req.headers.origin ? `${req.headers.origin}/` : (req.headers.referer || "https://gepacorner.my.id/"),
 
                                 pending:
-                                    "https://gepacorner.my.id/"
+                                    req.headers.origin ? `${req.headers.origin}/` : (req.headers.referer || "https://gepacorner.my.id/")
                             },
 
                             /* =================================
@@ -213,17 +225,13 @@ export default async function handler(req, res) {
                                Setelah pembayaran GoPay selesai
                                melalui deeplink, GoPay akan
                                mengembalikan user ke website ini.
-
-                               Midtrans akan menambahkan:
-                               ?order_id=...&result=success
-                               atau failure/abort.
                             */
                             gopay: {
                                 enable_callback:
                                     true,
 
                                 callback_url:
-                                    "https://gepacorner.my.id/"
+                                    req.headers.origin ? `${req.headers.origin}/` : (req.headers.referer || "https://gepacorner.my.id/")
                             }
                         })
                 }
@@ -231,6 +239,21 @@ export default async function handler(req, res) {
 
         const data =
             await midtransResponse.json();
+
+        // Register in shared memory store for fast local invoice syncing
+        memoryTransactions.set(orderId, {
+            order_id: orderId,
+            orderId: orderId,
+            gross_amount: numAmount,
+            amount: numAmount,
+            username: cleanUsername,
+            user_id: userId || null,
+            avatar: avatar || "✨",
+            transaction_status: "pending",
+            payment_type: "ONLINE PAYMENT",
+            transaction_time: new Date().toISOString()
+        });
+        saveTransactionsToDisk();
 
         /* =================================================
            MIDTRANS ERROR

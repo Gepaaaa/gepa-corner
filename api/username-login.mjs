@@ -4,16 +4,10 @@
 // Body: { username: string }
 // Response: { email: string } atau error 404
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://dkybfxbhlwyrjcycpatp.supabase.co";
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
-  throw new Error('Missing Supabase credentials');
-}
-
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
 
 export default async (req, res) => {
   // CORS headers
@@ -34,6 +28,12 @@ export default async (req, res) => {
     if (!username) {
       return res.status(400).json({ error: 'Username required' });
     }
+
+    if (!SUPABASE_SERVICE_ROLE) {
+      return res.status(503).json({ error: 'Supabase credentials not configured' });
+    }
+
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
 
     // Query profiles table untuk dapatkan username → id → email
     // Tapi kita tidak bisa langsung query email dari profiles karena email ada di auth.users

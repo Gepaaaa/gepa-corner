@@ -1,17 +1,10 @@
-// api/user-donations.mjs
-// Endpoint untuk query riwayat donasi user yang terah login
-// GET /api/user-donations
-// Header: Authorization: Bearer <access_token>
-// Response: Array of donations { order_id, amount, status, transaction_time }
+// @ts-nocheck
+import { createClient } from '@supabase/supabase-js';
+import { memoryTransactions } from "./transactions.mjs";
+import { memoryUsers } from "./auth.mjs";
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://dkybfxbhlwyrjcycpatp.supabase.co";
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
-  throw new Error('Missing Supabase credentials');
-}
 
 export default async (req, res) => {
   // CORS headers
@@ -28,38 +21,101 @@ export default async (req, res) => {
 
   try {
     const authHeader = req.headers.authorization;
+    let queryUsername = typeof req.query.username === "string" ? req.query.username.trim() : null;
+    let userId = typeof req.query.userId === "string" ? req.query.userId.trim() : null;
 
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Missing authorization header' });
+    // Coba resolve user dari token jika ada
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '').trim();
+      
+      // Cek apakah token berasal dari Supabase
+      if (SUPABASE_SERVICE_ROLE && token.length > 50) {
+        try {
+          const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+          const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+          if (user && !error) {
+            userId = user.id;
+            const { data: profile } = await supabaseAdmin
+              .from('profiles')
+              .select('username')
+              .eq('id', userId)
+              .single();
+            if (profile && profile.username) {
+              queryUsername = profile.username;
+            }
+          }
+        } catch (e) {
+          // Token mungkin token in-memory internal
+        }
+      }
     }
 
-    // Verify JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-    
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+    // Cari username dari memoryUsers jika userId diberikan
+    if (userId && !queryUsername) {
+      const memUser = memoryUsers.get(userId);
+      if (memUser && memUser.username) {
+        queryUsername = memUser.username;
+      }
     }
 
-    const userId = user.id;
+    const donations = [];
+    const seenOrderIds = new Set();
 
-    // Query donations by user_id (service-role bypass RLS)
-    const { data: donations, error: donationsError } = await supabaseAdmin
-      .from('donations')
-      .select('order_id, amount, status, transaction_time')
-      .eq('user_id', userId)
-      .order('transaction_time', { ascending: false });
-
-    if (donationsError) {
-      console.error('Donations query error:', donationsError);
-      return res.status(500).json({ error: 'Failed to fetch donations' });
+    // 1. Ambil dari Supabase jika ada userId atau queryUsername
+    if (SUPABASE_SERVICE_ROLE && (userId || queryUsername)) {
+      try {
+        const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+        let query = supabaseAdmin.from('donations').select('*');
+        if (userId) {
+          query = query.eq('user_id', userId);
+        } else if (queryUsername) {
+          query = query.ilike('username', queryUsername);
+        }
+        
+        const { data: sbDonations } = await query.order('transaction_time', { ascending: false });
+        if (Array.isArray(sbDonations)) {
+          sbDonations.forEach(d => {
+            donations.push({
+              order_id: d.order_id,
+              amount: Number(d.amount) || 0,
+              status: d.status || "settlement",
+              payment_type: d.payment_type || "ONLINE PAYMENT",
+              transaction_time: d.transaction_time || new Date().toISOString(),
+              username: d.username || queryUsername
+            });
+            seenOrderIds.add(d.order_id);
+          });
+        }
+      } catch (err) {
+        console.warn("Supabase user donations fallback:", err.message);
+      }
     }
 
-    res.status(200).json(donations || []);
+    // 2. Gabungkan dengan memoryTransactions
+    if (queryUsername) {
+      const targetUser = queryUsername.replace(/^@/, "").toLowerCase();
+      for (const [orderId, tx] of memoryTransactions.entries()) {
+        const txUser = String(tx?.username || "").replace(/^@/, "").toLowerCase();
+        if (txUser === targetUser && !seenOrderIds.has(orderId)) {
+          donations.push({
+            order_id: tx.order_id || orderId,
+            amount: Number(tx.gross_amount || tx.amount) || 0,
+            status: tx.transaction_status || "settlement",
+            payment_type: tx.payment_type || "ONLINE PAYMENT",
+            transaction_time: tx.transaction_time || new Date().toISOString(),
+            username: tx.username || queryUsername
+          });
+          seenOrderIds.add(orderId);
+        }
+      }
+    }
+
+    // Urutkan dari yang paling baru
+    donations.sort((a, b) => new Date(b.transaction_time).getTime() - new Date(a.transaction_time).getTime());
+
+    return res.status(200).json(donations);
   } catch (error) {
     console.error('User donations error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 };
