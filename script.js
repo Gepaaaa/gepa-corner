@@ -72,6 +72,120 @@ const AUTH_STORAGE_KEY = "gepa_corner_auth_session";
 let currentUserSession = null;
 let userProfileCache = null;
 
+// Multi-tab sync via BroadcastChannel
+let authSyncChannel = null;
+try {
+    authSyncChannel = new BroadcastChannel("gepa_user_sync_channel");
+    window._authSyncChannel = authSyncChannel;
+    authSyncChannel.onmessage = (event) => {
+        if (event.data && event.data.type === "PROFILE_UPDATED" && event.data.user) {
+            const incoming = event.data.user;
+            if (currentUserSession && currentUserSession.user && currentUserSession.user.username.toLowerCase() === incoming.username?.toLowerCase()) {
+                currentUserSession.user = { ...currentUserSession.user, ...incoming };
+                applyUserSession(currentUserSession, true);
+                loadUserProfileData(currentUserSession.user);
+                fetchRankings();
+            }
+        }
+    };
+} catch (e) {}
+
+// Multi-tab sync via localStorage storage event
+window.addEventListener("storage", (e) => {
+    if ((e.key === AUTH_STORAGE_KEY || e.key === "gepa_auth_session") && e.newValue) {
+        try {
+            const parsed = JSON.parse(e.newValue);
+            if (parsed && parsed.user) {
+                applyUserSession(parsed, false);
+                loadUserProfileData(parsed.user);
+                fetchRankings();
+            }
+        } catch (err) {}
+    }
+});
+
+// Sync profil pengguna dari server (Web A ke Web B, beda perangkat / beda browser)
+let lastProfileSyncTime = 0;
+async function syncUserProfileFromServer(force = false) {
+    if (!currentUserSession || !currentUserSession.user) return;
+    const now = Date.now();
+    // Throttle agar tidak spam request (minimal jeda 3 detik kecuali force)
+    if (!force && now - lastProfileSyncTime < 3000) return;
+    lastProfileSyncTime = now;
+
+    try {
+        const u = currentUserSession.user;
+        const targetUsername = u.username || "";
+        const targetId = u.id || "";
+        const token = currentUserSession.accessToken || currentUserSession.token;
+        const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+
+        const res = await fetch(`/api/auth?action=me&username=${encodeURIComponent(targetUsername)}&userId=${encodeURIComponent(targetId)}`, {
+            headers,
+            cache: "no-store"
+        });
+
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.user) {
+            let changed = false;
+            if (data.user.avatar && data.user.avatar !== currentUserSession.user.avatar) {
+                currentUserSession.user.avatar = data.user.avatar;
+                changed = true;
+            }
+            if (data.user.bio !== undefined && data.user.bio !== currentUserSession.user.bio) {
+                currentUserSession.user.bio = data.user.bio;
+                changed = true;
+            }
+            if (data.user.phone !== undefined && data.user.phone !== currentUserSession.user.phone) {
+                currentUserSession.user.phone = data.user.phone;
+                changed = true;
+            }
+
+            if (changed) {
+                applyUserSession(currentUserSession, true);
+
+                // Update modal akun jika sedang terbuka
+                const accModal = document.getElementById("accountModal");
+                if (accModal && (accModal.classList.contains("active") || accModal.style.display === "flex")) {
+                    loadUserProfileData(currentUserSession.user);
+                }
+
+                // Update leaderboard cache & re-render ranking instan
+                if (window.rankingDataCache) {
+                    ["daily", "weekly", "lifetime"].forEach(period => {
+                        const list = window.rankingDataCache[period] || [];
+                        list.forEach(item => {
+                            if (item.username && item.username.replace(/^@/, "").toLowerCase() === currentUserSession.user.username.toLowerCase()) {
+                                item.avatar = currentUserSession.user.avatar;
+                            }
+                        });
+                    });
+                    renderRanking(currentRankTab);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("syncUserProfileFromServer fallback:", e);
+    }
+}
+
+// Listener fokus dan visibilitas tab (saat user beralih kembali ke web B dari web A)
+window.addEventListener("focus", () => syncUserProfileFromServer(true));
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        syncUserProfileFromServer(true);
+        fetchRankings();
+    }
+});
+
+// Heartbeat otomatis tiap 10 detik saat tab aktif
+setInterval(() => {
+    if (document.visibilityState === "visible" && currentUserSession) {
+        syncUserProfileFromServer(false);
+    }
+}, 10000);
+
 // Initialize session from localStorage and sync with server
 function initAuthSession() {
     try {
@@ -83,19 +197,7 @@ function initAuthSession() {
             const parsed = JSON.parse(saved);
             if (parsed && parsed.user) {
                 applyUserSession(parsed, false);
-                // Background check if user data was updated on server
-                const targetId = parsed.user.id || "";
-                fetch(`/api/auth?action=me&userId=${encodeURIComponent(targetId)}`, {
-                    headers: parsed.token ? { "Authorization": `Bearer ${parsed.token}` } : {}
-                })
-                .then(res => res.ok ? res.json() : null)
-                .then(data => {
-                    if (data && data.user) {
-                        parsed.user = { ...parsed.user, ...data.user };
-                        applyUserSession(parsed, true);
-                    }
-                })
-                .catch(() => {});
+                syncUserProfileFromServer(true);
             }
         } else {
             syncSupportModalAuthState();
@@ -194,6 +296,7 @@ function updateNavbarAuthState() {
             <span style="font-weight: 700;">@${u.username}</span>
         `;
         openAuthModalBtn.onclick = () => {
+            syncUserProfileFromServer(true);
             loadUserProfileData(currentUserSession.user);
             openInfoModal("accountModal");
         };
@@ -679,6 +782,15 @@ if (saveProfileBtn) {
             // Muat ulang data hero & refresh ranking dari server
             loadUserProfileData(currentUserSession.user);
             fetchRankings();
+
+            if (window._authSyncChannel) {
+                try {
+                    window._authSyncChannel.postMessage({
+                        type: "PROFILE_UPDATED",
+                        user: currentUserSession.user
+                    });
+                } catch (e) {}
+            }
 
             showToast("Profil & foto avatar tersimpan permanen! ✨");
         } catch (err) {

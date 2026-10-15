@@ -73,15 +73,25 @@ export default async function handler(req, res) {
 
   try {
     // ==========================================
-    // ACTION: ME / GET CURRENT USER SESSION
+    // ACTION: ME / GET CURRENT USER SESSION (SYNC)
     // ==========================================
-    if (action === "me" && (req.method === "GET" || req.method === "POST")) {
+    if ((action === "me" || action === "get-profile") && (req.method === "GET" || req.method === "POST")) {
       const authHeader = req.headers.authorization;
       const queryUserId = req.query.userId || req.body?.userId;
+      const queryUsername = (req.query.username || req.body?.username || "").trim().toLowerCase().replace(/^@/, "");
       let targetUser = null;
 
       if (queryUserId) {
         targetUser = memoryUsers.get(queryUserId);
+      }
+
+      if (!targetUser && queryUsername) {
+        for (const [_, u] of memoryUsers.entries()) {
+          if (u.username?.toLowerCase() === queryUsername) {
+            targetUser = u;
+            break;
+          }
+        }
       }
 
       if (!targetUser && authHeader) {
@@ -94,10 +104,64 @@ export default async function handler(req, res) {
         }
       }
 
+      // Selalu cek database Supabase untuk mendapatkan avatar dan profil terupdate (sinkronisasi antar web/perangkat)
+      if (SUPABASE_SERVICE_ROLE && (queryUsername || targetUser || queryUserId)) {
+        try {
+          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+          const cleanName = (targetUser ? targetUser.username : queryUsername).toLowerCase();
+
+          // 1. Ambil avatar permanen dari record donations (AVATAR_USER_*)
+          if (cleanName) {
+            const { data: avRow } = await supabase
+              .from("donations")
+              .select("status")
+              .eq("order_id", `AVATAR_USER_${cleanName}`)
+              .maybeSingle();
+
+            if (avRow && avRow.status && avRow.status.startsWith("AVATAR_DATA:")) {
+              const savedAvatar = avRow.status.slice("AVATAR_DATA:".length);
+              if (savedAvatar) {
+                if (targetUser) targetUser.avatar = savedAvatar;
+                else targetUser = { username: cleanName, avatar: savedAvatar };
+              }
+            }
+          }
+
+          // 2. Ambil data profil dari profiles table
+          if (cleanName) {
+            const { data: prof } = await supabase
+              .from("profiles")
+              .select("*")
+              .ilike("username", cleanName)
+              .maybeSingle();
+
+            if (prof) {
+              if (!targetUser) {
+                targetUser = {
+                  id: prof.id,
+                  email: `${prof.username}@gepacorner.my.id`,
+                  username: prof.username,
+                  phone: prof.phone || "",
+                  bio: "Sahabat Corner",
+                  createdAt: prof.updated_at,
+                  avatar: prof.avatar_url || "👤"
+                };
+              } else {
+                if (!targetUser.id) targetUser.id = prof.id;
+                if (prof.phone) targetUser.phone = prof.phone;
+                if (!targetUser.avatar && prof.avatar_url) targetUser.avatar = prof.avatar_url;
+              }
+            }
+          }
+        } catch (sbErr) {
+          console.warn("Supabase me sync fallback warning:", sbErr.message);
+        }
+      }
+
       if (targetUser) {
         return res.status(200).json({
           user: {
-            id: targetUser.id,
+            id: targetUser.id || queryUserId,
             email: targetUser.email,
             username: targetUser.username,
             avatar: targetUser.avatar || "👤",
@@ -161,6 +225,14 @@ export default async function handler(req, res) {
               avatar_url: avatar || "🐱",
               phone: phone || ""
             });
+
+            await supabase.from("donations").upsert({
+              order_id: `USER_MAP_${cleanUsername}`,
+              username: cleanUsername,
+              amount: 0,
+              status: `USER_EMAIL:${email.toLowerCase()}`,
+              transaction_time: new Date().toISOString()
+            }, { onConflict: "order_id" });
           }
         } catch (sbErr) {
           console.warn("Supabase registration fallback:", sbErr.message);
@@ -294,6 +366,17 @@ export default async function handler(req, res) {
               matchedUser.avatar = prof.avatar_url;
             }
           }
+
+          // C. Simpan relasi email dan username agar pemulihan OTP selalu akurat
+          if (matchedUser.email) {
+            await supabase.from("donations").upsert({
+              order_id: `USER_MAP_${cleanUser}`,
+              username: cleanUser,
+              amount: 0,
+              status: `USER_EMAIL:${matchedUser.email.toLowerCase()}`,
+              transaction_time: new Date().toISOString()
+            }, { onConflict: "order_id" });
+          }
         } catch (avErr) {
           console.warn("Avatar login restore fallback:", avErr.message);
         }
@@ -332,7 +415,7 @@ export default async function handler(req, res) {
       let targetUser = null;
       let targetEmail = null;
 
-      // 1. Check in memoryUsers
+      // 1. Cek di database memory lokal
       for (const [_, u] of memoryUsers.entries()) {
         if (u.email?.toLowerCase() === cleanId || u.username?.toLowerCase() === cleanId) {
           targetUser = u;
@@ -341,46 +424,87 @@ export default async function handler(req, res) {
         }
       }
 
-      // 2. Check in Supabase if not matched or to ensure email is accurate
+      // 2. Validasi ketat pendaftaran di Supabase Auth
       if (SUPABASE_SERVICE_ROLE) {
         try {
           const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
           
           if (cleanId.includes("@")) {
+            // Identifier adalah email: Cek apakah email terdaftar di Supabase tanpa membuat user baru
+            const { error: otpErr } = await supabase.auth.signInWithOtp({
+              email: cleanId,
+              options: { shouldCreateUser: false }
+            });
+
+            // Jika Supabase menolak karena user belum terdaftar (status 422 / otp_disabled / Signups not allowed)
+            const isUnregistered = otpErr && (
+              otpErr.status === 422 || 
+              otpErr.code === "otp_disabled" || 
+              (otpErr.message && otpErr.message.toLowerCase().includes("signups not allowed"))
+            );
+
+            if (isUnregistered && !targetUser) {
+              return res.status(404).json({
+                error: "Email belum terdaftar di Gepa Corner. Silakan gunakan email yang sudah terdaftar atau buat akun baru."
+              });
+            }
+
             targetEmail = cleanId;
-            const { data: { users } } = await supabase.auth.admin.listUsers();
-            if (users) {
-              const found = users.find(u => u.email?.toLowerCase() === cleanId);
-              if (found) {
-                const { data: prof } = await supabase.from("profiles").select("*").eq("id", found.id).single();
-                targetUser = {
-                  id: found.id,
-                  email: found.email,
-                  username: prof?.username || cleanId.split("@")[0].replace(/[^a-z0-9_]/g, ""),
-                  passwordHash: "",
-                  avatar: prof?.avatar_url || "👤"
-                };
-                memoryUsers.set(targetUser.id, targetUser);
-                saveUsersToDisk();
-              }
+
+            // Cari profil yang mungkin cocok dengan email ini
+            const prefix = cleanId.split("@")[0].replace(/[^a-z0-9_]/g, "");
+            const { data: prof } = await supabase.from("profiles").select("*").ilike("username", prefix).maybeSingle();
+            if (prof && !targetUser) {
+              targetUser = {
+                id: prof.id,
+                email: cleanId,
+                username: prof.username,
+                avatar: prof.avatar_url || "👤"
+              };
             }
           } else {
-            // Identifier is username, lookup profile in Supabase
-            const { data: prof } = await supabase.from("profiles").select("id, username").eq("username", cleanId).single();
-            if (prof && prof.id) {
-              const { data: { user: sbUser } } = await supabase.auth.admin.getUserById(prof.id);
-              if (sbUser && sbUser.email) {
-                targetEmail = sbUser.email;
-                targetUser = {
-                  id: sbUser.id,
-                  email: sbUser.email,
-                  username: prof.username,
-                  passwordHash: "",
-                  avatar: "👤"
-                };
-                memoryUsers.set(targetUser.id, targetUser);
-                saveUsersToDisk();
+            // Identifier adalah username: Cek apakah username terdaftar di profiles table
+            const { data: prof } = await supabase.from("profiles").select("id, username").ilike("username", cleanId).maybeSingle();
+            if (!prof && !targetUser) {
+              return res.status(404).json({
+                error: `Username @${cleanId} tidak terdaftar di Gepa Corner.`
+              });
+            }
+
+            if (prof) {
+              // Cari email yang terhubung dengan username ini
+              const { data: userMap } = await supabase
+                .from("donations")
+                .select("status")
+                .eq("order_id", `USER_MAP_${cleanId}`)
+                .maybeSingle();
+
+              if (userMap && userMap.status && userMap.status.startsWith("USER_EMAIL:")) {
+                targetEmail = userMap.status.slice("USER_EMAIL:".length);
               }
+
+              if (!targetEmail && targetUser && targetUser.email) {
+                targetEmail = targetUser.email;
+              }
+
+              if (!targetEmail) {
+                return res.status(404).json({
+                  error: `Email untuk akun @${cleanId} belum tertaut. Silakan masukkan alamat email kamu saat mendaftar.`
+                });
+              }
+
+              targetUser = {
+                id: prof.id,
+                email: targetEmail,
+                username: prof.username,
+                avatar: "👤"
+              };
+
+              // Kirim OTP ke targetEmail
+              await supabase.auth.signInWithOtp({
+                email: targetEmail,
+                options: { shouldCreateUser: false }
+              });
             }
           }
         } catch (e) {
@@ -389,10 +513,12 @@ export default async function handler(req, res) {
       }
 
       if (!targetEmail) {
-        return res.status(404).json({ error: "Akun dengan email atau username tersebut tidak ditemukan." });
+        return res.status(404).json({
+          error: "Akun dengan email atau username tersebut tidak terdaftar di Gepa Corner."
+        });
       }
 
-      // Trigger official Supabase Password Reset Email
+      // Kirim juga link recovery resmi Supabase sebagai opsi tambahan
       let supabaseSent = false;
       const rawOrigin = req.headers.origin || req.headers.referer || "";
       let appOrigin = "https://www.gepacorner.my.id";
@@ -409,9 +535,7 @@ export default async function handler(req, res) {
           const { error: resetErr } = await supabase.auth.resetPasswordForEmail(targetEmail, {
             redirectTo: `${appOrigin}/#type=recovery`
           });
-          if (resetErr) {
-            console.warn("Supabase resetPasswordForEmail warning:", resetErr.message);
-          } else {
+          if (!resetErr) {
             supabaseSent = true;
           }
         } catch (sbErr) {
