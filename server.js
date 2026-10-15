@@ -25,9 +25,11 @@ import userDonationsHandler from './api/user-donations.mjs';
 import usernameLoginHandler from './api/username-login.mjs';
 import webhookHandler from './api/webhook.js';
 import authHandler from './api/auth.mjs';
+import musicSearchHandler from './api/music-search.mjs';
 
 // API Routes
 app.all('/api/auth', (req, res) => authHandler(req, res));
+app.all('/api/music-search', (req, res) => musicSearchHandler(req, res));
 app.all('/api/create-payment', (req, res) => createPaymentHandler(req, res));
 app.all('/api/check-payment', (req, res) => checkPaymentHandler(req, res));
 app.all('/api/ranking', (req, res) => rankingHandler(req, res));

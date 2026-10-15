@@ -2697,4 +2697,1055 @@ window.addEventListener("scroll", () => {
     }
 }, { passive: true });
 
+/* =========================================================
+   UNIVERSAL ONLINE MUSIC PLAYER & DRAGGABLE FLOATING WIDGET
+   ========================================================= */
+
+// Player DOM Elements
+const headerMusicToggle = document.getElementById("headerMusicToggle");
+const headerMusicIcon = document.getElementById("headerMusicIcon");
+const headerMusicEq = document.getElementById("headerMusicEq");
+
+const floatingWidget = document.getElementById("floatingMusicWidget");
+const floatingCloseBtn = document.getElementById("floatingMusicCloseBtn");
+const floatingBody = document.getElementById("floatingMusicBody");
+const floatingQuickPlayBtn = document.getElementById("floatingQuickPlayBtn");
+const floatingQuickNextBtn = document.getElementById("floatingQuickNextBtn");
+const floatingPlayIcon = document.getElementById("floatingPlayIcon");
+const floatingTrackTitle = document.getElementById("floatingTrackTitle");
+const floatingTrackArtist = document.getElementById("floatingTrackArtist");
+const floatingMiniEq = document.getElementById("floatingMiniEq");
+const vinylDisc = document.getElementById("vinylDisc");
+const vinylCover = document.getElementById("vinylCover");
+
+const musicModalOverlay = document.getElementById("musicModalOverlay");
+const musicModalMinimizeBtn = document.getElementById("musicModalMinimizeBtn");
+const musicModalCloseAndStopBtn = document.getElementById("musicModalCloseAndStopBtn");
+const musicTabBtns = document.querySelectorAll(".music-tab-btn");
+const musicTabContents = document.querySelectorAll(".music-tab-content");
+
+const playerHeroCard = document.querySelector(".player-hero-card");
+const playerAlbumArt = document.getElementById("playerAlbumArt");
+const playerTrackTitle = document.getElementById("playerTrackTitle");
+const playerArtistName = document.getElementById("playerArtistName");
+const playerSourceBadge = document.getElementById("playerSourceBadge");
+
+const progressBarWrapper = document.getElementById("progressBarWrapper");
+const progressBarFill = document.getElementById("progressBarFill");
+const playerSeekSlider = document.getElementById("playerSeekSlider");
+const playerCurrentTime = document.getElementById("playerCurrentTime");
+const playerTotalDuration = document.getElementById("playerTotalDuration");
+
+const playerLoopBtn = document.getElementById("playerLoopBtn");
+const playerPrevBtn = document.getElementById("playerPrevBtn");
+const playerPlayPauseBtn = document.getElementById("playerPlayPauseBtn");
+const playerPlayIcon = document.getElementById("playerPlayIcon");
+const playerNextBtn = document.getElementById("playerNextBtn");
+const playerMuteBtn = document.getElementById("playerMuteBtn");
+const playerVolumeSlider = document.getElementById("playerVolumeSlider");
+const volumePercent = document.getElementById("volumePercent");
+const volIndicatorIcon = document.getElementById("volIndicatorIcon");
+
+const playerUpcomingTrack = document.getElementById("playerUpcomingTrack");
+const upcomingTrackText = document.getElementById("upcomingTrackText");
+const queueCount = document.getElementById("queueCount");
+
+const musicSearchInput = document.getElementById("musicSearchInput");
+const musicSearchClearBtn = document.getElementById("musicSearchClearBtn");
+const musicSearchSubmitBtn = document.getElementById("musicSearchSubmitBtn");
+const musicSearchLoading = document.getElementById("musicSearchLoading");
+const musicSearchResultsList = document.getElementById("musicSearchResultsList");
+const searchChips = document.querySelectorAll(".search-chip");
+
+const curatedListIndo = document.getElementById("curatedListIndo");
+const curatedListLofi = document.getElementById("curatedListLofi");
+const curatedListGlobal = document.getElementById("curatedListGlobal");
+
+const html5Audio = document.getElementById("html5AudioPlayer");
+
+// State
+let ytPlayer = null;
+let isYtReady = false;
+let isPlaying = false;
+let isMuted = false;
+let isLooping = false;
+let currentVolume = 80;
+let progressUpdateInterval = null;
+let searchDebounceTimer = null;
+let currentSearchSeq = 0;
+let autoplayAttempted = false;
+
+// Default initial track
+let currentTrack = {
+    id: "dGcGbF4ex5o",
+    title: "Dan...",
+    artist: "Sheila On 7",
+    duration: "04:46",
+    thumbnail: "https://i.ytimg.com/vi/dGcGbF4ex5o/hqdefault.jpg",
+    source: "youtube"
+};
+
+let playlistQueue = [currentTrack];
+let queueIndex = 0;
+
+function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Format seconds into MM:SS
+function formatDuration(sec) {
+    if (!sec || isNaN(sec) || sec < 0) return "00:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+// ----------------------------------------------------
+// YOUTUBE & AUDIO ENGINE INITIALIZATION
+// ----------------------------------------------------
+function initYouTubeAudioEngine() {
+    if (window.YT && window.YT.Player) {
+        setupYtInstance();
+    } else {
+        window.onYouTubeIframeAPIReady = function() {
+            setupYtInstance();
+        };
+    }
+}
+
+function setupYtInstance() {
+    if (ytPlayer || !document.getElementById("ytAudioPlayer")) return;
+    try {
+        ytPlayer = new window.YT.Player("ytAudioPlayer", {
+            height: "1",
+            width: "1",
+            videoId: currentTrack.id,
+            playerVars: {
+                autoplay: 0,
+                controls: 0,
+                disablekb: 1,
+                fs: 0,
+                rel: 0,
+                playsinline: 1,
+                origin: window.location.origin
+            },
+            events: {
+                onReady: onYtReady,
+                onStateChange: onYtStateChange,
+                onError: onYtError
+            }
+        });
+    } catch (e) {
+        console.warn("YouTube Player initialization fallback:", e);
+    }
+}
+
+function onYtReady(event) {
+    isYtReady = true;
+    if (ytPlayer && ytPlayer.setVolume) {
+        ytPlayer.setVolume(currentVolume);
+    }
+    // Attempt initial autoplay if not dismissed
+    attemptAutoplay();
+}
+
+function onYtStateChange(event) {
+    if (event.data === window.YT.PlayerState.PLAYING) {
+        setPlaybackUIState(true);
+        startProgressTracking();
+    } else if (event.data === window.YT.PlayerState.PAUSED) {
+        setPlaybackUIState(false);
+        stopProgressTracking();
+    } else if (event.data === window.YT.PlayerState.ENDED) {
+        if (isLooping) {
+            if (ytPlayer && ytPlayer.seekTo) {
+                ytPlayer.seekTo(0);
+                ytPlayer.playVideo();
+            }
+        } else {
+            playNextTrack();
+        }
+    }
+}
+
+function onYtError(event) {
+    console.warn("YouTube playback error code:", event.data);
+    // If YouTube fails (e.g. embed restricted), try playing next track or fallback to preview
+    if (currentTrack.previewUrl && html5Audio) {
+        playWithHtml5(currentTrack.previewUrl);
+    } else {
+        showToast("Lagu ini tidak dapat diputar. Memutar lagu berikutnya...");
+        setTimeout(playNextTrack, 1500);
+    }
+}
+
+// ----------------------------------------------------
+// PLAYBACK CONTROLS
+// ----------------------------------------------------
+function playMusic() {
+    isPlaying = true;
+    if (currentTrack.source === "itunes" && currentTrack.previewUrl) {
+        playWithHtml5(currentTrack.previewUrl);
+        return;
+    }
+
+    if (ytPlayer && typeof ytPlayer.playVideo === "function") {
+        ytPlayer.playVideo();
+    } else if (html5Audio && html5Audio.src) {
+        html5Audio.play().catch(() => {});
+    }
+    setPlaybackUIState(true);
+    startProgressTracking();
+    updateMediaSession();
+}
+
+function pauseMusic() {
+    isPlaying = false;
+    if (ytPlayer && typeof ytPlayer.pauseVideo === "function") {
+        ytPlayer.pauseVideo();
+    }
+    if (html5Audio) {
+        html5Audio.pause();
+    }
+    setPlaybackUIState(false);
+    stopProgressTracking();
+    updateMediaSession();
+}
+
+function togglePlayPause() {
+    if (isPlaying) {
+        pauseMusic();
+    } else {
+        playMusic();
+    }
+}
+
+function playTrack(track) {
+    currentTrack = track;
+    updateTrackDisplay(track);
+
+    // Stop HTML5 audio if active
+    if (html5Audio) {
+        html5Audio.pause();
+        html5Audio.src = "";
+    }
+
+    if (track.source === "itunes" && track.previewUrl) {
+        playWithHtml5(track.previewUrl);
+    } else {
+        if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
+            ytPlayer.loadVideoById(track.id);
+            ytPlayer.playVideo();
+            setPlaybackUIState(true);
+            startProgressTracking();
+        }
+    }
+
+    updateMediaSession();
+    // Save last played track in localStorage
+    try {
+        localStorage.setItem("gepa_last_track", JSON.stringify(track));
+    } catch (e) {}
+}
+
+function playWithHtml5(src) {
+    if (!html5Audio) return;
+    html5Audio.src = src;
+    html5Audio.volume = currentVolume / 100;
+    html5Audio.loop = isLooping;
+    html5Audio.play().then(() => {
+        setPlaybackUIState(true);
+        startProgressTracking();
+    }).catch(err => {
+        console.warn("HTML5 audio play blocked:", err);
+    });
+
+    html5Audio.onended = () => {
+        if (isLooping) {
+            html5Audio.currentTime = 0;
+            html5Audio.play();
+        } else {
+            playNextTrack();
+        }
+    };
+}
+
+function playNextTrack() {
+    if (playlistQueue.length === 0) return;
+    queueIndex = (queueIndex + 1) % playlistQueue.length;
+    playTrack(playlistQueue[queueIndex]);
+}
+
+function playPrevTrack() {
+    if (playlistQueue.length === 0) return;
+    queueIndex = (queueIndex - 1 + playlistQueue.length) % playlistQueue.length;
+    playTrack(playlistQueue[queueIndex]);
+}
+
+// ----------------------------------------------------
+// UI STATE UPDATES
+// ----------------------------------------------------
+function setPlaybackUIState(playing) {
+    isPlaying = playing;
+    const playIconText = playing ? "⏸" : "▶";
+
+    if (floatingPlayIcon) floatingPlayIcon.textContent = playIconText;
+    if (playerPlayIcon) playerPlayIcon.textContent = playIconText;
+
+    if (floatingWidget) {
+        floatingWidget.classList.toggle("playing", playing);
+    }
+    if (floatingMiniEq) {
+        floatingMiniEq.style.display = playing ? "inline-flex" : "none";
+    }
+    if (headerMusicToggle) {
+        headerMusicToggle.classList.toggle("playing", playing);
+    }
+    if (playerHeroCard) {
+        playerHeroCard.classList.toggle("playing", playing);
+    }
+
+    // Update active highlight in search results and curated items
+    updateActivePlayButtons(playing);
+}
+
+function updateActivePlayButtons(playing) {
+    document.querySelectorAll(".music-result-item").forEach(item => {
+        const isCurrent = item.dataset.id === currentTrack.id;
+        item.classList.toggle("active", isCurrent);
+        const btn = item.querySelector(".result-play-btn");
+        if (btn) btn.textContent = isCurrent && playing ? "⏸" : "▶";
+    });
+}
+
+function updateUpcomingTrackDisplay() {
+    if (!upcomingTrackText) return;
+    if (playlistQueue.length <= 1) {
+        upcomingTrackText.textContent = "Putar lagu lain untuk menambah antrean";
+        if (queueCount) queueCount.textContent = "1 lagu";
+        return;
+    }
+
+    const nextIdx = (queueIndex + 1) % playlistQueue.length;
+    const nextTrack = playlistQueue[nextIdx];
+    if (nextTrack) {
+        upcomingTrackText.textContent = `${nextTrack.title} — ${nextTrack.artist}`;
+    }
+    if (queueCount) queueCount.textContent = `${playlistQueue.length} lagu`;
+}
+
+function updateTrackDisplay(track) {
+    if (floatingTrackTitle) floatingTrackTitle.textContent = track.title || "Judul Lagu";
+    if (floatingTrackArtist) floatingTrackArtist.textContent = track.artist || "Artis";
+    if (vinylCover && track.thumbnail) vinylCover.src = track.thumbnail;
+
+    if (playerTrackTitle) playerTrackTitle.textContent = track.title || "Judul Lagu";
+    if (playerArtistName) playerArtistName.textContent = track.artist || "Artis";
+    if (playerAlbumArt && track.thumbnail) playerAlbumArt.src = track.thumbnail;
+    if (playerTotalDuration && track.duration) playerTotalDuration.textContent = track.duration;
+
+    if (playerSourceBadge) {
+        playerSourceBadge.textContent = track.category ? `${track.category} • Online` : "YouTube Audio Stream";
+    }
+
+    updateUpcomingTrackDisplay();
+}
+
+function startProgressTracking() {
+    stopProgressTracking();
+    progressUpdateInterval = setInterval(() => {
+        let current = 0;
+        let total = 0;
+
+        if (html5Audio && html5Audio.src && !html5Audio.paused) {
+            current = html5Audio.currentTime || 0;
+            total = html5Audio.duration || 30;
+        } else if (ytPlayer && typeof ytPlayer.getCurrentTime === "function") {
+            current = ytPlayer.getCurrentTime() || 0;
+            total = ytPlayer.getDuration() || 0;
+        }
+
+        if (total > 0) {
+            const percent = (current / total) * 100;
+            if (progressBarFill) progressBarFill.style.width = `${percent}%`;
+            if (playerSeekSlider && !playerSeekSlider.matches(":active")) {
+                playerSeekSlider.value = percent;
+            }
+            if (playerCurrentTime) playerCurrentTime.textContent = formatDuration(current);
+            if (playerTotalDuration && total > 0) playerTotalDuration.textContent = formatDuration(total);
+        }
+    }, 500);
+}
+
+function stopProgressTracking() {
+    if (progressUpdateInterval) {
+        clearInterval(progressUpdateInterval);
+        progressUpdateInterval = null;
+    }
+}
+
+// ----------------------------------------------------
+// AUTOPLAY ON LOAD OR FIRST USER GESTURE
+// ----------------------------------------------------
+function attemptAutoplay() {
+    if (autoplayAttempted) return;
+    autoplayAttempted = true;
+
+    // Check if user previously closed the widget
+    const isDismissed = localStorage.getItem("music_widget_hidden") === "true";
+    if (isDismissed) {
+        if (floatingWidget) floatingWidget.classList.add("hidden");
+        return;
+    }
+
+    // Try auto-playing
+    try {
+        if (ytPlayer && typeof ytPlayer.playVideo === "function") {
+            ytPlayer.playVideo();
+        }
+    } catch (e) {
+        // Autoplay policy blocked by browser, attach one-time listener to start on first interaction
+        setupAutoplayFallback();
+    }
+
+    // If browser pauses immediately due to autoplay restrictions, listen for first touch/click
+    setTimeout(() => {
+        if (!isPlaying) {
+            setupAutoplayFallback();
+        }
+    }, 1000);
+}
+
+function setupAutoplayFallback() {
+    const startOnInteraction = () => {
+        const isDismissed = localStorage.getItem("music_widget_hidden") === "true";
+        if (!isDismissed && !isPlaying) {
+            playMusic();
+        }
+        document.removeEventListener("click", startOnInteraction);
+        document.removeEventListener("touchstart", startOnInteraction);
+        document.removeEventListener("keydown", startOnInteraction);
+    };
+
+    document.addEventListener("click", startOnInteraction, { once: true, passive: true });
+    document.addEventListener("touchstart", startOnInteraction, { once: true, passive: true });
+    document.addEventListener("keydown", startOnInteraction, { once: true, passive: true });
+}
+
+// ----------------------------------------------------
+// MEDIA SESSION INTEGRATION (Background tab & lockscreen)
+// ----------------------------------------------------
+function updateMediaSession() {
+    if (!("mediaSession" in navigator)) return;
+    try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: currentTrack.title || "Gepa Online Music",
+            artist: currentTrack.artist || "Gepa Corner",
+            album: "Background Music Player",
+            artwork: [
+                { src: currentTrack.thumbnail || "https://i.ytimg.com/vi/dGcGbF4ex5o/hqdefault.jpg", sizes: "512x512", type: "image/jpeg" }
+            ]
+        });
+
+        navigator.mediaSession.setActionHandler("play", () => playMusic());
+        navigator.mediaSession.setActionHandler("pause", () => pauseMusic());
+        navigator.mediaSession.setActionHandler("previoustrack", () => playPrevTrack());
+        navigator.mediaSession.setActionHandler("nexttrack", () => playNextTrack());
+    } catch (e) {
+        console.warn("MediaSession setup warning:", e);
+    }
+}
+
+// ----------------------------------------------------
+// DRAGGABLE FLOATING WIDGET (Touch & Pointer Events)
+// ----------------------------------------------------
+function initDraggableWidget() {
+    if (!floatingWidget || !floatingBody) return;
+
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
+    let dragDistance = 0;
+
+    // Restore saved position
+    const savedPos = localStorage.getItem("music_widget_pos");
+    if (savedPos) {
+        try {
+            const pos = JSON.parse(savedPos);
+            const clampX = Math.max(10, Math.min(window.innerWidth - 270, pos.x));
+            const clampY = Math.max(10, Math.min(window.innerHeight - 70, pos.y));
+            floatingWidget.style.left = `${clampX}px`;
+            floatingWidget.style.top = `${clampY}px`;
+            floatingWidget.style.right = "auto";
+            floatingWidget.style.bottom = "auto";
+        } catch (e) {}
+    }
+
+    const onPointerDown = (e) => {
+        // Ignore if clicking close button, play button, or next button
+        if (e.target.closest("#floatingMusicCloseBtn") || 
+            e.target.closest("#floatingQuickPlayBtn") || 
+            e.target.closest("#floatingQuickNextBtn")) {
+            return;
+        }
+
+        isDragging = true;
+        dragDistance = 0;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const rect = floatingWidget.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+
+        floatingWidget.classList.add("dragging");
+        floatingBody.setPointerCapture(e.pointerId);
+    };
+
+    const onPointerMove = (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        dragDistance = Math.hypot(dx, dy);
+
+        let newX = initialLeft + dx;
+        let newY = initialTop + dy;
+
+        // Viewport edge clamping
+        const widgetWidth = floatingWidget.offsetWidth || 220;
+        const widgetHeight = floatingWidget.offsetHeight || 50;
+        newX = Math.max(8, Math.min(window.innerWidth - widgetWidth - 8, newX));
+        newY = Math.max(8, Math.min(window.innerHeight - widgetHeight - 8, newY));
+
+        floatingWidget.style.left = `${newX}px`;
+        floatingWidget.style.top = `${newY}px`;
+        floatingWidget.style.right = "auto";
+        floatingWidget.style.bottom = "auto";
+    };
+
+    const onPointerUp = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        floatingWidget.classList.remove("dragging");
+        try {
+            floatingBody.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+
+        // If moved significantly, save position
+        if (dragDistance > 5) {
+            const rect = floatingWidget.getBoundingClientRect();
+            localStorage.setItem("music_widget_pos", JSON.stringify({ x: rect.left, y: rect.top }));
+        } else {
+            // It was a tap/click! Open the music modal
+            openMusicModal();
+        }
+    };
+
+    floatingBody.addEventListener("pointerdown", onPointerDown);
+    floatingBody.addEventListener("pointermove", onPointerMove);
+    floatingBody.addEventListener("pointerup", onPointerUp);
+    floatingBody.addEventListener("pointercancel", onPointerUp);
+
+    // Check if dismissed previously
+    if (localStorage.getItem("music_widget_hidden") === "true") {
+        floatingWidget.classList.add("hidden");
+    }
+}
+
+// ----------------------------------------------------
+// DISMISS / CLOSE ('X') & REACTIVATION (HEADER ICON)
+// ----------------------------------------------------
+function closeAndStopMusicWidget() {
+    pauseMusic();
+    if (floatingWidget) {
+        floatingWidget.classList.add("hidden");
+    }
+    closeMusicModal();
+    localStorage.setItem("music_widget_hidden", "true");
+    showToast("Musik dimatikan & widget disembunyikan. Klik ikon musik di samping logo untuk membuka kembali.");
+}
+
+function restoreAndOpenMusicWidget() {
+    if (floatingWidget) {
+        floatingWidget.classList.remove("hidden");
+    }
+    localStorage.setItem("music_widget_hidden", "false");
+    openMusicModal();
+    if (!isPlaying) {
+        playMusic();
+    }
+}
+
+function openMusicModal() {
+    if (!musicModalOverlay) return;
+    musicModalOverlay.classList.add("open");
+    musicModalOverlay.setAttribute("aria-hidden", "false");
+    // If search tab active, focus search input
+    const activeTab = document.querySelector(".music-tab-btn.active")?.dataset?.tab;
+    if (activeTab === "searchTab" && musicSearchInput) {
+        setTimeout(() => musicSearchInput.focus(), 200);
+    }
+}
+
+function closeMusicModal() {
+    if (!musicModalOverlay) return;
+    musicModalOverlay.classList.remove("open");
+    musicModalOverlay.setAttribute("aria-hidden", "true");
+}
+
+// ----------------------------------------------------
+// ONLINE MUSIC SEARCH & CURATED PLAYLISTS
+// ----------------------------------------------------
+async function searchSongsOnline(query) {
+    const q = (query || "").trim();
+    if (!q) {
+        if (musicSearchResultsList) {
+            musicSearchResultsList.innerHTML = `
+                <div class="music-empty-results">
+                    <div class="empty-icon">🎵</div>
+                    <div class="empty-title">Cari Lagu Favorit Anda</div>
+                    <div class="empty-subtitle">Ketik judul lagu atau nama penyanyi di atas, atau klik salah satu rekomendasi cepat.</div>
+                </div>`;
+        }
+        return;
+    }
+
+    currentSearchSeq++;
+    const thisSearchSeq = currentSearchSeq;
+
+    if (musicSearchLoading) {
+        musicSearchLoading.style.display = "flex";
+        const loadingText = document.getElementById("searchLoadingText");
+        if (loadingText) loadingText.textContent = `Mencari "${q}"...`;
+    }
+    if (musicSearchResultsList) musicSearchResultsList.innerHTML = "";
+
+    try {
+        const res = await fetch(`/api/music-search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        // Discard out-of-order stale network responses
+        if (thisSearchSeq !== currentSearchSeq) return;
+
+        if (musicSearchLoading) musicSearchLoading.style.display = "none";
+
+        if (data && data.success && Array.isArray(data.tracks) && data.tracks.length > 0) {
+            renderSearchResults(data.tracks, q);
+        } else {
+            if (musicSearchResultsList) {
+                musicSearchResultsList.innerHTML = `
+                    <div class="music-empty-results">
+                        <div class="empty-icon">🔍</div>
+                        <div class="empty-title">Lagu tidak ditemukan</div>
+                        <div class="empty-subtitle">Tidak ada lagu yang cocok untuk "<strong>${escapeHtml(q)}</strong>". Coba periksa ejaan judul lagu atau cari nama artisnya saja.</div>
+                    </div>`;
+            }
+        }
+    } catch (err) {
+        if (thisSearchSeq !== currentSearchSeq) return;
+        if (musicSearchLoading) musicSearchLoading.style.display = "none";
+        console.error("Music search error:", err);
+        if (musicSearchResultsList) {
+            musicSearchResultsList.innerHTML = `
+                <div class="music-empty-results">
+                    <div class="empty-icon">⚠️</div>
+                    <div class="empty-title">Kendala Pencarian</div>
+                    <div class="empty-subtitle">Gagal memuat katalog online. Silakan periksa koneksi Anda dan coba lagi.</div>
+                </div>`;
+        }
+    }
+}
+
+function renderSearchResults(tracks, query) {
+    if (!musicSearchResultsList) return;
+    musicSearchResultsList.innerHTML = "";
+
+    tracks.forEach((track) => {
+        const item = document.createElement("div");
+        item.className = "music-result-item";
+        item.dataset.id = track.id;
+        const isCurrent = currentTrack && currentTrack.id === track.id;
+        if (isCurrent) {
+            item.classList.add("active");
+        }
+
+        const safeTitle = escapeHtml(track.title);
+        const safeArtist = escapeHtml(track.artist);
+        const thumbUrl = track.thumbnail || `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
+
+        item.innerHTML = `
+            <img src="${thumbUrl}" alt="${safeTitle}" class="result-thumb" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=80'" />
+            <div class="result-info">
+                <div class="result-title" title="${safeTitle}">${safeTitle}</div>
+                <div class="result-artist" title="${safeArtist}">${safeArtist}</div>
+            </div>
+            <div class="result-duration">${track.duration || ''}</div>
+            <button class="result-play-btn" type="button" title="Putar ${safeTitle}" aria-label="Putar ${safeTitle}">
+                ${isCurrent && isPlaying ? '⏸' : '▶'}
+            </button>
+        `;
+
+        item.addEventListener("click", () => {
+            if (currentTrack && currentTrack.id === track.id) {
+                togglePlayPause();
+                return;
+            }
+
+            // Put into queue at front
+            if (!playlistQueue.some(t => t.id === track.id)) {
+                playlistQueue.unshift(track);
+                queueIndex = 0;
+            } else {
+                queueIndex = playlistQueue.findIndex(t => t.id === track.id);
+            }
+
+            playTrack(track);
+
+            document.querySelectorAll(".music-result-item").forEach(el => el.classList.remove("active"));
+            item.classList.add("active");
+
+            showToast(`Sedang memutar: ${track.title}`);
+            switchMusicTab("nowPlayingTab");
+        });
+
+        musicSearchResultsList.appendChild(item);
+    });
+}
+
+async function loadCuratedPlaylists() {
+    try {
+        const res = await fetch("/api/music-search");
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.tracks)) {
+            const tracks = data.tracks;
+            playlistQueue = [...tracks];
+
+            const indoTracks = tracks.filter(t => t.category === "Hits Indo");
+            const lofiTracks = tracks.filter(t => t.category === "Lo-Fi & Santai" || t.category === "Lo-Fi & Chill");
+            const globalTracks = tracks.filter(t => t.category === "Global Hits" || t.category === "Akustik" || t.category === "Acoustic");
+
+            renderCuratedSection(curatedListIndo, indoTracks.length > 0 ? indoTracks : tracks.slice(0, 5));
+            renderCuratedSection(curatedListLofi, lofiTracks.length > 0 ? lofiTracks : tracks.slice(5, 7));
+            renderCuratedSection(curatedListGlobal, globalTracks.length > 0 ? globalTracks : tracks.slice(7));
+
+            updateUpcomingTrackDisplay();
+        }
+    } catch (err) {
+        console.warn("Curated playlist load error:", err);
+    }
+}
+
+function renderCuratedSection(container, tracks) {
+    if (!container) return;
+    container.innerHTML = "";
+
+    tracks.forEach((track) => {
+        const item = document.createElement("div");
+        item.className = "curated-track-item";
+        item.dataset.id = track.id;
+        const isCurrent = currentTrack && currentTrack.id === track.id;
+        if (isCurrent) {
+            item.classList.add("active");
+        }
+
+        const safeTitle = escapeHtml(track.title);
+        const safeArtist = escapeHtml(track.artist);
+
+        item.innerHTML = `
+            <img src="${track.thumbnail}" alt="${safeTitle}" class="curated-thumb" loading="lazy" />
+            <div class="curated-info">
+                <div class="curated-title">${safeTitle}</div>
+                <div class="curated-artist">${safeArtist}</div>
+            </div>
+            <button class="result-play-btn" type="button" title="Putar" aria-label="Putar ${safeTitle}">
+                ${isCurrent && isPlaying ? '⏸' : '▶'}
+            </button>
+        `;
+
+        item.addEventListener("click", () => {
+            if (currentTrack && currentTrack.id === track.id) {
+                togglePlayPause();
+                return;
+            }
+
+            if (!playlistQueue.some(t => t.id === track.id)) {
+                playlistQueue.unshift(track);
+                queueIndex = 0;
+            } else {
+                queueIndex = playlistQueue.findIndex(t => t.id === track.id);
+            }
+
+            playTrack(track);
+            showToast(`Sedang memutar: ${track.title}`);
+            switchMusicTab("nowPlayingTab");
+        });
+
+        container.appendChild(item);
+    });
+}
+
+function switchMusicTab(tabId) {
+    musicTabBtns.forEach(btn => {
+        const isActive = btn.dataset.tab === tabId;
+        btn.classList.toggle("active", isActive);
+        btn.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+
+    musicTabContents.forEach(content => {
+        content.classList.toggle("active", content.id === tabId);
+    });
+}
+
+// ----------------------------------------------------
+// ATTACH EVENT LISTENERS
+// ----------------------------------------------------
+function bindMusicEventListeners() {
+    // 1. Header music toggle button (beside logo)
+    if (headerMusicToggle) {
+        headerMusicToggle.addEventListener("click", () => {
+            restoreAndOpenMusicWidget();
+        });
+    }
+
+    // 2. Floating close 'X' button -> Auto-stop and hide
+    if (floatingCloseBtn) {
+        floatingCloseBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            closeAndStopMusicWidget();
+        });
+    }
+
+    // 3. Floating quick play button
+    if (floatingQuickPlayBtn) {
+        floatingQuickPlayBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            togglePlayPause();
+        });
+    }
+
+    // 3b. Floating quick next button
+    if (floatingQuickNextBtn) {
+        floatingQuickNextBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            playNextTrack();
+        });
+    }
+
+    // 4. Modal header actions
+    if (musicModalMinimizeBtn) {
+        musicModalMinimizeBtn.addEventListener("click", () => {
+            closeMusicModal();
+        });
+    }
+
+    if (musicModalCloseAndStopBtn) {
+        musicModalCloseAndStopBtn.addEventListener("click", () => {
+            closeAndStopMusicWidget();
+        });
+    }
+
+    // Click outside modal container to minimize
+    if (musicModalOverlay) {
+        musicModalOverlay.addEventListener("click", (e) => {
+            if (e.target === musicModalOverlay) {
+                closeMusicModal();
+            }
+        });
+    }
+
+    // 5. Tabs
+    musicTabBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            switchMusicTab(btn.dataset.tab);
+            if (btn.dataset.tab === "searchTab" && musicSearchInput) {
+                setTimeout(() => musicSearchInput.focus(), 150);
+            }
+        });
+    });
+
+    // 6. Playback controls
+    if (playerPlayPauseBtn) {
+        playerPlayPauseBtn.addEventListener("click", togglePlayPause);
+    }
+
+    if (playerNextBtn) {
+        playerNextBtn.addEventListener("click", playNextTrack);
+    }
+
+    if (playerPrevBtn) {
+        playerPrevBtn.addEventListener("click", playPrevTrack);
+    }
+
+    if (playerLoopBtn) {
+        playerLoopBtn.addEventListener("click", () => {
+            isLooping = !isLooping;
+            playerLoopBtn.classList.toggle("active", isLooping);
+            if (html5Audio) html5Audio.loop = isLooping;
+            showToast(isLooping ? "Ulang lagu diaktifkan (Loop On)" : "Ulang lagu dimatikan (Loop Off)");
+        });
+    }
+
+    if (playerMuteBtn) {
+        playerMuteBtn.addEventListener("click", () => {
+            isMuted = !isMuted;
+            if (isMuted) {
+                if (ytPlayer && ytPlayer.mute) ytPlayer.mute();
+                if (html5Audio) html5Audio.muted = true;
+                playerMuteBtn.textContent = "🔇";
+                if (volIndicatorIcon) volIndicatorIcon.textContent = "🔇";
+            } else {
+                if (ytPlayer && ytPlayer.unMute) ytPlayer.unMute();
+                if (html5Audio) html5Audio.muted = false;
+                playerMuteBtn.textContent = "🔊";
+                if (volIndicatorIcon) volIndicatorIcon.textContent = "🔉";
+            }
+        });
+    }
+
+    // 7. Seek Bar Slider
+    if (playerSeekSlider) {
+        playerSeekSlider.addEventListener("input", (e) => {
+            const val = parseFloat(e.target.value);
+            if (progressBarFill) progressBarFill.style.width = `${val}%`;
+
+            let total = 0;
+            if (html5Audio && html5Audio.duration) {
+                total = html5Audio.duration;
+            } else if (ytPlayer && ytPlayer.getDuration) {
+                total = ytPlayer.getDuration();
+            }
+
+            if (total > 0 && playerCurrentTime) {
+                playerCurrentTime.textContent = formatDuration((val / 100) * total);
+            }
+        });
+
+        playerSeekSlider.addEventListener("change", (e) => {
+            const val = parseFloat(e.target.value);
+            let total = 0;
+            if (html5Audio && html5Audio.duration) {
+                total = html5Audio.duration;
+                html5Audio.currentTime = (val / 100) * total;
+            } else if (ytPlayer && ytPlayer.getDuration && ytPlayer.seekTo) {
+                total = ytPlayer.getDuration();
+                ytPlayer.seekTo((val / 100) * total, true);
+            }
+        });
+    }
+
+    // 8. Volume Slider
+    if (playerVolumeSlider) {
+        playerVolumeSlider.addEventListener("input", (e) => {
+            const val = parseInt(e.target.value, 10);
+            currentVolume = val;
+            if (volumePercent) volumePercent.textContent = `${val}%`;
+
+            if (ytPlayer && ytPlayer.setVolume) {
+                ytPlayer.setVolume(val);
+            }
+            if (html5Audio) {
+                html5Audio.volume = val / 100;
+            }
+
+            if (val === 0) {
+                if (volIndicatorIcon) volIndicatorIcon.textContent = "🔇";
+            } else if (val < 50) {
+                if (volIndicatorIcon) volIndicatorIcon.textContent = "🔈";
+            } else {
+                if (volIndicatorIcon) volIndicatorIcon.textContent = "🔉";
+            }
+        });
+    }
+
+    // 9. Search Bar & Clear
+    if (musicSearchInput) {
+        musicSearchInput.addEventListener("input", (e) => {
+            const val = e.target.value;
+            if (musicSearchClearBtn) {
+                musicSearchClearBtn.style.display = val ? "block" : "none";
+            }
+
+            clearTimeout(searchDebounceTimer);
+            if (val.trim().length >= 2) {
+                searchDebounceTimer = setTimeout(() => {
+                    searchSongsOnline(val);
+                }, 450);
+            } else if (val.trim().length === 0) {
+                searchSongsOnline("");
+            }
+        });
+
+        musicSearchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                clearTimeout(searchDebounceTimer);
+                searchSongsOnline(musicSearchInput.value);
+            }
+        });
+    }
+
+    if (musicSearchClearBtn) {
+        musicSearchClearBtn.addEventListener("click", () => {
+            if (musicSearchInput) {
+                musicSearchInput.value = "";
+                musicSearchInput.focus();
+            }
+            musicSearchClearBtn.style.display = "none";
+            searchSongsOnline("");
+        });
+    }
+
+    if (musicSearchSubmitBtn) {
+        musicSearchSubmitBtn.addEventListener("click", () => {
+            if (musicSearchInput) {
+                clearTimeout(searchDebounceTimer);
+                searchSongsOnline(musicSearchInput.value);
+            }
+        });
+    }
+
+    // 10. Search Chips
+    searchChips.forEach(chip => {
+        chip.addEventListener("click", () => {
+            const q = chip.dataset.query;
+            if (musicSearchInput) {
+                musicSearchInput.value = q;
+                if (musicSearchClearBtn) musicSearchClearBtn.style.display = "block";
+                searchSongsOnline(q);
+            }
+        });
+    });
+}
+
+// ----------------------------------------------------
+// BOOTSTRAP MUSIC PLAYER
+// ----------------------------------------------------
+function initMusicPlayer() {
+    // Restore last track if present
+    try {
+        const saved = localStorage.getItem("gepa_last_track");
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.id) {
+                currentTrack = parsed;
+            }
+        }
+    } catch (e) {}
+
+    updateTrackDisplay(currentTrack);
+    initDraggableWidget();
+    bindMusicEventListeners();
+    initYouTubeAudioEngine();
+    loadCuratedPlaylists();
+}
+
+initMusicPlayer();
+
 });
