@@ -1138,11 +1138,28 @@ window.closeInfoModal = function(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove("open");
+        modal.classList.remove("active");
+        modal.style.display = "none";
+        setTimeout(() => {
+            if (!modal.classList.contains("open")) {
+                modal.style.display = "";
+            }
+        }, 220);
         if (!document.querySelector(".modal-overlay.open")) {
             body.classList.remove("modal-open");
         }
     }
 };
+
+// Explicit Close Handler for Account Dashboard
+const closeAccountModalBtn = document.getElementById("closeAccountModalBtn");
+if (closeAccountModalBtn) {
+    closeAccountModalBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeInfoModal("accountModal");
+    });
+}
 
 if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOverlay"));
 if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
@@ -2819,13 +2836,13 @@ function stopBackgroundWatchdog() {
     }
 }
 
-// Default initial track
+// Default initial track (yung kai - blue)
 let currentTrack = {
-    id: "dGcGbF4ex5o",
-    title: "Dan...",
-    artist: "Sheila On 7",
-    duration: "04:46",
-    thumbnail: "https://i.ytimg.com/vi/dGcGbF4ex5o/hqdefault.jpg",
+    id: "_K0P2j9Gq_E",
+    title: "blue",
+    artist: "yung kai",
+    duration: "03:45",
+    thumbnail: "https://i.ytimg.com/vi/_K0P2j9Gq_E/hqdefault.jpg",
     source: "youtube"
 };
 
@@ -3867,13 +3884,15 @@ function bindMusicEventListeners() {
 // BOOTSTRAP MUSIC PLAYER
 // ----------------------------------------------------
 function initMusicPlayer() {
-    // Restore last track if present
+    // Restore last track if present, upgrading from old default if needed
     try {
         const saved = localStorage.getItem("gepa_last_track");
         if (saved) {
             const parsed = JSON.parse(saved);
-            if (parsed && parsed.id) {
+            if (parsed && parsed.id && parsed.id !== "dGcGbF4ex5o") {
                 currentTrack = parsed;
+            } else {
+                localStorage.setItem("gepa_last_track", JSON.stringify(currentTrack));
             }
         }
     } catch (e) {}
