@@ -1,67 +1,41 @@
-# Gepa — Personal Website
+# Gepa — Personal Corner (React & Vite)
 
-Personal website milik Gepa, dibuat sebagai tempat untuk memperkenalkan diri, membagikan berbagai link, dan menjadi personal space di internet.
-
-🌐 **Live Website:** https://gepa-we-vercel-version.vercel.app/
+Personal website and cozy corner for Gepa featuring links, profile information, interactive audio player, supporter ranking, and Midtrans donations.
 
 ---
 
 ## ✨ Features
 
-- 👋 Personal introduction
-- 👤 About Me section
-- 🔗 Social media & useful links
-- 💚 WhatsApp Channel
-- 📸 Instagram
-- 🎵 TikTok
-- ☕ Support / Dukung Gue section
-- 💰 Nominal dukungan mulai dari Rp10K
-- 📍 Location section
-- 🎮 Hobby & interests
-- ⏱️ Age counter
-- 📱 Responsive design untuk desktop dan mobile
-- 🌙 Dark minimalist interface
-- ✨ Smooth animations & interactive UI
-
----
-
-## 🔗 Social Media
-
-### WhatsApp Channel
-Follow the GepSturr channel on WhatsApp:
-
-https://whatsapp.com/channel/0029Vb6pu0S7tkj4IRcKyM44
-
-### Instagram
-https://www.instagram.com/argheeva_/
-
-### TikTok
-https://www.tiktok.com/@argheeva
+- 👋 **Personal Introduction & Hero:** Bio, social media channels, and interactive photo carousel.
+- 👤 **About Section:** Story, quote, and interactive clickable cards for real-time age, location (Bogor map), and hobbies.
+- ⏱️ **Real-Time Age Ticker:** Live counter displaying exact years, months, days, hours, minutes, and seconds.
+- 🔗 **Links Section:** Direct channels to WhatsApp Channel, Instagram, and TikTok.
+- ☕ **Support & Donation System:** Predefined & custom Rupiah amounts with Midtrans Snap integration, invoice tracking, and receipt printing.
+- 🏆 **Supporter Leaderboard:** Daily, weekly, and lifetime rankings with supporter tiers and avatars.
+- 🎧 **Online Music Player:** Floating draggable vinyl widget with background YouTube audio engine, iTunes catalog search, and curated Indonesian & lo-fi playlists.
+- 🔐 **Account & Auth System:** Login, registration with avatar selector, self-service password recovery, profile editing, and donation history dashboard.
+- 🌙 **Dark/Light Mode:** Full dark mode support persisted in local storage.
 
 ---
 
 ## 🛠️ Built With
 
-Website ini dibuat menggunakan teknologi web dasar:
-
-- HTML5
-- CSS3
-- JavaScript
-- SVG Icons
-- Vercel
-
-Tidak menggunakan framework frontend besar sehingga website tetap ringan dan mudah dikembangkan.
+- **React 19 & TypeScript**
+- **Vite**
+- **Express Backend (`server.ts`)** for API routes (`/api/auth`, `/api/ranking`, `/api/create-payment`, `/api/music-search`, etc.)
+- **Midtrans Snap & Supabase** integration with resilient in-memory fallbacks
 
 ---
 
-## 📁 Project Structure
+## 🚀 Running Locally
 
-```text
-Gepa/
-├── index.html
-├── style.css
-├── script.js
-├── README.md
-└── assets/
-└── api/
-    └── create-payment.mjs
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```

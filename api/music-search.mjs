@@ -4,6 +4,15 @@
 
 const CURATED_TRACKS = [
   {
+    id: "_K0P2j9Gq_E",
+    title: "blue",
+    artist: "yung kai",
+    category: "Hits Santai",
+    duration: "03:45",
+    thumbnail: "https://i.ytimg.com/vi/_K0P2j9Gq_E/hqdefault.jpg",
+    source: "youtube"
+  },
+  {
     id: "dGcGbF4ex5o",
     title: "Dan...",
     artist: "Sheila On 7",

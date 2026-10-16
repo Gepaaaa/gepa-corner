@@ -329,7 +329,6 @@ async function loadUserProfileData(user) {
     const usernameInput = document.getElementById("accUsernameInput");
     const bioInput = document.getElementById("accBioInput");
     const phoneInput = document.getElementById("accPhoneInput");
-    const customAvatarUrlInput = document.getElementById("accCustomAvatarUrl");
     
     // Render Avatar
     const avatar = user.avatar || "👤";
@@ -364,7 +363,6 @@ async function loadUserProfileData(user) {
     if (usernameInput) usernameInput.value = user.username || "";
     if (bioInput) bioInput.value = user.bio || "";
     if (phoneInput) phoneInput.value = user.phone || "";
-    if (customAvatarUrlInput) customAvatarUrlInput.value = isImageUrl && (avatar.startsWith("http://") || avatar.startsWith("https://")) ? avatar : "";
     
     // Highlight currently selected avatar in account modal if emoji
     const accAvatarBtns = document.querySelectorAll("#accAvatarPicker .avatar-choice-btn");
@@ -619,9 +617,6 @@ function compressAndSetAvatar(file) {
             // Deselect preset emoji
             document.querySelectorAll("#accAvatarPicker .avatar-choice-btn").forEach(b => b.classList.remove("selected"));
             
-            const customUrlInput = document.getElementById("accCustomAvatarUrl");
-            if (customUrlInput) customUrlInput.value = "";
-
             const removeBtn = document.getElementById("removeUploadedAvatarBtn");
             if (removeBtn) removeBtn.style.display = "inline-flex";
 
@@ -676,41 +671,6 @@ if (removeUploadedAvatarBtn) {
             catBtn.classList.add("selected");
         }
         showToast("Foto di-reset ke avatar default. Klik 'Simpan Perubahan' untuk menyimpan.");
-    });
-}
-
-// Preview / Terapkan Custom Avatar Image URL
-const applyAvatarUrlBtn = document.getElementById("applyAvatarUrlBtn");
-if (applyAvatarUrlBtn) {
-    applyAvatarUrlBtn.addEventListener("click", () => {
-        const urlInput = document.getElementById("accCustomAvatarUrl");
-        const url = (urlInput?.value || "").trim();
-        if (!url || (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("data:image"))) {
-            showToast("Masukkan URL gambar yang valid (dimulai dengan https://)");
-            return;
-        }
-
-        pendingProfileAvatar = url;
-        const accHeroImg = document.getElementById("accHeroImg");
-        const accHeroEmoji = document.getElementById("accHeroEmoji");
-        if (accHeroImg && accHeroEmoji) {
-            accHeroImg.src = url;
-            accHeroImg.style.display = "block";
-            accHeroEmoji.style.display = "none";
-        }
-
-        const removeBtn = document.getElementById("removeUploadedAvatarBtn");
-        if (removeBtn) removeBtn.style.display = "inline-flex";
-
-        const fileStatus = document.getElementById("avatarFileStatus");
-        if (fileStatus) {
-            fileStatus.innerHTML = `✅ Link gambar diterapkan ke preview.`;
-            fileStatus.style.display = "block";
-        }
-
-        // Hapus seleksi preset avatar
-        document.querySelectorAll("#accAvatarPicker .avatar-choice-btn").forEach(b => b.classList.remove("selected"));
-        showToast("Foto profil diterapkan ke preview! Klik 'Simpan Perubahan' untuk mengunci.");
     });
 }
 
@@ -1367,9 +1327,6 @@ window.selectAccAvatar = function(emoji, btnEl) {
 
     const fileStatus = document.getElementById("avatarFileStatus");
     if (fileStatus) fileStatus.style.display = "none";
-
-    const customUrlInput = document.getElementById("accCustomAvatarUrl");
-    if (customUrlInput) customUrlInput.value = "";
 };
 
 // Random Guest Name Generator
@@ -2775,6 +2732,93 @@ let searchDebounceTimer = null;
 let currentSearchSeq = 0;
 let autoplayAttempted = false;
 
+// Background Audio Persistence State
+let userWantsPlayback = false; // Tracks if user intended music to play
+let isExplicitlyPausedByUser = false; // Tracks if user manually paused or closed the player
+let backgroundWatchdogTimer = null;
+let bgAudioKeepAlive = null;
+let audioContext = null;
+
+// Silent WAV (1 second 44.1kHz mono PCM silent base64 audio)
+// Keeps browser media pipeline alive and prevents Chrome/Safari background tab suspension
+const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+
+function initBackgroundAudioKeepAlive() {
+    if (!bgAudioKeepAlive) {
+        bgAudioKeepAlive = document.getElementById("bgAudioKeepAlive");
+        if (!bgAudioKeepAlive) {
+            bgAudioKeepAlive = document.createElement("audio");
+            bgAudioKeepAlive.id = "bgAudioKeepAlive";
+            bgAudioKeepAlive.style.display = "none";
+            document.body.appendChild(bgAudioKeepAlive);
+        }
+        bgAudioKeepAlive.src = SILENT_AUDIO_URI;
+        bgAudioKeepAlive.loop = true;
+        // Volume 0.001 is virtually inaudible to human ears but flags the tab as an active audible media source
+        bgAudioKeepAlive.volume = 0.001;
+    }
+}
+
+function startBackgroundAudioKeepAlive() {
+    initBackgroundAudioKeepAlive();
+    if (bgAudioKeepAlive && bgAudioKeepAlive.paused) {
+        bgAudioKeepAlive.play().catch(() => {});
+    }
+
+    try {
+        if (!audioContext && (window.AudioContext || window.webkitAudioContext)) {
+            const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+            audioContext = new AudioCtxClass();
+        }
+        if (audioContext && audioContext.state === "suspended") {
+            audioContext.resume().catch(() => {});
+        }
+    } catch (e) {}
+
+    startBackgroundWatchdog();
+}
+
+function stopBackgroundAudioKeepAlive() {
+    if (bgAudioKeepAlive && !bgAudioKeepAlive.paused) {
+        bgAudioKeepAlive.pause();
+    }
+    stopBackgroundWatchdog();
+}
+
+function startBackgroundWatchdog() {
+    stopBackgroundWatchdog();
+    backgroundWatchdogTimer = setInterval(() => {
+        if (userWantsPlayback && !isExplicitlyPausedByUser) {
+            // Keep silent audio loop playing
+            if (bgAudioKeepAlive && bgAudioKeepAlive.paused) {
+                bgAudioKeepAlive.play().catch(() => {});
+            }
+
+            // If YouTube is active, ensure it doesn't get throttled/paused by browser background policies
+            if (currentTrack.source !== "itunes" && ytPlayer && typeof ytPlayer.getPlayerState === "function") {
+                try {
+                    const st = ytPlayer.getPlayerState();
+                    if (st === window.YT.PlayerState.PAUSED || st === -1) {
+                        ytPlayer.playVideo();
+                    }
+                } catch (e) {}
+            }
+
+            // If HTML5 audio is used, verify it is still playing
+            if (currentTrack.source === "itunes" && html5Audio && html5Audio.src && html5Audio.paused) {
+                html5Audio.play().catch(() => {});
+            }
+        }
+    }, 1500);
+}
+
+function stopBackgroundWatchdog() {
+    if (backgroundWatchdogTimer) {
+        clearInterval(backgroundWatchdogTimer);
+        backgroundWatchdogTimer = null;
+    }
+}
+
 // Default initial track
 let currentTrack = {
     id: "dGcGbF4ex5o",
@@ -2823,8 +2867,8 @@ function setupYtInstance() {
     if (ytPlayer || !document.getElementById("ytAudioPlayer")) return;
     try {
         ytPlayer = new window.YT.Player("ytAudioPlayer", {
-            height: "1",
-            width: "1",
+            height: "180",
+            width: "240",
             videoId: currentTrack.id,
             playerVars: {
                 autoplay: 0,
@@ -2833,6 +2877,7 @@ function setupYtInstance() {
                 fs: 0,
                 rel: 0,
                 playsinline: 1,
+                enablejsapi: 1,
                 origin: window.location.origin
             },
             events: {
@@ -2857,11 +2902,30 @@ function onYtReady(event) {
 
 function onYtStateChange(event) {
     if (event.data === window.YT.PlayerState.PLAYING) {
+        isExplicitlyPausedByUser = false;
+        userWantsPlayback = true;
         setPlaybackUIState(true);
         startProgressTracking();
+        startBackgroundAudioKeepAlive();
+        updateMediaSession();
     } else if (event.data === window.YT.PlayerState.PAUSED) {
+        // CRITICAL CHECK: Intercept unwanted background pauses caused by switching tabs or unfocusing
+        if (userWantsPlayback && !isExplicitlyPausedByUser) {
+            setTimeout(() => {
+                if (userWantsPlayback && !isExplicitlyPausedByUser && ytPlayer && typeof ytPlayer.playVideo === "function") {
+                    try {
+                        ytPlayer.playVideo();
+                    } catch (e) {}
+                }
+            }, 50);
+            return;
+        }
+
+        // Genuine manual user pause
         setPlaybackUIState(false);
         stopProgressTracking();
+        stopBackgroundAudioKeepAlive();
+        updateMediaSession();
     } else if (event.data === window.YT.PlayerState.ENDED) {
         if (isLooping) {
             if (ytPlayer && ytPlayer.seekTo) {
@@ -2889,7 +2953,11 @@ function onYtError(event) {
 // PLAYBACK CONTROLS
 // ----------------------------------------------------
 function playMusic() {
+    isExplicitlyPausedByUser = false;
+    userWantsPlayback = true;
     isPlaying = true;
+    startBackgroundAudioKeepAlive();
+
     if (currentTrack.source === "itunes" && currentTrack.previewUrl) {
         playWithHtml5(currentTrack.previewUrl);
         return;
@@ -2906,7 +2974,11 @@ function playMusic() {
 }
 
 function pauseMusic() {
+    isExplicitlyPausedByUser = true;
+    userWantsPlayback = false;
     isPlaying = false;
+    stopBackgroundAudioKeepAlive();
+
     if (ytPlayer && typeof ytPlayer.pauseVideo === "function") {
         ytPlayer.pauseVideo();
     }
@@ -2927,6 +2999,8 @@ function togglePlayPause() {
 }
 
 function playTrack(track) {
+    isExplicitlyPausedByUser = false;
+    userWantsPlayback = true;
     currentTrack = track;
     updateTrackDisplay(track);
 
@@ -2935,6 +3009,8 @@ function playTrack(track) {
         html5Audio.pause();
         html5Audio.src = "";
     }
+
+    startBackgroundAudioKeepAlive();
 
     if (track.source === "itunes" && track.previewUrl) {
         playWithHtml5(track.previewUrl);
@@ -2960,8 +3036,11 @@ function playWithHtml5(src) {
     html5Audio.volume = currentVolume / 100;
     html5Audio.loop = isLooping;
     html5Audio.play().then(() => {
+        isExplicitlyPausedByUser = false;
+        userWantsPlayback = true;
         setPlaybackUIState(true);
         startProgressTracking();
+        startBackgroundAudioKeepAlive();
     }).catch(err => {
         console.warn("HTML5 audio play blocked:", err);
     });
@@ -3147,7 +3226,7 @@ function updateMediaSession() {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: currentTrack.title || "Gepa Online Music",
             artist: currentTrack.artist || "Gepa Corner",
-            album: "Background Music Player",
+            album: "Gepa Corner Music Player",
             artwork: [
                 { src: currentTrack.thumbnail || "https://i.ytimg.com/vi/dGcGbF4ex5o/hqdefault.jpg", sizes: "512x512", type: "image/jpeg" }
             ]
@@ -3721,6 +3800,66 @@ function bindMusicEventListeners() {
                 searchSongsOnline(q);
             }
         });
+    });
+
+    // 11. Background Playback Guard (Tab Visibility & Focus Watchers)
+    // Ensures audio continues playing when user switches tabs, minimizes window, or opens another app
+    document.addEventListener("visibilitychange", () => {
+        if (userWantsPlayback && !isExplicitlyPausedByUser) {
+            startBackgroundAudioKeepAlive();
+
+            // Resume YouTube video if browser attempted to pause it in the background
+            if (currentTrack.source !== "itunes" && ytPlayer && typeof ytPlayer.playVideo === "function") {
+                try {
+                    const st = typeof ytPlayer.getPlayerState === "function" ? ytPlayer.getPlayerState() : -1;
+                    if (st !== window.YT.PlayerState.PLAYING && st !== window.YT.PlayerState.BUFFERING) {
+                        ytPlayer.playVideo();
+                    }
+                } catch (err) {}
+            }
+
+            // Resume HTML5 audio if active
+            if (currentTrack.source === "itunes" && html5Audio && html5Audio.src && html5Audio.paused) {
+                html5Audio.play().catch(() => {});
+            }
+
+            if (document.visibilityState === "visible") {
+                setPlaybackUIState(true);
+                startProgressTracking();
+            }
+        }
+    });
+
+    window.addEventListener("blur", () => {
+        if (userWantsPlayback && !isExplicitlyPausedByUser) {
+            setTimeout(() => {
+                if (userWantsPlayback && !isExplicitlyPausedByUser) {
+                    if (currentTrack.source !== "itunes" && ytPlayer && typeof ytPlayer.playVideo === "function") {
+                        try {
+                            const st = typeof ytPlayer.getPlayerState === "function" ? ytPlayer.getPlayerState() : -1;
+                            if (st === window.YT.PlayerState.PAUSED) {
+                                ytPlayer.playVideo();
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }, 80);
+        }
+    });
+
+    window.addEventListener("focus", () => {
+        if (userWantsPlayback && !isExplicitlyPausedByUser) {
+            if (currentTrack.source !== "itunes" && ytPlayer && typeof ytPlayer.playVideo === "function") {
+                try {
+                    const st = typeof ytPlayer.getPlayerState === "function" ? ytPlayer.getPlayerState() : -1;
+                    if (st !== window.YT.PlayerState.PLAYING && st !== window.YT.PlayerState.BUFFERING) {
+                        ytPlayer.playVideo();
+                    }
+                } catch (e) {}
+            }
+            setPlaybackUIState(true);
+            startProgressTracking();
+        }
     });
 }
 

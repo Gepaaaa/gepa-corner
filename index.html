@@ -24,7 +24,7 @@
                     <span class="brand-dot"></span>
                     Gepa
                 </a>
-                <button class="header-music-toggle" id="headerMusicToggle" type="button" aria-label="Pemutar Musik Online" title="Buka Pemutar Musik (Lagu background)">
+                <button class="header-music-toggle" id="headerMusicToggle" type="button" aria-label="Pemutar Musik Online" title="Buka Pemutar Musik Corner">
                     <span class="header-music-icon" id="headerMusicIcon">🎵</span>
                     <span class="header-music-eq" id="headerMusicEq" aria-hidden="true">
                         <span class="eq-bar bar1"></span>
@@ -530,7 +530,7 @@
     <!-- Overhauled Account Management Modal -->
     <div class="modal-overlay" id="accountModal">
         <div class="support-modal modal-content" role="dialog" aria-modal="true" style="max-width: 480px; text-align: left; padding: 26px 22px;">
-            <button class="modal-close" type="button" onclick="closeInfoModal('accountModal')">×</button>
+            <button class="modal-close" id="closeAccountModalBtn" type="button" aria-label="Tutup Dashboard Akun" onclick="closeInfoModal('accountModal')">×</button>
             
             <!-- User Header Hero -->
             <div class="acc-profile-hero">
@@ -618,18 +618,6 @@
                     </div>
                     <div id="avatarFileStatus" style="display: none; margin-top: 8px; font-size: 0.75rem; color: var(--sage-700); font-weight: 600;"></div>
                 </div>
-
-                <!-- Custom Photo Profile / Image URL (Sekunder) -->
-                <details style="margin-top: 2px; font-size: 0.8rem; color: var(--text-soft);">
-                    <summary style="cursor: pointer; font-weight: 600; color: var(--sage-700); padding: 4px 0;">🔗 Atau masukkan tautan / URL gambar</summary>
-                    <div class="auth-field" style="margin-top: 8px; margin-bottom: 0;">
-                        <div class="auth-input-wrapper">
-                            <span class="auth-input-icon">🖼️</span>
-                            <input type="url" id="accCustomAvatarUrl" class="auth-input" placeholder="https://domain.com/foto-kamu.png">
-                            <button type="button" id="applyAvatarUrlBtn" style="background: var(--sage-700); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">Terapkan</button>
-                        </div>
-                    </div>
-                </details>
 
                 <!-- Avatar Preset Grid Picker -->
                 <div>
@@ -997,12 +985,12 @@
             </div>
             <div class="floating-music-info">
                 <div class="floating-title-row">
-                    <div id="floatingTrackTitle" class="floating-track-title">Dan...</div>
+                    <div id="floatingTrackTitle" class="floating-track-title">blue</div>
                     <div class="floating-mini-eq" id="floatingMiniEq" aria-hidden="true">
                         <span></span><span></span><span></span>
                     </div>
                 </div>
-                <div id="floatingTrackArtist" class="floating-track-artist">Sheila On 7</div>
+                <div id="floatingTrackArtist" class="floating-track-artist">yung kai</div>
             </div>
             <div class="floating-actions">
                 <button id="floatingQuickPlayBtn" class="floating-play-btn" type="button" aria-label="Putar / Jeda" title="Putar / Jeda">
@@ -1026,13 +1014,13 @@
                     <div>
                         <div class="music-modal-title-row">
                             <h3 id="musicModalTitle" class="music-modal-title">Pemutar Musik Online</h3>
-                            <span class="music-live-tag">Online & Background</span>
+                            <span class="music-live-tag">Web Exclusive Player</span>
                         </div>
-                        <p class="music-modal-subtitle">Putar jutaan lagu tanpa jeda saat menjelajahi website</p>
+                        <p class="music-modal-subtitle">Putar lagu pilihan eksklusif saat menjelajahi website Gepa</p>
                     </div>
                 </div>
                 <div class="music-modal-header-actions">
-                    <button id="musicModalMinimizeBtn" class="music-modal-action-btn minimize-btn" type="button" title="Kecilkan ke widget mengambang (musik tetap berputar)" aria-label="Kecilkan">
+                    <button id="musicModalMinimizeBtn" class="music-modal-action-btn minimize-btn" type="button" title="Kecilkan ke widget mengambang" aria-label="Kecilkan">
                         <span>—</span>
                     </button>
                     <button id="musicModalCloseAndStopBtn" class="music-modal-action-btn stop-close-btn" type="button" title="Matikan musik & sembunyikan widget" aria-label="Tutup dan matikan musik">
@@ -1059,14 +1047,14 @@
                 <div id="nowPlayingTab" class="music-tab-content active" role="tabpanel">
                     <div class="player-hero-card">
                         <div class="player-cover-container">
-                            <img id="playerAlbumArt" src="https://i.ytimg.com/vi/dGcGbF4ex5o/hqdefault.jpg" alt="Album Cover" class="player-album-art" />
+                            <img id="playerAlbumArt" src="https://i.ytimg.com/vi/_K0P2j9Gq_E/hqdefault.jpg" alt="Album Cover" class="player-album-art" />
                             <div id="playerWaveOverlay" class="player-wave-overlay">
                                 <span></span><span></span><span></span><span></span><span></span>
                             </div>
                         </div>
                         <div class="player-meta">
-                            <h4 id="playerTrackTitle" class="player-track-title">Dan...</h4>
-                            <p id="playerArtistName" class="player-artist-name">Sheila On 7</p>
+                            <h4 id="playerTrackTitle" class="player-track-title">blue</h4>
+                            <p id="playerArtistName" class="player-artist-name">yung kai</p>
                             <span id="playerSourceBadge" class="player-source-badge">Online Audio Stream</span>
                         </div>
 
@@ -1079,7 +1067,7 @@
                             </div>
                             <div class="player-time-row">
                                 <span id="playerCurrentTime" class="time-text">00:00</span>
-                                <span id="playerTotalDuration" class="time-text">04:46</span>
+                                <span id="playerTotalDuration" class="time-text">03:45</span>
                             </div>
                         </div>
 
@@ -1189,17 +1177,19 @@
             </div>
 
             <div class="music-modal-footer">
-                <span class="music-footer-tip">💡 Musik tetap berputar di latar belakang saat Anda berpindah halaman sampai tombol 'X' ditekan.</span>
+                <span class="music-footer-tip">💡 Musik eksklusif menemani Anda saat menjelajahi website Gepa Corner.</span>
             </div>
         </div>
     </div>
 
-    <!-- Hidden YouTube IFrame container for background audio engine -->
-    <div id="hiddenYtPlayerContainer" style="position: fixed; width: 1px; height: 1px; left: -9999px; top: -9999px; overflow: hidden; pointer-events: none; opacity: 0; z-index: -999;" aria-hidden="true">
+    <!-- YouTube Background Audio Engine container -->
+    <div id="hiddenYtPlayerContainer" class="hidden-yt-audio-container" aria-hidden="true">
         <div id="ytAudioPlayer"></div>
     </div>
     <!-- Fallback HTML5 audio player for previews -->
-    <audio id="html5AudioPlayer" preload="auto" style="display: none;"></audio>
+    <audio id="html5AudioPlayer" preload="auto" playsinline style="display: none;"></audio>
+    <!-- Background Audio Keep-Alive for continuous playback across tab switching -->
+    <audio id="bgAudioKeepAlive" preload="auto" loop playsinline style="display: none;"></audio>
 
     <div id="toast" class="toast"></div>
 
