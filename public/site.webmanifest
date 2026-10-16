@@ -1,0 +1,27 @@
+{
+  "name": "Gepa — Personal Corner",
+  "short_name": "Gepa",
+  "description": "Personal website and corner for Gepa featuring links, profile info, supporter donations, and exclusive music.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF8F1",
+  "theme_color": "#5E7C57",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

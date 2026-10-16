@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="gepaGradLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#78966f" />
+      <stop offset="100%" stop-color="#486343" />
+    </linearGradient>
+    <linearGradient id="gepaGradDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5e7c57" />
+      <stop offset="100%" stop-color="#2d3e2e" />
+    </linearGradient>
+    <filter id="gepaGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="#263725" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <style>
+    .bg { fill: url(#gepaGradLight); }
+    .letter { fill: #faf8f1; font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 700; }
+    .sparkle { fill: #fffdf8; }
+    .dot { fill: #d7e3cd; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: url(#gepaGradDark); }
+      .dot { fill: #9fb795; }
+    }
+  </style>
+
+  <!-- Squircle Background -->
+  <rect class="bg" width="64" height="64" rx="16" filter="url(#gepaGlow)" />
+  
+  <!-- Subtle decorative inner border -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.5"/>
+
+  <!-- Sparkle top-right ✦ -->
+  <path class="sparkle" d="M 48 10 C 48 14 50 16 54 16 C 50 16 48 18 48 22 C 48 18 46 16 42 16 C 46 16 48 14 48 10 Z" opacity="0.95" />
+
+  <!-- Heart bottom-left tiny accent ♡ -->
+  <path class="sparkle" d="M 14 46 C 14 44 16 43 17.5 44.5 C 19 43 21 44 21 46 C 21 48.5 17.5 51 17.5 51 C 17.5 51 14 48.5 14 46 Z" opacity="0.75" />
+
+  <!-- Center 'G' Monogram for Gepa -->
+  <text class="letter" x="31" y="44" font-size="33" text-anchor="middle" letter-spacing="-0.5">G</text>
+
+  <!-- Gepa signature green brand dot -->
+  <circle class="dot" cx="47" cy="42" r="3.5" />
+</svg>

@@ -915,6 +915,9 @@ function applyInitialTheme() {
         if (prefersDark) body.classList.add("dark-mode");
     }
     updateThemeIcon();
+    if (window.FaviconModule && typeof window.FaviconModule.setTheme === "function") {
+        window.FaviconModule.setTheme(body.classList.contains("dark-mode"));
+    }
 }
 
 function updateThemeIcon() {
@@ -928,6 +931,9 @@ if (themeToggle) {
         const isDark = body.classList.toggle("dark-mode");
         localStorage.setItem("gepa-theme", isDark ? "dark" : "light");
         updateThemeIcon();
+        if (window.FaviconModule && typeof window.FaviconModule.setTheme === "function") {
+            window.FaviconModule.setTheme(isDark);
+        }
     });
 }
 
@@ -3109,6 +3115,11 @@ function setPlaybackUIState(playing) {
 
     // Update active highlight in search results and curated items
     updateActivePlayButtons(playing);
+
+    // Sync with Favicon Module
+    if (window.FaviconModule && typeof window.FaviconModule.setMusicPlaying === "function") {
+        window.FaviconModule.setMusicPlaying(playing, currentTrack?.title || "Musik");
+    }
 }
 
 function updateActivePlayButtons(playing) {
