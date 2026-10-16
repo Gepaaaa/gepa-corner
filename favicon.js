@@ -372,6 +372,15 @@
          * Re-render current static frame
          */
         render: function () {
+            const link = getFaviconElement();
+            if (!state.isMusicPlaying && !state.badge) {
+                if (link) {
+                    link.type = "image/svg+xml";
+                    link.href = "/favicon.svg";
+                }
+                return;
+            }
+
             if (!ctx) return;
             const palette = state.isDark ? PALETTES.dark : PALETTES.light;
 

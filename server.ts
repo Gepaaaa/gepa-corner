@@ -37,6 +37,7 @@ async function startServer() {
   app.all('/api/webhook', (req, res) => webhookHandler(req, res));
 
   // Serve static assets
+  app.use(express.static(path.join(__dirname, 'public')));
   app.use('/assets', express.static(path.join(__dirname, 'assets')));
   app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 

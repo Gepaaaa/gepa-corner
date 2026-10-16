@@ -7,10 +7,20 @@
     <meta name="description" content="Personal website and corner for Gepa featuring links, profile info, and supporter donations.">
     <meta property="og:title" content="Gepa — Personal Corner">
     <meta property="og:description" content="Personal website and corner for Gepa featuring links, profile info, and supporter donations.">
+    <meta property="og:image" content="/favicon-512x512.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Gepa — Personal Corner">
+    <meta name="twitter:description" content="Personal website and corner for Gepa featuring links, profile info, and supporter donations.">
+    <meta name="twitter:image" content="/favicon-512x512.png">
     <meta name="theme-color" content="#5e7c57">
 
-    <!-- Favicon & Mobile App Icons -->
+    <!-- Favicon & Brand Icons (Browser Tab, Google Search, Chrome URL Omnibox, Mobile Apps) -->
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" id="dynamicFavicon">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -31,8 +41,26 @@
         <nav class="navbar container" aria-label="Main navigation">
             <div class="brand-group">
                 <a href="#home" class="brand" aria-label="Gepa Home">
-                    <span class="brand-dot"></span>
-                    Gepa
+                    <div class="brand-logo-emblem" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" width="32" height="32" class="brand-logo-svg">
+                            <defs>
+                                <linearGradient id="navBrandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#78966f" />
+                                    <stop offset="100%" stop-color="#486343" />
+                                </linearGradient>
+                            </defs>
+                            <rect width="64" height="64" rx="16" fill="url(#navBrandGrad)" />
+                            <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5" />
+                            <path d="M 48 10 C 48 14 50 16 54 16 C 50 16 48 18 48 22 C 48 18 46 16 42 16 C 46 16 48 14 48 10 Z" fill="#ffffff" opacity="0.95" />
+                            <path d="M 14 46 C 14 44 16 43 17.5 44.5 C 19 43 21 44 21 46 C 21 48.5 17.5 51 17.5 51 C 17.5 51 14 48.5 14 46 Z" fill="#ffffff" opacity="0.75" />
+                            <text x="31" y="44" font-size="33" text-anchor="middle" font-family="'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" font-weight="700" fill="#faf8f1">G</text>
+                            <circle cx="47" cy="42" r="3.5" fill="#d7e3cd" />
+                        </svg>
+                    </div>
+                    <span class="brand-text-wrap">
+                        <span>Gepa</span>
+                        <span class="brand-dot"></span>
+                    </span>
                 </a>
                 <button class="header-music-toggle" id="headerMusicToggle" type="button" aria-label="Pemutar Musik Online" title="Buka Pemutar Musik Corner">
                     <span class="header-music-icon" id="headerMusicIcon">🎵</span>
@@ -265,7 +293,27 @@
     <footer class="footer">
         <div class="container footer-inner">
             <div class="footer-brand">
-                <a href="#home" class="brand"><span class="brand-dot"></span>Gepa</a>
+                <a href="#home" class="brand" aria-label="Gepa Home">
+                    <div class="brand-logo-emblem" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" width="28" height="28" class="brand-logo-svg">
+                            <defs>
+                                <linearGradient id="footerBrandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#78966f" />
+                                    <stop offset="100%" stop-color="#486343" />
+                                </linearGradient>
+                            </defs>
+                            <rect width="64" height="64" rx="16" fill="url(#footerBrandGrad)" />
+                            <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5" />
+                            <path d="M 48 10 C 48 14 50 16 54 16 C 50 16 48 18 48 22 C 48 18 46 16 42 16 C 46 16 48 14 48 10 Z" fill="#ffffff" opacity="0.95" />
+                            <text x="31" y="44" font-size="33" text-anchor="middle" font-family="'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" font-weight="700" fill="#faf8f1">G</text>
+                            <circle cx="47" cy="42" r="3.5" fill="#d7e3cd" />
+                        </svg>
+                    </div>
+                    <span class="brand-text-wrap">
+                        <span>Gepa</span>
+                        <span class="brand-dot"></span>
+                    </span>
+                </a>
                 <p>Thanks for visiting! ☺</p>
             </div>
             <div class="footer-right">
