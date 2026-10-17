@@ -110,24 +110,8 @@ export default async function handler(req, res) {
           const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
           const cleanName = (targetUser ? targetUser.username : queryUsername).toLowerCase();
 
-          // 1. Ambil avatar permanen dari record donations (AVATAR_USER_*)
-          if (cleanName) {
-            const { data: avRow } = await supabase
-              .from("donations")
-              .select("status")
-              .eq("order_id", `AVATAR_USER_${cleanName}`)
-              .maybeSingle();
-
-            if (avRow && avRow.status && avRow.status.startsWith("AVATAR_DATA:")) {
-              const savedAvatar = avRow.status.slice("AVATAR_DATA:".length);
-              if (savedAvatar) {
-                if (targetUser) targetUser.avatar = savedAvatar;
-                else targetUser = { username: cleanName, avatar: savedAvatar };
-              }
-            }
-          }
-
-          // 2. Ambil data profil dari profiles table
+          // 1. Ambil data profil dari profiles table (Sumber Utama Akurat)
+          let profAvatar = null;
           if (cleanName) {
             const { data: prof } = await supabase
               .from("profiles")
@@ -136,6 +120,7 @@ export default async function handler(req, res) {
               .maybeSingle();
 
             if (prof) {
+              profAvatar = prof.avatar_url;
               if (!targetUser) {
                 targetUser = {
                   id: prof.id,
@@ -149,9 +134,39 @@ export default async function handler(req, res) {
               } else {
                 if (!targetUser.id) targetUser.id = prof.id;
                 if (prof.phone) targetUser.phone = prof.phone;
-                if (!targetUser.avatar && prof.avatar_url) targetUser.avatar = prof.avatar_url;
               }
             }
+          }
+
+          // 2. Ambil avatar dari record donations (AVATAR_USER_*) sebagai fallback emoji jika profiles kosong
+          let donAvatar = null;
+          if (cleanName) {
+            const { data: avRow } = await supabase
+              .from("donations")
+              .select("status")
+              .eq("order_id", `AVATAR_USER_${cleanName}`)
+              .maybeSingle();
+
+            if (avRow && avRow.status && avRow.status.startsWith("AVATAR_DATA:")) {
+              donAvatar = avRow.status.slice("AVATAR_DATA:".length);
+            }
+          }
+
+          // Resolusi avatar terbaik: Foto profil asli (data:image / http) selalu menang di atas emoji default
+          const resolvedAvatar = (profAvatar && (profAvatar.startsWith("data:image") || profAvatar.startsWith("http")))
+            ? profAvatar
+            : (donAvatar && (donAvatar.startsWith("data:image") || donAvatar.startsWith("http")))
+            ? donAvatar
+            : (profAvatar || donAvatar || targetUser?.avatar || "👤");
+
+          if (targetUser) {
+            targetUser.avatar = resolvedAvatar;
+          } else if (cleanName) {
+            targetUser = {
+              username: cleanName,
+              avatar: resolvedAvatar,
+              bio: "Sahabat Corner"
+            };
           }
         } catch (sbErr) {
           console.warn("Supabase me sync fallback warning:", sbErr.message);
@@ -343,7 +358,20 @@ export default async function handler(req, res) {
           const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
           const cleanUser = matchedUser.username.toLowerCase();
           
-          // A. Cek dari record donasi AVATAR_USER_*
+          // A. Cek dari profiles table terlebih dahulu (Primary)
+          let profAvatar = null;
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("avatar_url, phone")
+            .ilike("username", cleanUser)
+            .maybeSingle();
+          if (prof && prof.avatar_url) {
+            profAvatar = prof.avatar_url;
+            if (prof.phone && !matchedUser.phone) matchedUser.phone = prof.phone;
+          }
+
+          // B. Cek dari record donasi AVATAR_USER_* sebagai fallback
+          let donAvatar = null;
           const { data: avRow } = await supabase
             .from("donations")
             .select("status")
@@ -351,21 +379,16 @@ export default async function handler(req, res) {
             .maybeSingle();
 
           if (avRow && avRow.status && avRow.status.startsWith("AVATAR_DATA:")) {
-            const savedAvatar = avRow.status.slice("AVATAR_DATA:".length);
-            if (savedAvatar) {
-              matchedUser.avatar = savedAvatar;
-            }
-          } else {
-            // B. Fallback cek dari profiles table
-            const { data: prof } = await supabase
-              .from("profiles")
-              .select("avatar_url")
-              .ilike("username", cleanUser)
-              .maybeSingle();
-            if (prof && prof.avatar_url) {
-              matchedUser.avatar = prof.avatar_url;
-            }
+            donAvatar = avRow.status.slice("AVATAR_DATA:".length);
           }
+
+          const resolvedAvatar = (profAvatar && (profAvatar.startsWith("data:image") || profAvatar.startsWith("http")))
+            ? profAvatar
+            : (donAvatar && (donAvatar.startsWith("data:image") || donAvatar.startsWith("http")))
+            ? donAvatar
+            : (profAvatar || donAvatar || matchedUser.avatar || "🐱");
+
+          matchedUser.avatar = resolvedAvatar;
 
           // C. Simpan relasi email dan username agar pemulihan OTP selalu akurat
           if (matchedUser.email) {
@@ -772,39 +795,53 @@ export default async function handler(req, res) {
       if (SUPABASE_SERVICE_ROLE && !userId.startsWith("demo_")) {
         try {
           const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+          const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
 
-          // 1. Simpan permanen ke Supabase donations table (AVATAR_USER_*)
-          // Mengatasi kendala RLS pada profiles table pada key anon/publishable
-          if (user.avatar) {
-            await supabase.from("donations").upsert({
-              order_id: `AVATAR_USER_${cleanUsername}`,
-              username: cleanUsername,
-              amount: 0,
-              status: `AVATAR_DATA:${user.avatar}`,
-              transaction_time: new Date().toISOString(),
-              user_id: !userId.startsWith("demo_") ? userId : null
-            }, { onConflict: "order_id" });
+          // 1. Simpan ke profiles table (Primary source of truth untuk user & foto profil)
+          try {
+            let profileId = isValidUuid ? userId : null;
+            if (!profileId) {
+              const { data: pExist } = await supabase.from("profiles").select("id").ilike("username", cleanUsername).maybeSingle();
+              if (pExist && pExist.id) profileId = pExist.id;
+            }
+
+            if (profileId) {
+              await supabase.from("profiles").update({
+                username: user.username,
+                avatar_url: user.avatar,
+                phone: user.phone || "",
+                updated_at: new Date().toISOString()
+              }).eq("id", profileId);
+            } else {
+              await supabase.from("profiles").upsert({
+                username: user.username,
+                avatar_url: user.avatar,
+                phone: user.phone || "",
+                updated_at: new Date().toISOString()
+              }, { onConflict: "username" });
+            }
+          } catch (pErr) {
+            console.warn("Supabase profiles update error:", pErr.message);
           }
 
-          // 2. Coba simpan ke profiles table jika client menyertakan JWT auth token
+          // 2. Untuk tabel donations: donations.status memiliki indeks b-tree PostgreSQL (maks 2704 byte).
+          // Jika avatar adalah foto galeri (base64 besar), hapus record emoji lama di donations agar tidak menimpa foto profil.
+          // Jika avatar adalah emoji biasa (pendek), barulah simpan ke donations sebagai cadangan.
           try {
-            const authHeader = req.headers.authorization;
-            const userToken = authHeader ? authHeader.replace("Bearer ", "").trim() : null;
-            const clientHeaders = userToken && userToken.length > 50 ? { Authorization: `Bearer ${userToken}` } : {};
-
-            const clientSb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-              global: { headers: clientHeaders }
-            });
-            
-            await clientSb.from("profiles").upsert({
-              id: userId,
-              username: user.username,
-              avatar_url: user.avatar,
-              phone: user.phone,
-              updated_at: new Date().toISOString()
-            });
-          } catch (pErr) {
-            // Profile RLS fallback handled by step 1
+            if (user.avatar && (user.avatar.startsWith("data:image") || user.avatar.length > 200)) {
+              await supabase.from("donations").delete().eq("order_id", `AVATAR_USER_${cleanUsername}`);
+            } else if (user.avatar) {
+              await supabase.from("donations").upsert({
+                order_id: `AVATAR_USER_${cleanUsername}`,
+                username: cleanUsername,
+                amount: 0,
+                status: `AVATAR_DATA:${user.avatar}`,
+                transaction_time: new Date().toISOString(),
+                user_id: isValidUuid ? userId : null
+              }, { onConflict: "order_id" });
+            }
+          } catch (dErr) {
+            console.warn("Donations avatar sync fallback warning:", dErr.message);
           }
         } catch (e) {
           console.warn("Supabase update profile error:", e.message);

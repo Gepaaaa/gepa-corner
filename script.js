@@ -108,6 +108,8 @@ window.addEventListener("storage", (e) => {
 let lastProfileSyncTime = 0;
 async function syncUserProfileFromServer(force = false) {
     if (!currentUserSession || !currentUserSession.user) return;
+    // Jangan lakukan sinkronisasi jika user sedang memilih foto atau ada preview avatar yang belum disimpan
+    if (window._isPickingAvatarFile || window._hasPendingCustomAvatar) return;
     const now = Date.now();
     // Throttle agar tidak spam request (minimal jeda 3 detik kecuali force)
     if (!force && now - lastProfileSyncTime < 3000) return;
@@ -129,9 +131,12 @@ async function syncUserProfileFromServer(force = false) {
         const data = await res.json();
         if (data && data.user) {
             let changed = false;
+            // JANGAN timpa jika user sedang memilih atau ada avatar kustom aktif
             if (data.user.avatar && data.user.avatar !== currentUserSession.user.avatar) {
-                currentUserSession.user.avatar = data.user.avatar;
-                changed = true;
+                if (!window._hasPendingCustomAvatar) {
+                    currentUserSession.user.avatar = data.user.avatar;
+                    changed = true;
+                }
             }
             if (data.user.bio !== undefined && data.user.bio !== currentUserSession.user.bio) {
                 currentUserSession.user.bio = data.user.bio;
@@ -145,9 +150,9 @@ async function syncUserProfileFromServer(force = false) {
             if (changed) {
                 applyUserSession(currentUserSession, true);
 
-                // Update modal akun jika sedang terbuka
+                // Update modal akun HANYA jika tidak sedang ada preview custom avatar
                 const accModal = document.getElementById("accountModal");
-                if (accModal && (accModal.classList.contains("active") || accModal.style.display === "flex")) {
+                if (!window._hasPendingCustomAvatar && accModal && (accModal.classList.contains("active") || accModal.style.display === "flex")) {
                     loadUserProfileData(currentUserSession.user);
                 }
 
@@ -604,6 +609,8 @@ function compressAndSetAvatar(file) {
             }
 
             pendingProfileAvatar = dataUrl;
+            window._hasPendingCustomAvatar = true;
+            window._isPickingAvatarFile = false;
             
             // Update preview hero
             const accHeroImg = document.getElementById("accHeroImg");
@@ -638,9 +645,13 @@ const triggerAvatarUploadBtn = document.getElementById("triggerAvatarUploadBtn")
 const accAvatarFileInput = document.getElementById("accAvatarFileInput");
 if (triggerAvatarUploadBtn && accAvatarFileInput) {
     triggerAvatarUploadBtn.addEventListener("click", () => {
+        window._isPickingAvatarFile = true;
         accAvatarFileInput.click();
+        // Reset flag pengaman jika user membatalkan file picker
+        setTimeout(() => { window._isPickingAvatarFile = false; }, 15000);
     });
     accAvatarFileInput.addEventListener("change", (e) => {
+        window._isPickingAvatarFile = false;
         if (e.target.files && e.target.files[0]) {
             compressAndSetAvatar(e.target.files[0]);
         }
@@ -651,6 +662,8 @@ if (triggerAvatarUploadBtn && accAvatarFileInput) {
 const removeUploadedAvatarBtn = document.getElementById("removeUploadedAvatarBtn");
 if (removeUploadedAvatarBtn) {
     removeUploadedAvatarBtn.addEventListener("click", () => {
+        window._hasPendingCustomAvatar = false;
+        window._isPickingAvatarFile = false;
         pendingProfileAvatar = "🐱";
         const accHeroImg = document.getElementById("accHeroImg");
         const accHeroEmoji = document.getElementById("accHeroEmoji");
@@ -723,7 +736,9 @@ if (saveProfileBtn) {
             currentUserSession.user.username = newUsername;
             currentUserSession.user.bio = newBio;
             currentUserSession.user.phone = newPhone;
-            currentUserSession.user.avatar = newAvatar;
+            currentUserSession.user.avatar = (data && data.user && data.user.avatar) ? data.user.avatar : newAvatar;
+            window._hasPendingCustomAvatar = false;
+            window._isPickingAvatarFile = false;
             applyUserSession(currentUserSession, true);
 
             // Update avatar langsung di cache leaderboard agar sinkron 100% instan
@@ -1330,6 +1345,7 @@ window.selectRegAvatar = function(emoji, label, btnEl) {
 
 // Avatar Selection in Account Modal
 window.selectAccAvatar = function(emoji, btnEl) {
+    window._hasPendingCustomAvatar = false;
     pendingProfileAvatar = emoji;
     const heroEmoji = document.getElementById("accHeroEmoji");
     const heroImg = document.getElementById("accHeroImg");

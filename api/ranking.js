@@ -66,7 +66,13 @@ export default async function handler(req, res) {
                                 const clean = String(row.username).trim().replace(/^@/, "").toLowerCase();
                                 const avatarVal = row.status.slice("AVATAR_DATA:".length);
                                 if (avatarVal) {
-                                    profileAvatarMap.set(clean, avatarVal);
+                                    const existing = profileAvatarMap.get(clean);
+                                    // Jangan pernah menimpa foto profil gambar (data:image / http) dengan emoji fallback
+                                    const isExistingImage = existing && (existing.startsWith("data:image") || existing.startsWith("http"));
+                                    const isNewImage = avatarVal.startsWith("data:image") || avatarVal.startsWith("http");
+                                    if (!existing || isNewImage || !isExistingImage) {
+                                        profileAvatarMap.set(clean, avatarVal);
+                                    }
                                 }
                             }
                         });
