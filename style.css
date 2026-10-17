@@ -176,61 +176,16 @@ button:active,
     justify-content: center;
     flex-shrink: 0;
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
-    cursor: pointer;
 }
-.brand-logo-emblem svg,
-.brand-logo-emblem img,
-.brand-logo-img {
+.brand-logo-emblem svg {
     display: block;
     border-radius: 9px;
     box-shadow: 0 3px 10px rgba(38, 55, 37, 0.16);
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.brand-logo-emblem img,
-.brand-logo-img {
-    width: 32px;
-    height: 32px;
-    object-fit: cover;
-}
-.footer-brand .brand-logo-emblem img {
-    width: 28px;
-    height: 28px;
-}
-.brand:hover .brand-logo-emblem svg,
-.brand:hover .brand-logo-emblem img,
-.brand:hover .brand-logo-img {
+.brand:hover .brand-logo-emblem svg {
     transform: scale(1.08) rotate(-3deg);
     box-shadow: 0 5px 16px rgba(38, 55, 37, 0.24);
-}
-.header-logo-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 11px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--sage-700);
-    background: var(--sage-100);
-    border: 1px solid var(--sage-200);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-.header-logo-toggle:hover {
-    background: var(--sage-200);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-.dark-mode .header-logo-toggle {
-    background: rgba(120, 150, 111, 0.18);
-    border-color: rgba(120, 150, 111, 0.35);
-    color: #d7e3cd;
-}
-.logo-dropzone.dragover {
-    border-color: var(--sage-700) !important;
-    background: var(--sage-100) !important;
-    transform: scale(1.02);
 }
 .brand-text-wrap {
     display: inline-flex;

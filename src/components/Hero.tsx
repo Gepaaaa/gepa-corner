@@ -72,7 +72,7 @@ export const Hero: React.FC = () => {
             </div>
             <div className="social-row" aria-label="Social media links">
               <a
-                href="#"
+                href="https://www.instagram.com/argheeva_?stkn=MWIxa2o3ZnB5dDBrOQ=="
                 className="social-icon"
                 aria-label="Instagram"
                 target="_blank"
@@ -85,7 +85,7 @@ export const Hero: React.FC = () => {
                 </svg>
               </a>
               <a
-                href="#"
+                href="https://whatsapp.com/channel/0029Vb6pu0S7tkj4IRcKyM44"
                 className="social-icon"
                 aria-label="WhatsApp"
                 target="_blank"
@@ -97,7 +97,7 @@ export const Hero: React.FC = () => {
                 </svg>
               </a>
               <a
-                href="#"
+                href="https://www.tiktok.com/@argheeva?_r=1&_t=ZS-99eyKDmtMns"
                 className="social-icon"
                 aria-label="TikTok"
                 target="_blank"

@@ -26,7 +26,6 @@ async function startServer() {
   const { default: userDonationsHandler } = await import('./api/user-donations.mjs');
   const { default: usernameLoginHandler } = await import('./api/username-login.mjs');
   const { default: webhookHandler } = await import('./api/webhook.js');
-  const { default: uploadLogoHandler } = await import('./api/upload-logo.mjs');
 
   app.all('/api/auth', (req, res) => authHandler(req, res));
   app.all('/api/music-search', (req, res) => musicSearchHandler(req, res));
@@ -36,7 +35,6 @@ async function startServer() {
   app.all('/api/user-donations', (req, res) => userDonationsHandler(req, res));
   app.all('/api/username-login', (req, res) => usernameLoginHandler(req, res));
   app.all('/api/webhook', (req, res) => webhookHandler(req, res));
-  app.all('/api/upload-logo', (req, res) => uploadLogoHandler(req, res));
 
   // Serve static assets
   app.use(express.static(path.join(__dirname, 'public')));

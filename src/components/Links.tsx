@@ -11,7 +11,7 @@ export const Links: React.FC = () => {
         </div>
         <div className="links-list">
           <a
-            href="#"
+            href="https://whatsapp.com/channel/0029Vb6pu0S7tkj4IRcKyM44"
             target="_blank"
             rel="noopener noreferrer"
             className="link-card"
@@ -30,7 +30,7 @@ export const Links: React.FC = () => {
           </a>
 
           <a
-            href="#"
+            href="https://www.instagram.com/argheeva_?stkn=MWIxa2o3ZnB5dDBrOQ=="
             target="_blank"
             rel="noopener noreferrer"
             className="link-card"
@@ -44,7 +44,7 @@ export const Links: React.FC = () => {
           </a>
 
           <a
-            href="#"
+            href="https://www.tiktok.com/@argheeva?_r=1&_t=ZS-99eyKDmtMns"
             target="_blank"
             rel="noopener noreferrer"
             className="link-card"

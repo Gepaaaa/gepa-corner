@@ -375,14 +375,6 @@
             const link = getFaviconElement();
             if (!state.isMusicPlaying && !state.badge) {
                 if (link) {
-                    try {
-                        const custom = typeof localStorage !== 'undefined' ? localStorage.getItem('gepa_custom_logo') : null;
-                        if (custom) {
-                            link.type = custom.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
-                            link.href = custom;
-                            return;
-                        }
-                    } catch (e) {}
                     link.type = "image/svg+xml";
                     link.href = "/favicon.svg";
                 }
