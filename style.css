@@ -63,13 +63,35 @@ body.dark-mode {
 }
 
 /* =========================================================
-GLOBAL RESET & TOUCH FEEDBACK
+GLOBAL RESET & ASSET PROTECTION (ANTI-COPY, ANTI-DRAG)
 ========================================================= */
-* { 
+*, *::before, *::after { 
     -webkit-tap-highlight-color: transparent; 
     margin: 0; 
     padding: 0; 
     box-sizing: border-box; 
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Izinkan seleksi teks pada input dan textarea agar form tetap dapat digunakan dengan nyaman */
+input, textarea, select, [contenteditable="true"] {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+}
+
+/* Cegah dragging foto, gambar, video, dan canvas */
+img, svg, canvas, video {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    pointer-events: auto;
 }
 
 html { scroll-behavior: smooth; scroll-padding-top: 90px; }
@@ -176,61 +198,16 @@ button:active,
     justify-content: center;
     flex-shrink: 0;
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
-    cursor: pointer;
 }
-.brand-logo-emblem svg,
-.brand-logo-emblem img,
-.brand-logo-img {
+.brand-logo-emblem svg {
     display: block;
     border-radius: 9px;
     box-shadow: 0 3px 10px rgba(38, 55, 37, 0.16);
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.brand-logo-emblem img,
-.brand-logo-img {
-    width: 32px;
-    height: 32px;
-    object-fit: cover;
-}
-.footer-brand .brand-logo-emblem img {
-    width: 28px;
-    height: 28px;
-}
-.brand:hover .brand-logo-emblem svg,
-.brand:hover .brand-logo-emblem img,
-.brand:hover .brand-logo-img {
+.brand:hover .brand-logo-emblem svg {
     transform: scale(1.08) rotate(-3deg);
     box-shadow: 0 5px 16px rgba(38, 55, 37, 0.24);
-}
-.header-logo-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 11px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--sage-700);
-    background: var(--sage-100);
-    border: 1px solid var(--sage-200);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-.header-logo-toggle:hover {
-    background: var(--sage-200);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-.dark-mode .header-logo-toggle {
-    background: rgba(120, 150, 111, 0.18);
-    border-color: rgba(120, 150, 111, 0.35);
-    color: #d7e3cd;
-}
-.logo-dropzone.dragover {
-    border-color: var(--sage-700) !important;
-    background: var(--sage-100) !important;
-    transform: scale(1.02);
 }
 .brand-text-wrap {
     display: inline-flex;
@@ -1246,9 +1223,12 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
     .support-cup { right: 2%; bottom: -10px; font-size: 5rem; }
     .footer-inner { align-items: flex-start; flex-direction: column; gap: 20px; }
     .footer-brand { flex-direction: column; align-items: flex-start; gap: 6px; }
-    .footer-right { align-items: flex-start; text-align: left; }
-    .modal-content { padding: 30px 20px 22px; }
-}
+    .modal-content { 
+        padding: 28px 18px max(24px, env(safe-area-inset-bottom)); 
+        max-height: 92vh;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
 
 @media (max-width: 390px) {
     .container { width: min(100% - 22px, var(--max-width)); }

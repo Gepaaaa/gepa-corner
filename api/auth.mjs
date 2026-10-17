@@ -447,31 +447,12 @@ export default async function handler(req, res) {
         }
       }
 
-      // 2. Validasi ketat pendaftaran di Supabase Auth
+      // 2. Validasi pendaftaran dan resolusi targetEmail
       if (SUPABASE_SERVICE_ROLE) {
         try {
           const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
           
           if (cleanId.includes("@")) {
-            // Identifier adalah email: Cek apakah email terdaftar di Supabase tanpa membuat user baru
-            const { error: otpErr } = await supabase.auth.signInWithOtp({
-              email: cleanId,
-              options: { shouldCreateUser: false }
-            });
-
-            // Jika Supabase menolak karena user belum terdaftar (status 422 / otp_disabled / Signups not allowed)
-            const isUnregistered = otpErr && (
-              otpErr.status === 422 || 
-              otpErr.code === "otp_disabled" || 
-              (otpErr.message && otpErr.message.toLowerCase().includes("signups not allowed"))
-            );
-
-            if (isUnregistered && !targetUser) {
-              return res.status(404).json({
-                error: "Email belum terdaftar di Gepa Corner. Silakan gunakan email yang sudah terdaftar atau buat akun baru."
-              });
-            }
-
             targetEmail = cleanId;
 
             // Cari profil yang mungkin cocok dengan email ini
@@ -495,7 +476,7 @@ export default async function handler(req, res) {
             }
 
             if (prof) {
-              // Cari email yang terhubung dengan username ini
+              // Cari email yang terhubung dengan username ini dari tabel donations (USER_MAP_*)
               const { data: userMap } = await supabase
                 .from("donations")
                 .select("status")
@@ -522,12 +503,6 @@ export default async function handler(req, res) {
                 username: prof.username,
                 avatar: "👤"
               };
-
-              // Kirim OTP ke targetEmail
-              await supabase.auth.signInWithOtp({
-                email: targetEmail,
-                options: { shouldCreateUser: false }
-              });
             }
           }
         } catch (e) {
@@ -541,7 +516,8 @@ export default async function handler(req, res) {
         });
       }
 
-      // Kirim juga link recovery resmi Supabase sebagai opsi tambahan
+      // 3. Kirim email pemulihan resmi menggunakan template "Reset Password" Supabase
+      // JANGAN gunakan signInWithOtp (yang mengirim template Magic Link / Sign In Link)
       let supabaseSent = false;
       const rawOrigin = req.headers.origin || req.headers.referer || "";
       let appOrigin = "https://www.gepacorner.my.id";
@@ -560,6 +536,8 @@ export default async function handler(req, res) {
           });
           if (!resetErr) {
             supabaseSent = true;
+          } else {
+            console.warn("Supabase auth resetPasswordForEmail error:", resetErr.message);
           }
         } catch (sbErr) {
           console.warn("Supabase auth reset error:", sbErr.message);

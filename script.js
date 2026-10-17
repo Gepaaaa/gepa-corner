@@ -5,7 +5,80 @@ GEPA PERSONAL WEBSITE - SCRIPT.JS
 Vanilla JavaScript
 
 Payment System & Supabase Auth Integration (Sign In, Sign Up, Profile, History)
-========================================================= */
+/* =========================================================
+   CONTENT & ASSET PROTECTION GUARD
+   Anti-Right-Click, Anti-Copy, Anti-Drag, Anti-DevTools
+   ========================================================= */
+// 1. Matikan klik kanan (context menu) di seluruh website
+document.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    return false;
+}, { capture: true });
+
+// 2. Cegah drag-and-drop foto, gambar, avatar, video, dan canvas
+document.addEventListener("dragstart", (e) => {
+    const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : "";
+    if (tag === "img" || tag === "video" || tag === "canvas" || tag === "svg" || (e.target.closest && e.target.closest("img, video, canvas, svg"))) {
+        e.preventDefault();
+        return false;
+    }
+}, { capture: true });
+
+// 3. Cegah penyalinan teks (copy & cut) di luar elemen formulir
+document.addEventListener("copy", (e) => {
+    const activeEl = document.activeElement;
+    const tag = activeEl && activeEl.tagName ? activeEl.tagName.toLowerCase() : "";
+    const isInput = tag === "input" || tag === "textarea" || (activeEl && activeEl.isContentEditable);
+    if (!isInput) {
+        e.preventDefault();
+        if (e.clipboardData) {
+            e.clipboardData.clearData();
+        }
+        return false;
+    }
+}, { capture: true });
+
+document.addEventListener("cut", (e) => {
+    const activeEl = document.activeElement;
+    const tag = activeEl && activeEl.tagName ? activeEl.tagName.toLowerCase() : "";
+    const isInput = tag === "input" || tag === "textarea" || (activeEl && activeEl.isContentEditable);
+    if (!isInput) {
+        e.preventDefault();
+        return false;
+    }
+}, { capture: true });
+
+// 4. Cegah shortcut inspeksi & penyalinan umum (F12, Ctrl+U, Ctrl+S, Ctrl+Shift+I/J/C)
+document.addEventListener("keydown", (e) => {
+    const key = e.key;
+    const ctrlOrMeta = e.ctrlKey || e.metaKey;
+    const activeEl = document.activeElement;
+    const isInput = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable);
+
+    // Block F12 (Developer Tools)
+    if (key === "F12") {
+        e.preventDefault();
+        return false;
+    }
+
+    // Block Ctrl+U (View Page Source) & Ctrl+S (Save Page)
+    if (ctrlOrMeta && (key === "u" || key === "U" || key === "s" || key === "S")) {
+        e.preventDefault();
+        return false;
+    }
+
+    // Block Ctrl+Shift+I / J / C (DevTools inspector)
+    if (ctrlOrMeta && e.shiftKey && (key === "I" || key === "i" || key === "J" || key === "j" || key === "C" || key === "c")) {
+        e.preventDefault();
+        return false;
+    }
+
+    // Block Ctrl+C / Cmd+C jika di luar field input/textarea
+    if (ctrlOrMeta && (key === "c" || key === "C") && !isInput) {
+        e.preventDefault();
+        return false;
+    }
+}, { capture: true });
 
 document.addEventListener("DOMContentLoaded", () => {
 
