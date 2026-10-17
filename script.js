@@ -407,6 +407,7 @@ async function loadUserProfileData(user) {
     const usernameInput = document.getElementById("accUsernameInput");
     const bioInput = document.getElementById("accBioInput");
     const phoneInput = document.getElementById("accPhoneInput");
+    const customAvatarUrlInput = document.getElementById("accCustomAvatarUrl");
     
     // Render Avatar
     const avatar = user.avatar || "👤";
@@ -441,6 +442,7 @@ async function loadUserProfileData(user) {
     if (usernameInput) usernameInput.value = user.username || "";
     if (bioInput) bioInput.value = user.bio || "";
     if (phoneInput) phoneInput.value = user.phone || "";
+    if (customAvatarUrlInput) customAvatarUrlInput.value = isImageUrl && (avatar.startsWith("http://") || avatar.startsWith("https://")) ? avatar : "";
     
     // Highlight currently selected avatar in account modal if emoji
     const accAvatarBtns = document.querySelectorAll("#accAvatarPicker .avatar-choice-btn");
@@ -697,6 +699,9 @@ function compressAndSetAvatar(file) {
             // Deselect preset emoji
             document.querySelectorAll("#accAvatarPicker .avatar-choice-btn").forEach(b => b.classList.remove("selected"));
             
+            const customUrlInput = document.getElementById("accCustomAvatarUrl");
+            if (customUrlInput) customUrlInput.value = "";
+
             const removeBtn = document.getElementById("removeUploadedAvatarBtn");
             if (removeBtn) removeBtn.style.display = "inline-flex";
 
@@ -757,6 +762,41 @@ if (removeUploadedAvatarBtn) {
             catBtn.classList.add("selected");
         }
         showToast("Foto di-reset ke avatar default. Klik 'Simpan Perubahan' untuk menyimpan.");
+    });
+}
+
+// Preview / Terapkan Custom Avatar Image URL
+const applyAvatarUrlBtn = document.getElementById("applyAvatarUrlBtn");
+if (applyAvatarUrlBtn) {
+    applyAvatarUrlBtn.addEventListener("click", () => {
+        const urlInput = document.getElementById("accCustomAvatarUrl");
+        const url = (urlInput?.value || "").trim();
+        if (!url || (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("data:image"))) {
+            showToast("Masukkan URL gambar yang valid (dimulai dengan https://)");
+            return;
+        }
+
+        pendingProfileAvatar = url;
+        const accHeroImg = document.getElementById("accHeroImg");
+        const accHeroEmoji = document.getElementById("accHeroEmoji");
+        if (accHeroImg && accHeroEmoji) {
+            accHeroImg.src = url;
+            accHeroImg.style.display = "block";
+            accHeroEmoji.style.display = "none";
+        }
+
+        const removeBtn = document.getElementById("removeUploadedAvatarBtn");
+        if (removeBtn) removeBtn.style.display = "inline-flex";
+
+        const fileStatus = document.getElementById("avatarFileStatus");
+        if (fileStatus) {
+            fileStatus.innerHTML = `✅ Link gambar diterapkan ke preview.`;
+            fileStatus.style.display = "block";
+        }
+
+        // Hapus seleksi preset avatar
+        document.querySelectorAll("#accAvatarPicker .avatar-choice-btn").forEach(b => b.classList.remove("selected"));
+        showToast("Foto profil diterapkan ke preview! Klik 'Simpan Perubahan' untuk mengunci.");
     });
 }
 
@@ -1003,9 +1043,6 @@ function applyInitialTheme() {
         if (prefersDark) body.classList.add("dark-mode");
     }
     updateThemeIcon();
-    if (window.FaviconModule && typeof window.FaviconModule.setTheme === "function") {
-        window.FaviconModule.setTheme(body.classList.contains("dark-mode"));
-    }
 }
 
 function updateThemeIcon() {
@@ -1019,9 +1056,6 @@ if (themeToggle) {
         const isDark = body.classList.toggle("dark-mode");
         localStorage.setItem("gepa-theme", isDark ? "dark" : "light");
         updateThemeIcon();
-        if (window.FaviconModule && typeof window.FaviconModule.setTheme === "function") {
-            window.FaviconModule.setTheme(isDark);
-        }
     });
 }
 
@@ -1232,28 +1266,11 @@ window.closeInfoModal = function(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove("open");
-        modal.classList.remove("active");
-        modal.style.display = "none";
-        setTimeout(() => {
-            if (!modal.classList.contains("open")) {
-                modal.style.display = "";
-            }
-        }, 220);
         if (!document.querySelector(".modal-overlay.open")) {
             body.classList.remove("modal-open");
         }
     }
 };
-
-// Explicit Close Handler for Account Dashboard
-const closeAccountModalBtn = document.getElementById("closeAccountModalBtn");
-if (closeAccountModalBtn) {
-    closeAccountModalBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        closeInfoModal("accountModal");
-    });
-}
 
 if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOverlay"));
 if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
@@ -1439,6 +1456,9 @@ window.selectAccAvatar = function(emoji, btnEl) {
 
     const fileStatus = document.getElementById("avatarFileStatus");
     if (fileStatus) fileStatus.style.display = "none";
+
+    const customUrlInput = document.getElementById("accCustomAvatarUrl");
+    if (customUrlInput) customUrlInput.value = "";
 };
 
 // Random Guest Name Generator
@@ -1601,6 +1621,7 @@ if (submitRegisterBtn) {
 // 3. RESET PASSWORD STATE & HANDLERS (SUPABASE AUTH)
 // ==========================================
 let pendingResetIdentifier = "";
+let pendingResetEmail = "";
 let recoveryAccessToken = "";
 let resetResendInterval = null;
 
@@ -1649,6 +1670,10 @@ window.resendResetOtp = async function() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Gagal mengirim ulang instruksi.");
+
+        if (data.email || data.targetEmail) {
+            pendingResetEmail = (data.email || data.targetEmail).trim().toLowerCase();
+        }
 
         setAuthAlert(data.message || "Kode verifikasi baru telah dikirim ke email Anda.", "success");
         showToast("Kode verifikasi baru telah dikirim! ✉️");
@@ -1734,6 +1759,9 @@ if (submitRequestOtpBtn) {
             }
 
             pendingResetIdentifier = identifier;
+            if (data.email || data.targetEmail) {
+                pendingResetEmail = (data.email || data.targetEmail).trim().toLowerCase();
+            }
 
             // Transition to Step 2 (Verification code + new password)
             const step1 = document.getElementById("resetStep1");
@@ -1804,7 +1832,9 @@ if (submitVerifyResetBtn) {
                 body: JSON.stringify({
                     action: "verify-reset-password",
                     identifier,
+                    email: pendingResetEmail || undefined,
                     code: code || undefined,
+                    otp: code || undefined,
                     newPassword,
                     accessToken: recoveryAccessToken || undefined
                 })
@@ -2789,7 +2819,7 @@ const vinylCover = document.getElementById("vinylCover");
 
 const musicModalOverlay = document.getElementById("musicModalOverlay");
 const musicModalMinimizeBtn = document.getElementById("musicModalMinimizeBtn");
-const musicModalCloseAndStopBtn = document.getElementById("musicModalCloseAndStopBtn");
+const musicModalCloseBtn = document.getElementById("musicModalCloseBtn");
 const musicTabBtns = document.querySelectorAll(".music-tab-btn");
 const musicTabContents = document.querySelectorAll(".music-tab-content");
 
@@ -2836,6 +2866,7 @@ const html5Audio = document.getElementById("html5AudioPlayer");
 let ytPlayer = null;
 let isYtReady = false;
 let isPlaying = false;
+let userExplicitlyPaused = false;
 let isMuted = false;
 let isLooping = false;
 let currentVolume = 80;
@@ -2844,100 +2875,13 @@ let searchDebounceTimer = null;
 let currentSearchSeq = 0;
 let autoplayAttempted = false;
 
-// Background Audio Persistence State
-let userWantsPlayback = false; // Tracks if user intended music to play
-let isExplicitlyPausedByUser = false; // Tracks if user manually paused or closed the player
-let backgroundWatchdogTimer = null;
-let bgAudioKeepAlive = null;
-let audioContext = null;
-
-// Silent WAV (1 second 44.1kHz mono PCM silent base64 audio)
-// Keeps browser media pipeline alive and prevents Chrome/Safari background tab suspension
-const SILENT_AUDIO_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-
-function initBackgroundAudioKeepAlive() {
-    if (!bgAudioKeepAlive) {
-        bgAudioKeepAlive = document.getElementById("bgAudioKeepAlive");
-        if (!bgAudioKeepAlive) {
-            bgAudioKeepAlive = document.createElement("audio");
-            bgAudioKeepAlive.id = "bgAudioKeepAlive";
-            bgAudioKeepAlive.style.display = "none";
-            document.body.appendChild(bgAudioKeepAlive);
-        }
-        bgAudioKeepAlive.src = SILENT_AUDIO_URI;
-        bgAudioKeepAlive.loop = true;
-        // Volume 0.001 is virtually inaudible to human ears but flags the tab as an active audible media source
-        bgAudioKeepAlive.volume = 0.001;
-    }
-}
-
-function startBackgroundAudioKeepAlive() {
-    initBackgroundAudioKeepAlive();
-    if (bgAudioKeepAlive && bgAudioKeepAlive.paused) {
-        bgAudioKeepAlive.play().catch(() => {});
-    }
-
-    try {
-        if (!audioContext && (window.AudioContext || window.webkitAudioContext)) {
-            const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-            audioContext = new AudioCtxClass();
-        }
-        if (audioContext && audioContext.state === "suspended") {
-            audioContext.resume().catch(() => {});
-        }
-    } catch (e) {}
-
-    startBackgroundWatchdog();
-}
-
-function stopBackgroundAudioKeepAlive() {
-    if (bgAudioKeepAlive && !bgAudioKeepAlive.paused) {
-        bgAudioKeepAlive.pause();
-    }
-    stopBackgroundWatchdog();
-}
-
-function startBackgroundWatchdog() {
-    stopBackgroundWatchdog();
-    backgroundWatchdogTimer = setInterval(() => {
-        if (userWantsPlayback && !isExplicitlyPausedByUser) {
-            // Keep silent audio loop playing
-            if (bgAudioKeepAlive && bgAudioKeepAlive.paused) {
-                bgAudioKeepAlive.play().catch(() => {});
-            }
-
-            // If YouTube is active, ensure it doesn't get throttled/paused by browser background policies
-            if (currentTrack.source !== "itunes" && ytPlayer && typeof ytPlayer.getPlayerState === "function") {
-                try {
-                    const st = ytPlayer.getPlayerState();
-                    if (st === window.YT.PlayerState.PAUSED || st === -1) {
-                        ytPlayer.playVideo();
-                    }
-                } catch (e) {}
-            }
-
-            // If HTML5 audio is used, verify it is still playing
-            if (currentTrack.source === "itunes" && html5Audio && html5Audio.src && html5Audio.paused) {
-                html5Audio.play().catch(() => {});
-            }
-        }
-    }, 1500);
-}
-
-function stopBackgroundWatchdog() {
-    if (backgroundWatchdogTimer) {
-        clearInterval(backgroundWatchdogTimer);
-        backgroundWatchdogTimer = null;
-    }
-}
-
-// Default initial track (yung kai - blue)
+// Default initial track
 let currentTrack = {
-    id: "_K0P2j9Gq_E",
-    title: "blue",
-    artist: "yung kai",
-    duration: "03:45",
-    thumbnail: "https://i.ytimg.com/vi/_K0P2j9Gq_E/hqdefault.jpg",
+    id: "dGcGbF4ex5o",
+    title: "Dan...",
+    artist: "Sheila On 7",
+    duration: "04:46",
+    thumbnail: "https://i.ytimg.com/vi/dGcGbF4ex5o/hqdefault.jpg",
     source: "youtube"
 };
 
@@ -2979,8 +2923,8 @@ function setupYtInstance() {
     if (ytPlayer || !document.getElementById("ytAudioPlayer")) return;
     try {
         ytPlayer = new window.YT.Player("ytAudioPlayer", {
-            height: "180",
-            width: "240",
+            height: "200",
+            width: "200",
             videoId: currentTrack.id,
             playerVars: {
                 autoplay: 0,
@@ -2989,7 +2933,6 @@ function setupYtInstance() {
                 fs: 0,
                 rel: 0,
                 playsinline: 1,
-                enablejsapi: 1,
                 origin: window.location.origin
             },
             events: {
@@ -3014,30 +2957,23 @@ function onYtReady(event) {
 
 function onYtStateChange(event) {
     if (event.data === window.YT.PlayerState.PLAYING) {
-        isExplicitlyPausedByUser = false;
-        userWantsPlayback = true;
+        isPlaying = true;
+        userExplicitlyPaused = false;
         setPlaybackUIState(true);
         startProgressTracking();
-        startBackgroundAudioKeepAlive();
-        updateMediaSession();
     } else if (event.data === window.YT.PlayerState.PAUSED) {
-        // CRITICAL CHECK: Intercept unwanted background pauses caused by switching tabs or unfocusing
-        if (userWantsPlayback && !isExplicitlyPausedByUser) {
+        // If pause was NOT explicitly triggered by user, but caused by browser tab switching or background throttle
+        if (!userExplicitlyPaused && isPlaying) {
             setTimeout(() => {
-                if (userWantsPlayback && !isExplicitlyPausedByUser && ytPlayer && typeof ytPlayer.playVideo === "function") {
-                    try {
-                        ytPlayer.playVideo();
-                    } catch (e) {}
+                if (!userExplicitlyPaused && isPlaying && ytPlayer && typeof ytPlayer.playVideo === "function") {
+                    ytPlayer.playVideo();
                 }
-            }, 50);
-            return;
+            }, 100);
+        } else {
+            isPlaying = false;
+            setPlaybackUIState(false);
+            stopProgressTracking();
         }
-
-        // Genuine manual user pause
-        setPlaybackUIState(false);
-        stopProgressTracking();
-        stopBackgroundAudioKeepAlive();
-        updateMediaSession();
     } else if (event.data === window.YT.PlayerState.ENDED) {
         if (isLooping) {
             if (ytPlayer && ytPlayer.seekTo) {
@@ -3065,11 +3001,8 @@ function onYtError(event) {
 // PLAYBACK CONTROLS
 // ----------------------------------------------------
 function playMusic() {
-    isExplicitlyPausedByUser = false;
-    userWantsPlayback = true;
     isPlaying = true;
-    startBackgroundAudioKeepAlive();
-
+    userExplicitlyPaused = false;
     if (currentTrack.source === "itunes" && currentTrack.previewUrl) {
         playWithHtml5(currentTrack.previewUrl);
         return;
@@ -3086,11 +3019,8 @@ function playMusic() {
 }
 
 function pauseMusic() {
-    isExplicitlyPausedByUser = true;
-    userWantsPlayback = false;
     isPlaying = false;
-    stopBackgroundAudioKeepAlive();
-
+    userExplicitlyPaused = true;
     if (ytPlayer && typeof ytPlayer.pauseVideo === "function") {
         ytPlayer.pauseVideo();
     }
@@ -3111,9 +3041,9 @@ function togglePlayPause() {
 }
 
 function playTrack(track) {
-    isExplicitlyPausedByUser = false;
-    userWantsPlayback = true;
     currentTrack = track;
+    isPlaying = true;
+    userExplicitlyPaused = false;
     updateTrackDisplay(track);
 
     // Stop HTML5 audio if active
@@ -3121,8 +3051,6 @@ function playTrack(track) {
         html5Audio.pause();
         html5Audio.src = "";
     }
-
-    startBackgroundAudioKeepAlive();
 
     if (track.source === "itunes" && track.previewUrl) {
         playWithHtml5(track.previewUrl);
@@ -3148,11 +3076,8 @@ function playWithHtml5(src) {
     html5Audio.volume = currentVolume / 100;
     html5Audio.loop = isLooping;
     html5Audio.play().then(() => {
-        isExplicitlyPausedByUser = false;
-        userWantsPlayback = true;
         setPlaybackUIState(true);
         startProgressTracking();
-        startBackgroundAudioKeepAlive();
     }).catch(err => {
         console.warn("HTML5 audio play blocked:", err);
     });
@@ -3204,11 +3129,6 @@ function setPlaybackUIState(playing) {
 
     // Update active highlight in search results and curated items
     updateActivePlayButtons(playing);
-
-    // Sync with Favicon Module
-    if (window.FaviconModule && typeof window.FaviconModule.setMusicPlaying === "function") {
-        window.FaviconModule.setMusicPlaying(playing, currentTrack?.title || "Musik");
-    }
 }
 
 function updateActivePlayButtons(playing) {
@@ -3343,7 +3263,7 @@ function updateMediaSession() {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: currentTrack.title || "Gepa Online Music",
             artist: currentTrack.artist || "Gepa Corner",
-            album: "Gepa Corner Music Player",
+            album: "Background Music Player",
             artwork: [
                 { src: currentTrack.thumbnail || "https://i.ytimg.com/vi/dGcGbF4ex5o/hqdefault.jpg", sizes: "512x512", type: "image/jpeg" }
             ]
@@ -3735,20 +3655,56 @@ function bindMusicEventListeners() {
         });
     }
 
-    // 4. Modal header actions
+    // 4. Modal header actions: Minimize & Close (music keeps playing!)
     if (musicModalMinimizeBtn) {
         musicModalMinimizeBtn.addEventListener("click", () => {
             closeMusicModal();
         });
     }
 
-    if (musicModalCloseAndStopBtn) {
-        musicModalCloseAndStopBtn.addEventListener("click", () => {
-            closeAndStopMusicWidget();
+    if (musicModalCloseBtn) {
+        musicModalCloseBtn.addEventListener("click", () => {
+            closeMusicModal();
         });
     }
 
-    // Click outside modal container to minimize
+    // Escape key closes modal while music keeps playing
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && musicModalOverlay && musicModalOverlay.classList.contains("open")) {
+            closeMusicModal();
+        }
+    });
+
+    // Background tab & visibility persistence
+    document.addEventListener("visibilitychange", () => {
+        if (!userExplicitlyPaused && isPlaying) {
+            if (ytPlayer && typeof ytPlayer.playVideo === "function") {
+                const state = typeof ytPlayer.getPlayerState === "function" ? ytPlayer.getPlayerState() : -1;
+                if (state !== window.YT?.PlayerState?.PLAYING) {
+                    ytPlayer.playVideo();
+                }
+            }
+            if (html5Audio && html5Audio.paused && html5Audio.src) {
+                html5Audio.play().catch(() => {});
+            }
+        }
+    });
+
+    window.addEventListener("focus", () => {
+        if (!userExplicitlyPaused && isPlaying) {
+            if (ytPlayer && typeof ytPlayer.playVideo === "function") {
+                const state = typeof ytPlayer.getPlayerState === "function" ? ytPlayer.getPlayerState() : -1;
+                if (state !== window.YT?.PlayerState?.PLAYING) {
+                    ytPlayer.playVideo();
+                }
+            }
+            if (html5Audio && html5Audio.paused && html5Audio.src) {
+                html5Audio.play().catch(() => {});
+            }
+        }
+    });
+
+    // Click outside modal container to close modal (music keeps playing)
     if (musicModalOverlay) {
         musicModalOverlay.addEventListener("click", (e) => {
             if (e.target === musicModalOverlay) {
@@ -3918,81 +3874,19 @@ function bindMusicEventListeners() {
             }
         });
     });
-
-    // 11. Background Playback Guard (Tab Visibility & Focus Watchers)
-    // Ensures audio continues playing when user switches tabs, minimizes window, or opens another app
-    document.addEventListener("visibilitychange", () => {
-        if (userWantsPlayback && !isExplicitlyPausedByUser) {
-            startBackgroundAudioKeepAlive();
-
-            // Resume YouTube video if browser attempted to pause it in the background
-            if (currentTrack.source !== "itunes" && ytPlayer && typeof ytPlayer.playVideo === "function") {
-                try {
-                    const st = typeof ytPlayer.getPlayerState === "function" ? ytPlayer.getPlayerState() : -1;
-                    if (st !== window.YT.PlayerState.PLAYING && st !== window.YT.PlayerState.BUFFERING) {
-                        ytPlayer.playVideo();
-                    }
-                } catch (err) {}
-            }
-
-            // Resume HTML5 audio if active
-            if (currentTrack.source === "itunes" && html5Audio && html5Audio.src && html5Audio.paused) {
-                html5Audio.play().catch(() => {});
-            }
-
-            if (document.visibilityState === "visible") {
-                setPlaybackUIState(true);
-                startProgressTracking();
-            }
-        }
-    });
-
-    window.addEventListener("blur", () => {
-        if (userWantsPlayback && !isExplicitlyPausedByUser) {
-            setTimeout(() => {
-                if (userWantsPlayback && !isExplicitlyPausedByUser) {
-                    if (currentTrack.source !== "itunes" && ytPlayer && typeof ytPlayer.playVideo === "function") {
-                        try {
-                            const st = typeof ytPlayer.getPlayerState === "function" ? ytPlayer.getPlayerState() : -1;
-                            if (st === window.YT.PlayerState.PAUSED) {
-                                ytPlayer.playVideo();
-                            }
-                        } catch (e) {}
-                    }
-                }
-            }, 80);
-        }
-    });
-
-    window.addEventListener("focus", () => {
-        if (userWantsPlayback && !isExplicitlyPausedByUser) {
-            if (currentTrack.source !== "itunes" && ytPlayer && typeof ytPlayer.playVideo === "function") {
-                try {
-                    const st = typeof ytPlayer.getPlayerState === "function" ? ytPlayer.getPlayerState() : -1;
-                    if (st !== window.YT.PlayerState.PLAYING && st !== window.YT.PlayerState.BUFFERING) {
-                        ytPlayer.playVideo();
-                    }
-                } catch (e) {}
-            }
-            setPlaybackUIState(true);
-            startProgressTracking();
-        }
-    });
 }
 
 // ----------------------------------------------------
 // BOOTSTRAP MUSIC PLAYER
 // ----------------------------------------------------
 function initMusicPlayer() {
-    // Restore last track if present, upgrading from old default if needed
+    // Restore last track if present
     try {
         const saved = localStorage.getItem("gepa_last_track");
         if (saved) {
             const parsed = JSON.parse(saved);
-            if (parsed && parsed.id && parsed.id !== "dGcGbF4ex5o") {
+            if (parsed && parsed.id) {
                 currentTrack = parsed;
-            } else {
-                localStorage.setItem("gepa_last_track", JSON.stringify(currentTrack));
             }
         }
     } catch (e) {}

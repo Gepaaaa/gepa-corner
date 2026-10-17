@@ -48,6 +48,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
   const [resetOtp, setResetOtp] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetTargetEmail, setResetTargetEmail] = useState('');
   const [showResetNewPassword, setShowResetNewPassword] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
@@ -173,6 +174,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal mengirim instruksi pemulihan.');
 
+      if (data.email || data.targetEmail) {
+        setResetTargetEmail((data.email || data.targetEmail).trim().toLowerCase());
+      }
+
       setResetStep(2);
       setCountdown(60);
       const timer = setInterval(() => {
@@ -214,8 +219,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'verify-reset-otp',
+          action: 'verify-reset-password',
           identifier: resetIdentifier.trim(),
+          email: resetTargetEmail || undefined,
+          code: resetOtp.trim(),
           otp: resetOtp.trim(),
           newPassword: resetNewPassword
         })

@@ -313,11 +313,23 @@ export default async function handler(req, res) {
 
           // If not email, look up email by username
           if (!cleanId.includes("@")) {
-            const { data: prof } = await supabase.from("profiles").select("id").eq("username", cleanId).single();
-            if (prof) {
-              const { data: { users } } = await supabase.auth.admin.listUsers();
-              const u = users?.find(item => item.id === prof.id);
-              if (u) loginEmail = u.email;
+            const { data: userMap } = await supabase
+              .from("donations")
+              .select("status")
+              .eq("order_id", `USER_MAP_${cleanId}`)
+              .maybeSingle();
+            if (userMap?.status && userMap.status.startsWith("USER_EMAIL:")) {
+              loginEmail = userMap.status.slice("USER_EMAIL:".length).trim().toLowerCase();
+            } else {
+              const { data: prof } = await supabase.from("profiles").select("id").eq("username", cleanId).maybeSingle();
+              if (prof) {
+                for (const [_, u] of memoryUsers.entries()) {
+                  if (u.id === prof.id && u.email && u.email.includes("@")) {
+                    loginEmail = u.email;
+                    break;
+                  }
+                }
+              }
             }
           }
 
@@ -442,7 +454,9 @@ export default async function handler(req, res) {
       for (const [_, u] of memoryUsers.entries()) {
         if (u.email?.toLowerCase() === cleanId || u.username?.toLowerCase() === cleanId) {
           targetUser = u;
-          targetEmail = u.email;
+          if (u.email && u.email.includes("@") && !u.email.endsWith("@gepacorner.my.id")) {
+            targetEmail = u.email.toLowerCase();
+          }
           break;
         }
       }
@@ -467,42 +481,50 @@ export default async function handler(req, res) {
               };
             }
           } else {
-            // Identifier adalah username: Cek apakah username terdaftar di profiles table
-            const { data: prof } = await supabase.from("profiles").select("id, username").ilike("username", cleanId).maybeSingle();
-            if (!prof && !targetUser) {
+            // Identifier adalah username: Cari email yang terhubung dengan username ini
+            const lookupKey = cleanId.replace(/^@/, "");
+
+            // A. Cari email dari relasi donations (USER_MAP_*)
+            const { data: userMap } = await supabase
+              .from("donations")
+              .select("status")
+              .eq("order_id", `USER_MAP_${lookupKey}`)
+              .maybeSingle();
+
+            if (userMap?.status && userMap.status.startsWith("USER_EMAIL:")) {
+              targetEmail = userMap.status.slice("USER_EMAIL:".length).trim().toLowerCase();
+            }
+
+            // B. Cek profiles table
+            const { data: prof } = await supabase.from("profiles").select("id, username, avatar_url, phone").ilike("username", lookupKey).maybeSingle();
+            if (!prof && !targetUser && !targetEmail) {
               return res.status(404).json({
                 error: `Username @${cleanId} tidak terdaftar di Gepa Corner.`
               });
             }
 
             if (prof) {
-              // Cari email yang terhubung dengan username ini dari tabel donations (USER_MAP_*)
-              const { data: userMap } = await supabase
-                .from("donations")
-                .select("status")
-                .eq("order_id", `USER_MAP_${cleanId}`)
-                .maybeSingle();
-
-              if (userMap && userMap.status && userMap.status.startsWith("USER_EMAIL:")) {
-                targetEmail = userMap.status.slice("USER_EMAIL:".length);
+              if (!targetUser) {
+                targetUser = {
+                  id: prof.id,
+                  email: targetEmail || "",
+                  username: prof.username,
+                  avatar: prof.avatar_url || "👤",
+                  phone: prof.phone || ""
+                };
+              } else {
+                targetUser.id = prof.id;
               }
+            }
 
-              if (!targetEmail && targetUser && targetUser.email) {
-                targetEmail = targetUser.email;
-              }
+            if (!targetEmail && targetUser && targetUser.email && targetUser.email.includes("@")) {
+              targetEmail = targetUser.email.toLowerCase();
+            }
 
-              if (!targetEmail) {
-                return res.status(404).json({
-                  error: `Email untuk akun @${cleanId} belum tertaut. Silakan masukkan alamat email kamu saat mendaftar.`
-                });
-              }
-
-              targetUser = {
-                id: prof.id,
-                email: targetEmail,
-                username: prof.username,
-                avatar: "👤"
-              };
+            if (!targetEmail) {
+              return res.status(404).json({
+                error: `Email untuk akun @${cleanId} belum tertaut. Silakan masukkan alamat email yang kamu daftarkan.`
+              });
             }
           }
         } catch (e) {
@@ -510,14 +532,20 @@ export default async function handler(req, res) {
         }
       }
 
-      if (!targetEmail) {
+      if (!targetEmail || !targetEmail.includes("@")) {
         return res.status(404).json({
           error: "Akun dengan email atau username tersebut tidak terdaftar di Gepa Corner."
         });
       }
 
+      // Sinkronkan email targetUser di database lokal
+      if (targetUser) {
+        targetUser.email = targetEmail;
+        memoryUsers.set(targetUser.id, targetUser);
+        saveUsersToDisk();
+      }
+
       // 3. Kirim email pemulihan resmi menggunakan template "Reset Password" Supabase
-      // JANGAN gunakan signInWithOtp (yang mengirim template Magic Link / Sign In Link)
       let supabaseSent = false;
       const rawOrigin = req.headers.origin || req.headers.referer || "";
       let appOrigin = "https://www.gepacorner.my.id";
@@ -537,32 +565,29 @@ export default async function handler(req, res) {
           if (!resetErr) {
             supabaseSent = true;
           } else {
-            console.warn("Supabase auth resetPasswordForEmail error:", resetErr.message);
+            console.warn("Supabase auth resetPasswordForEmail warning:", resetErr.message);
           }
         } catch (sbErr) {
           console.warn("Supabase auth reset error:", sbErr.message);
         }
       }
 
-      // Generate verification code for secure fallback (kept server-side only, NEVER SENT IN JSON)
+      // Simpan session reset dan kode verifikasi ke memory store
       const secureOtp = String(Math.floor(100000 + Math.random() * 900000));
       const expiresAt = Date.now() + 15 * 60 * 1000;
-      if (targetUser?.id) {
-        resetOtps.set(targetUser.id, {
-          code: secureOtp,
-          expiresAt,
-          userId: targetUser.id,
-          email: targetEmail,
-          username: targetUser.username
-        });
-      }
-      resetOtps.set(targetEmail.toLowerCase(), {
+      const resetEntry = {
         code: secureOtp,
         expiresAt,
         userId: targetUser?.id || null,
         email: targetEmail,
-        username: targetUser?.username || ""
-      });
+        username: targetUser?.username || cleanId
+      };
+
+      resetOtps.set(cleanId, resetEntry);
+      resetOtps.set(targetEmail.toLowerCase(), resetEntry);
+      if (targetUser?.id) {
+        resetOtps.set(targetUser.id, resetEntry);
+      }
 
       // Mask email for privacy (e.g. r***a@gmail.com)
       const [localPart, domainPart] = targetEmail.split("@");
@@ -571,11 +596,14 @@ export default async function handler(req, res) {
         : localPart[0] + "***";
       const maskedEmail = `${maskedLocal}@${domainPart || "mail.com"}`;
 
-      // CRITICAL: NEVER RETURN verificationCode / OTP IN RESPONSE!
       return res.status(200).json({
         success: true,
-        message: `Instruksi pemulihan kata sandi resmi telah dikirim ke email ${maskedEmail}.`,
+        message: `Instruksi dan kode pemulihan kata sandi resmi telah dikirim ke email ${maskedEmail}.`,
         maskedEmail,
+        targetEmail,
+        email: targetEmail,
+        identifier: cleanId,
+        username: targetUser?.username || cleanId,
         supabaseSent,
         userId: targetUser?.id || null
       });
@@ -584,133 +612,275 @@ export default async function handler(req, res) {
     // ==========================================
     // ACTION: VERIFY RESET PASSWORD / UPDATE VIA RECOVERY
     // ==========================================
-    if ((action === "verify-reset-password" || action === "update-recovery-password") && req.method === "POST") {
-      const { identifier, code, newPassword, accessToken } = req.body || {};
-      if (!newPassword || newPassword.length < 6) {
+    if ((action === "verify-reset-password" || action === "verify-reset-otp" || action === "update-recovery-password" || action === "reset-password") && req.method === "POST") {
+      const { identifier, email, code, otp, token, newPassword, password, accessToken } = req.body || {};
+      const targetPassword = newPassword || password;
+      if (!targetPassword || targetPassword.length < 6) {
         return res.status(400).json({ error: "Password baru minimal 6 karakter." });
       }
 
       // Direct update via recovery accessToken from Supabase
       if (accessToken && SUPABASE_SERVICE_ROLE) {
+        let accessUpdated = false;
         try {
-          const userSb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-            global: { headers: { Authorization: `Bearer ${accessToken}` } }
+          const restResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": SUPABASE_SERVICE_ROLE,
+              "Authorization": `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ password: targetPassword })
           });
-          const { error: updErr } = await userSb.auth.updateUser({ password: newPassword });
-          if (!updErr) {
-            const { data: { user: sbUser } } = await userSb.auth.getUser();
-            if (sbUser) {
-              const memU = memoryUsers.get(sbUser.id);
-              if (memU) {
-                memU.passwordHash = hashPassword(newPassword);
-                saveUsersToDisk();
-              }
-            }
-            return res.status(200).json({
-              success: true,
-              message: "Password berhasil diperbarui! Silakan masuk dengan kata sandi baru kamu. 🔐"
-            });
+          if (restResp.ok) {
+            accessUpdated = true;
           }
         } catch (e) {
-          console.warn("Update password via recovery token error:", e.message);
+          console.warn("Direct updateUser via accessToken error:", e.message);
+        }
+
+        if (!accessUpdated) {
+          try {
+            const userSb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+            await userSb.auth.setSession({ access_token: accessToken, refresh_token: "" });
+            const { error: updErr } = await userSb.auth.updateUser({ password: targetPassword });
+            if (!updErr) accessUpdated = true;
+          } catch (e) {
+            console.warn("SDK updateUser via accessToken error:", e.message);
+          }
+        }
+
+        if (accessUpdated) {
+          const cleanId = String(identifier || email || "").trim().toLowerCase();
+          for (const [_, u] of memoryUsers.entries()) {
+            if (u.email?.toLowerCase() === cleanId || u.username?.toLowerCase() === cleanId) {
+              u.passwordHash = hashPassword(targetPassword);
+              saveUsersToDisk();
+              break;
+            }
+          }
+          return res.status(200).json({
+            success: true,
+            message: "Password berhasil diperbarui! Silakan masuk dengan kata sandi baru kamu. 🔐"
+          });
         }
       }
 
-      const cleanId = String(identifier || "").trim().toLowerCase();
-      let targetUser = null;
-      let targetEmail = null;
+      const rawCode = String(code || otp || token || "").trim();
+      const cleanCode = rawCode.replace(/\s+/g, "");
 
+      if (!cleanCode) {
+        return res.status(400).json({ error: "Kode verifikasi 6-digit wajib diisi." });
+      }
+
+      const cleanId = String(identifier || "").trim().toLowerCase();
+      let targetEmail = String(email || "").trim().toLowerCase();
+      let targetUser = null;
+
+      // 1. Cek di resetOtps map
+      if (cleanId && resetOtps.has(cleanId)) {
+        const stored = resetOtps.get(cleanId);
+        if (stored?.email) targetEmail = stored.email.toLowerCase();
+      }
+
+      // 2. Cek database lokal
       for (const [_, u] of memoryUsers.entries()) {
         if (u.email?.toLowerCase() === cleanId || u.username?.toLowerCase() === cleanId) {
           targetUser = u;
-          targetEmail = u.email;
+          if (!targetEmail && u.email && u.email.includes("@") && !u.email.endsWith("@gepacorner.my.id")) {
+            targetEmail = u.email.toLowerCase();
+          }
           break;
         }
       }
 
-      if (cleanId.includes("@")) {
+      if (cleanId.includes("@") && !targetEmail) {
         targetEmail = cleanId;
       }
 
-      if (!targetUser && cleanId) {
-        targetUser = {
-          id: "usr_" + cleanId.replace(/[^a-z0-9_]/g, ""),
-          email: targetEmail || cleanId,
-          username: cleanId.replace(/[^a-z0-9_]/g, "")
-        };
+      // 3. Supabase lookup untuk username -> email jika targetEmail masih kosong
+      if (SUPABASE_SERVICE_ROLE && (!targetEmail || !targetEmail.includes("@"))) {
+        try {
+          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+          const lookupKey = cleanId.replace(/^@/, "");
+
+          const { data: userMap } = await supabase
+            .from("donations")
+            .select("status")
+            .eq("order_id", `USER_MAP_${lookupKey}`)
+            .maybeSingle();
+
+          if (userMap?.status && userMap.status.startsWith("USER_EMAIL:")) {
+            targetEmail = userMap.status.slice("USER_EMAIL:".length).trim().toLowerCase();
+          }
+
+          if (!targetEmail) {
+            const { data: prof } = await supabase
+              .from("profiles")
+              .select("id, username")
+              .ilike("username", lookupKey)
+              .maybeSingle();
+            if (prof && targetUser) {
+              targetUser.id = prof.id;
+            }
+          }
+        } catch (sbLookupErr) {
+          console.warn("Supabase lookup error during verify reset:", sbLookupErr.message);
+        }
       }
 
-      // Require code if accessToken was not valid
-      if (!code) {
-        return res.status(400).json({ error: "Kode verifikasi 6 digit wajib diisi." });
+      if (!targetEmail && cleanId.includes("@")) {
+        targetEmail = cleanId;
       }
 
       let otpValid = false;
       let sessionToken = null;
 
+      // Kumpulan email kandidat untuk diverifikasi ke Supabase
+      const candidateEmails = Array.from(new Set([
+        targetEmail,
+        targetUser?.email,
+        cleanId.includes("@") ? cleanId : null
+      ].filter(e => e && typeof e === "string" && e.includes("@")).map(e => e.trim().toLowerCase())));
+
       // 1. Verifikasi kode OTP langsung ke Supabase Auth
-      if (SUPABASE_SERVICE_ROLE && (targetEmail || targetUser?.email)) {
-        const verifyEmail = targetEmail || targetUser.email;
-        try {
-          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-          const { data: vData, error: vErr } = await supabase.auth.verifyOtp({
-            email: verifyEmail,
-            token: String(code).trim(),
-            type: "recovery"
-          });
-          if (!vErr && vData?.user) {
-            otpValid = true;
-            sessionToken = vData.session?.access_token || null;
-            if (targetUser) targetUser.id = vData.user.id;
-          } else if (vErr) {
-            console.warn("Supabase verifyOtp message:", vErr.message);
+      if (SUPABASE_SERVICE_ROLE && candidateEmails.length > 0) {
+        for (const vEmail of candidateEmails) {
+          if (otpValid) break;
+
+          // A. Coba type: "recovery" (Standard Supabase reset password OTP)
+          try {
+            const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+            const { data: vData, error: vErr } = await supabase.auth.verifyOtp({
+              email: vEmail,
+              token: cleanCode,
+              type: "recovery"
+            });
+            if (!vErr && vData?.user) {
+              otpValid = true;
+              sessionToken = vData.session?.access_token || null;
+              targetEmail = vEmail;
+              if (targetUser) targetUser.id = vData.user.id;
+              break;
+            } else if (vErr) {
+              console.warn(`Supabase verifyOtp recovery for ${vEmail}:`, vErr.message);
+            }
+          } catch (e) {
+            console.warn(`Supabase verifyOtp recovery exception:`, e.message);
           }
-        } catch (e) {
-          console.warn("Supabase verifyOtp error:", e.message);
+
+          // B. Coba type: "email" (Template email OTP / Magic link)
+          if (!otpValid) {
+            try {
+              const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+              const { data: vData, error: vErr } = await supabase.auth.verifyOtp({
+                email: vEmail,
+                token: cleanCode,
+                type: "email"
+              });
+              if (!vErr && vData?.user) {
+                otpValid = true;
+                sessionToken = vData.session?.access_token || null;
+                targetEmail = vEmail;
+                if (targetUser) targetUser.id = vData.user.id;
+                break;
+              }
+            } catch (e) {}
+          }
+
+          // C. Coba token_hash jika input berbentuk hash
+          if (!otpValid && cleanCode.length > 8) {
+            try {
+              const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+              const { data: vData, error: vErr } = await supabase.auth.verifyOtp({
+                token_hash: cleanCode,
+                type: "recovery"
+              });
+              if (!vErr && vData?.user) {
+                otpValid = true;
+                sessionToken = vData.session?.access_token || null;
+                if (targetUser) targetUser.id = vData.user.id;
+                break;
+              }
+            } catch (e) {}
+          }
         }
       }
 
       // 2. Fallback memory OTP
-      const activeOtp = (targetUser && resetOtps.get(targetUser.id)) || (targetEmail && resetOtps.get(targetEmail.toLowerCase()));
-      if (activeOtp && activeOtp.code === String(code).trim() && Date.now() <= activeOtp.expiresAt) {
-        otpValid = true;
-      }
-
       if (!otpValid) {
-        return res.status(400).json({ error: "Kode verifikasi salah atau sudah kedaluwarsa. Silakan periksa kembali email Anda." });
-      }
-
-      // Update password hash lokal
-      if (targetUser) {
-        targetUser.passwordHash = hashPassword(newPassword);
-        memoryUsers.set(targetUser.id, targetUser);
-        saveUsersToDisk();
-      }
-
-      // Update di Supabase dengan session token hasil verifyOtp atau admin
-      if (SUPABASE_SERVICE_ROLE) {
-        try {
-          if (sessionToken) {
-            const userSb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-              global: { headers: { Authorization: `Bearer ${sessionToken}` } }
-            });
-            await userSb.auth.updateUser({ password: newPassword });
-          } else if (targetUser?.id && !targetUser.id.startsWith("demo_")) {
-            const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-            await supabase.auth.admin.updateUserById(targetUser.id, { password: newPassword });
-          }
-        } catch (sbErr) {
-          console.warn("Supabase reset password update:", sbErr.message);
+        const activeOtp = (targetUser && resetOtps.get(targetUser.id)) ||
+                          (targetEmail && resetOtps.get(targetEmail.toLowerCase())) ||
+                          (cleanId && resetOtps.get(cleanId.toLowerCase()));
+        if (activeOtp && activeOtp.code === cleanCode && Date.now() <= activeOtp.expiresAt) {
+          otpValid = true;
         }
       }
 
+      if (!otpValid) {
+        return res.status(400).json({
+          error: "Kode verifikasi salah atau sudah kedaluwarsa. Silakan periksa kembali email Anda atau minta kode baru."
+        });
+      }
+
+      // 3. Update password di Supabase Auth via verified session
+      if (sessionToken && SUPABASE_SERVICE_ROLE) {
+        try {
+          const restResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": SUPABASE_SERVICE_ROLE,
+              "Authorization": `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify({ password: targetPassword })
+          });
+          if (!restResp.ok) {
+            console.warn("Direct updateUser status:", restResp.status);
+          }
+        } catch (sbErr) {
+          console.warn("Supabase user update via session token error:", sbErr.message);
+        }
+      }
+
+      // 4. Update password hash dan email di database lokal
+      const newHash = hashPassword(targetPassword);
+      let localUserFound = false;
+
+      for (const [_, u] of memoryUsers.entries()) {
+        if ((targetEmail && u.email?.toLowerCase() === targetEmail.toLowerCase()) ||
+            (cleanId && u.username?.toLowerCase() === cleanId.toLowerCase()) ||
+            (targetUser?.id && u.id === targetUser.id)) {
+          u.passwordHash = newHash;
+          if (targetEmail && targetEmail.includes("@")) u.email = targetEmail;
+          localUserFound = true;
+          break;
+        }
+      }
+
+      if (!localUserFound && (targetEmail || cleanId)) {
+        const newLocal = {
+          id: targetUser?.id || `usr_${Date.now()}`,
+          email: targetEmail || `${cleanId}@mail.com`,
+          username: targetUser?.username || cleanId.replace(/[^a-z0-9_]/g, ""),
+          passwordHash: newHash,
+          avatar: targetUser?.avatar || "👤",
+          phone: targetUser?.phone || "",
+          bio: "Sahabat Corner",
+          createdAt: new Date().toISOString()
+        };
+        memoryUsers.set(newLocal.id, newLocal);
+      }
+      saveUsersToDisk();
+
       // Invalidate OTP
-      if (targetUser?.id) resetOtps.delete(targetUser.id);
+      if (cleanId) resetOtps.delete(cleanId);
       if (targetEmail) resetOtps.delete(targetEmail.toLowerCase());
+      if (targetUser?.id) resetOtps.delete(targetUser.id);
 
       return res.status(200).json({
         success: true,
-        message: "Password berhasil diperbarui! Silakan masuk dengan password baru kamu. 🔐"
+        message: "Password berhasil diperbarui! Silakan masuk dengan kata sandi baru Anda. 🔐"
       });
     }
 

@@ -21,11 +21,12 @@
   },
   {
     "id": "feb164ed-976a-457b-8641-1371277a60e6",
-    "email": "argheeva@gepacorner.my.id",
+    "email": "ragepriandika@gmail.com",
     "username": "argheeva",
     "avatar": "data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAD8D+JaQAA3AA/ua1AAA=",
     "phone": "",
     "bio": "Sahabat Corner",
-    "createdAt": "2026-10-17T22:32:22.208Z"
+    "createdAt": "2026-10-17T22:32:22.208Z",
+    "passwordHash": "5c880ad9d63ad1414379eb98dc95d0f5cba248637e42bc698b2ca2d2fe9bb811"
   }
 ]
