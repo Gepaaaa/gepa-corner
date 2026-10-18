@@ -667,7 +667,7 @@ export default async function handler(req, res) {
       }
 
       const rawCode = String(code || otp || token || "").trim();
-      const cleanCode = rawCode.replace(/\s+/g, "");
+      const cleanCode = rawCode.replace(/[\s-]+/g, "");
 
       if (!cleanCode) {
         return res.status(400).json({ error: "Kode verifikasi 6-digit wajib diisi." });
@@ -735,74 +735,65 @@ export default async function handler(req, res) {
 
       let otpValid = false;
       let sessionToken = null;
+      let verifiedSupabaseClient = null;
 
-      // Kumpulan email kandidat untuk diverifikasi ke Supabase
+      // Kumpulan email kandidat untuk diverifikasi ke Supabase (hindari domain placeholder)
       const candidateEmails = Array.from(new Set([
         targetEmail,
+        email,
         targetUser?.email,
         cleanId.includes("@") ? cleanId : null
-      ].filter(e => e && typeof e === "string" && e.includes("@")).map(e => e.trim().toLowerCase())));
+      ].filter(e => e && typeof e === "string" && e.includes("@") && !e.toLowerCase().endsWith("@gepacorner.my.id"))
+       .map(e => e.trim().toLowerCase())));
 
       // 1. Verifikasi kode OTP langsung ke Supabase Auth
       if (SUPABASE_SERVICE_ROLE && candidateEmails.length > 0) {
+        const otpTypes = ["recovery", "email", "magiclink", "signup"];
         for (const vEmail of candidateEmails) {
           if (otpValid) break;
 
-          // A. Coba type: "recovery" (Standard Supabase reset password OTP)
-          try {
-            const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-            const { data: vData, error: vErr } = await supabase.auth.verifyOtp({
-              email: vEmail,
-              token: cleanCode,
-              type: "recovery"
-            });
-            if (!vErr && vData?.user) {
-              otpValid = true;
-              sessionToken = vData.session?.access_token || null;
-              targetEmail = vEmail;
-              if (targetUser) targetUser.id = vData.user.id;
-              break;
-            } else if (vErr) {
-              console.warn(`Supabase verifyOtp recovery for ${vEmail}:`, vErr.message);
-            }
-          } catch (e) {
-            console.warn(`Supabase verifyOtp recovery exception:`, e.message);
-          }
-
-          // B. Coba type: "email" (Template email OTP / Magic link)
-          if (!otpValid) {
+          for (const type of otpTypes) {
+            if (otpValid) break;
             try {
               const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
               const { data: vData, error: vErr } = await supabase.auth.verifyOtp({
                 email: vEmail,
                 token: cleanCode,
-                type: "email"
+                type
               });
-              if (!vErr && vData?.user) {
+              if (!vErr && (vData?.user || vData?.session)) {
                 otpValid = true;
+                verifiedSupabaseClient = supabase;
                 sessionToken = vData.session?.access_token || null;
                 targetEmail = vEmail;
-                if (targetUser) targetUser.id = vData.user.id;
+                if (targetUser && vData.user?.id) targetUser.id = vData.user.id;
+                console.log(`Supabase verifyOtp succeeded for ${vEmail} with type ${type}`);
                 break;
               }
-            } catch (e) {}
+            } catch (e) {
+              // continue to next type
+            }
           }
 
-          // C. Coba token_hash jika input berbentuk hash
+          // Coba token_hash jika input berbentuk hash / token link
           if (!otpValid && cleanCode.length > 8) {
-            try {
-              const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-              const { data: vData, error: vErr } = await supabase.auth.verifyOtp({
-                token_hash: cleanCode,
-                type: "recovery"
-              });
-              if (!vErr && vData?.user) {
-                otpValid = true;
-                sessionToken = vData.session?.access_token || null;
-                if (targetUser) targetUser.id = vData.user.id;
-                break;
-              }
-            } catch (e) {}
+            for (const type of ["recovery", "email"]) {
+              if (otpValid) break;
+              try {
+                const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+                const { data: vData, error: vErr } = await supabase.auth.verifyOtp({
+                  token_hash: cleanCode,
+                  type
+                });
+                if (!vErr && (vData?.user || vData?.session)) {
+                  otpValid = true;
+                  verifiedSupabaseClient = supabase;
+                  sessionToken = vData.session?.access_token || null;
+                  if (targetUser && vData.user?.id) targetUser.id = vData.user.id;
+                  break;
+                }
+              } catch (e) {}
+            }
           }
         }
       }
@@ -824,7 +815,21 @@ export default async function handler(req, res) {
       }
 
       // 3. Update password di Supabase Auth via verified session
-      if (sessionToken && SUPABASE_SERVICE_ROLE) {
+      let sbPasswordUpdated = false;
+      if (verifiedSupabaseClient) {
+        try {
+          const { error: updErr } = await verifiedSupabaseClient.auth.updateUser({ password: targetPassword });
+          if (!updErr) {
+            sbPasswordUpdated = true;
+          } else {
+            console.warn("verifiedSupabaseClient updateUser warning:", updErr.message);
+          }
+        } catch (sbErr) {
+          console.warn("verifiedSupabaseClient updateUser exception:", sbErr.message);
+        }
+      }
+
+      if (!sbPasswordUpdated && sessionToken && SUPABASE_SERVICE_ROLE) {
         try {
           const restResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
             method: "PUT",
@@ -835,7 +840,9 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({ password: targetPassword })
           });
-          if (!restResp.ok) {
+          if (restResp.ok) {
+            sbPasswordUpdated = true;
+          } else {
             console.warn("Direct updateUser status:", restResp.status);
           }
         } catch (sbErr) {

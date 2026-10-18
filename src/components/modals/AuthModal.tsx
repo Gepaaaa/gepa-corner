@@ -224,6 +224,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTa
           email: resetTargetEmail || undefined,
           code: resetOtp.trim(),
           otp: resetOtp.trim(),
+          token: resetOtp.trim(),
           newPassword: resetNewPassword
         })
       });

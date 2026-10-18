@@ -12,6 +12,22 @@
     <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-l9Y2DBOBf5qo02s7"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
+
+    <!-- Favicon & Touch Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#5E7C57">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Gepa">
+    <script src="/favicon.js"></script>
+</head>
 <body oncontextmenu="return false;" ondragstart="return false;">
     <div class="page-decoration decoration-one" aria-hidden="true">✦</div>
     <div class="page-decoration decoration-two" aria-hidden="true">♡</div>
@@ -462,14 +478,14 @@
                         ✅ Tautan email terverifikasi! Anda dapat langsung membuat kata sandi baru di bawah ini.
                     </div>
 
-                    <!-- 6-Digit OTP Field (shown when code verification is needed) -->
+                    <!-- OTP Field (shown when code verification is needed) -->
                     <div class="auth-field" id="resetOtpGroup">
                         <label for="resetOtpInput" style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>Kode Verifikasi 6-Digit (dari Email)</span>
+                            <span>Kode Verifikasi OTP (dari Email)</span>
                             <span style="font-size: 0.72rem; color: var(--text-soft); font-weight: normal;">Cek Inbox / Spam</span>
                         </label>
                         <div class="otp-input-wrapper">
-                            <input type="text" id="resetOtpInput" class="otp-input-field" maxlength="6" inputmode="numeric" placeholder="123456" autocomplete="one-time-code">
+                            <input type="text" id="resetOtpInput" class="otp-input-field" maxlength="12" inputmode="numeric" placeholder="123456" autocomplete="one-time-code">
                         </div>
                     </div>
 

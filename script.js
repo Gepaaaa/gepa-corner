@@ -1056,10 +1056,16 @@ if (themeToggle) {
         const isDark = body.classList.toggle("dark-mode");
         localStorage.setItem("gepa-theme", isDark ? "dark" : "light");
         updateThemeIcon();
+        if (window.FaviconModule) {
+            try { window.FaviconModule.setDarkMode(isDark); } catch (e) {}
+        }
     });
 }
 
 applyInitialTheme();
+if (window.FaviconModule) {
+    try { window.FaviconModule.setDarkMode(body.classList.contains("dark-mode")); } catch (e) {}
+}
 
 
 /* =========================================================
@@ -1802,8 +1808,8 @@ if (submitVerifyResetBtn) {
         const confirmPassword = document.getElementById("resetConfirmPasswordInput")?.value || "";
 
         // If not using recovery access token, code is strictly required
-        if (!recoveryAccessToken && (!code || code.length < 6)) {
-            setAuthAlert("Masukkan 6-digit kode verifikasi yang dikirim ke email Anda.");
+        if (!recoveryAccessToken && (!code || code.length < 4)) {
+            setAuthAlert("Masukkan kode verifikasi OTP yang dikirim ke email Anda.");
             const otpInput = document.getElementById("resetOtpInput");
             if (otpInput) otpInput.focus();
             return;
@@ -1835,6 +1841,7 @@ if (submitVerifyResetBtn) {
                     email: pendingResetEmail || undefined,
                     code: code || undefined,
                     otp: code || undefined,
+                    token: code || undefined,
                     newPassword,
                     accessToken: recoveryAccessToken || undefined
                 })
@@ -3129,6 +3136,17 @@ function setPlaybackUIState(playing) {
 
     // Update active highlight in search results and curated items
     updateActivePlayButtons(playing);
+
+    // Synchronize dynamic favicon equalizer and title
+    if (window.FaviconModule) {
+        try {
+            if (playing && currentTrack) {
+                window.FaviconModule.setMusicPlaying(true, currentTrack.title || "Gepa Corner");
+            } else {
+                window.FaviconModule.setMusicPlaying(false);
+            }
+        } catch (e) {}
+    }
 }
 
 function updateActivePlayButtons(playing) {
