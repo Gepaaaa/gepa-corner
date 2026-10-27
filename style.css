@@ -16,11 +16,17 @@
     --beige-dark: #dcd3bf;
 
     --text: #26372b;
+    --text-main: var(--text);
     --text-soft: #667368;
     --text-muted: #899188;
     --white: #ffffff;
+    --surface: var(--warm-white);
+    --surface-alt: var(--sage-50);
+    --bg-secondary: var(--sage-50);
+    --bg-card: var(--warm-white);
 
     --border: rgba(71, 94, 67, 0.14);
+    --border-light: var(--border);
     --shadow: 0 16px 45px rgba(52, 72, 48, 0.08);
     --shadow-soft: 0 8px 25px rgba(52, 72, 48, 0.07);
 
@@ -53,11 +59,17 @@ body.dark-mode {
     --beige-dark: #3b4539;
 
     --text: #e0e9dc;
+    --text-main: var(--text);
     --text-soft: #b4c0b2;
     --text-muted: #899689;
     --white: #f8faf5;
+    --surface: var(--warm-white);
+    --surface-alt: var(--sage-50);
+    --bg-secondary: var(--sage-50);
+    --bg-card: var(--warm-white);
 
     --border: rgba(184, 204, 178, 0.13);
+    --border-light: var(--border);
     --shadow: 0 16px 45px rgba(0, 0, 0, 0.2);
     --shadow-soft: 0 8px 25px rgba(0, 0, 0, 0.18);
 }
@@ -666,17 +678,21 @@ button:active,
 .modal-overlay {
     position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center;
     padding: 20px; background: rgba(29, 42, 31, 0.48); backdrop-filter: blur(7px);
-    -webkit-backdrop-filter: blur(7px); opacity: 0; visibility: hidden;
+    -webkit-backdrop-filter: blur(7px); opacity: 0; visibility: hidden; pointer-events: none;
+    overflow-y: auto;
     transition: opacity 220ms ease, visibility 220ms ease;
 }
-.modal-overlay.open { opacity: 1; visibility: visible; }
+.modal-overlay.open,
+.modal-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
 .modal-content {
-    position: relative; width: min(100%, 430px); max-height: 90vh; overflow-y: auto;
+    position: relative; width: min(100%, 430px); max-height: 90vh; max-height: 90dvh; overflow-y: auto;
     padding: 36px; background: var(--warm-white); border: 1px solid var(--border);
     border-radius: var(--radius-lg); box-shadow: 0 30px 80px rgba(25, 40, 27, 0.2);
-    text-align: center; transform: translateY(20px) scale(0.97); transition: transform 220ms ease;
+    text-align: center; opacity: 0; transform: translateY(20px) scale(0.97);
+    transition: transform 220ms ease, opacity 220ms ease;
 }
-.modal-overlay.open .modal-content { transform: translateY(0) scale(1); }
+.modal-overlay.open .modal-content,
+.modal-overlay.active .modal-content { opacity: 1; transform: translateY(0) scale(1); }
 .modal-close {
     position: absolute; top: 14px; right: 15px; width: 34px; height: 34px;
     display: grid; place-items: center; color: var(--text-soft); background: var(--sage-100);
@@ -1226,9 +1242,21 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
     .modal-content { 
         padding: 28px 18px max(24px, env(safe-area-inset-bottom)); 
         max-height: 92vh;
+        max-height: 92dvh;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
     }
+    .hobby-modal-container {
+        padding: 24px 18px max(24px, env(safe-area-inset-bottom)) !important;
+    }
+    .hobby-game-logo-wrap img {
+        height: 46px;
+    }
+    .hobby-movie-cover {
+        width: 66px;
+        height: 99px;
+    }
+}
 
 @media (max-width: 390px) {
     .container { width: min(100% - 22px, var(--max-width)); }
@@ -1242,6 +1270,8 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
     .link-info span { font-size: 0.7rem; }
     .amount-grid { grid-template-columns: 1fr 1fr; }
     .age-realtime-grid { grid-template-columns: repeat(2, 1fr); }
+    .hobby-game-logo-wrap img { height: 42px; }
+    .hobby-movie-cover { width: 60px; height: 90px; }
 }
 
 @media print {
@@ -2615,289 +2645,224 @@ body.dark-mode .playlist-action-btn:hover {
 }
 
 /* =========================================================
-   HOBBY MODAL (MLBB & ELITIS MOVIES)
+   HOBBY MODAL (CLEAN GAMING & MOVIES LIST)
 ========================================================= */
 .hobby-modal-container {
-    max-width: 580px !important;
+    max-width: 520px !important;
     text-align: left !important;
     padding: 28px !important;
 }
 
-.hobby-modal-title {
-    font-size: 1.45rem;
-    font-weight: 700;
-    color: var(--text-main);
-    margin-bottom: 4px;
-}
-
-.hobby-modal-desc {
-    color: var(--text-soft);
-    font-size: 0.88rem;
-    margin-bottom: 18px;
-    line-height: 1.5;
-}
-
-/* Segmented Tabs */
-.hobby-tabs {
+.hobby-close-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     display: flex;
-    background: var(--surface-alt, rgba(0, 0, 0, 0.04));
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 4px;
+    justify-content: flex-end;
+    height: 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.hobby-close-sticky .modal-close {
+    position: relative;
+    top: -10px;
+    right: -8px;
+    pointer-events: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.hobby-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.hobby-section-title {
+    margin: 0;
+    padding-right: 36px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--sage-700);
+}
+
+body.dark-mode .hobby-section-title,
+[data-theme="dark"] .hobby-section-title {
+    color: var(--sage-300, #BDCFB1);
+}
+
+.hobby-game-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 6px;
-    margin-bottom: 20px;
 }
 
-body.dark-mode .hobby-tabs {
-    background: rgba(0, 0, 0, 0.25);
-}
-
-.hobby-tab-btn {
-    flex: 1;
-    background: transparent;
-    border: none;
-    padding: 10px 14px;
-    border-radius: 10px;
-    font-size: 0.86rem;
-    font-weight: 600;
-    color: var(--text-soft);
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.hobby-game-logo-wrap {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
+    margin-bottom: 4px;
+    max-width: 100%;
 }
 
-.hobby-tab-btn:hover {
-    color: var(--text-main);
+.hobby-game-logo-wrap img {
+    height: 52px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: left center;
+    display: block;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.08));
 }
 
-.hobby-tab-btn.active {
-    background: var(--surface);
-    color: var(--sage-700);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-body.dark-mode .hobby-tab-btn.active {
-    background: var(--sage-700);
-    color: #FAF8F1;
-}
-
-/* Tab 1: MLBB Showcase */
-.mlbb-showcase-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
-}
-
-.mlbb-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 14px;
-}
-
-.mlbb-badge-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, rgba(94, 124, 87, 0.2), rgba(94, 124, 87, 0.06));
-    border: 1.5px solid var(--sage-400);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-    flex-shrink: 0;
-}
-
-.mlbb-title-meta h4 {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--text-main);
-}
-
-.mlbb-tag {
-    font-size: 0.74rem;
-    color: var(--sage-600);
-    font-weight: 600;
-    display: inline-block;
-    margin-top: 2px;
-}
-
-.mlbb-desc {
-    color: var(--text-soft);
-    font-size: 0.88rem;
-    line-height: 1.6;
-    margin-bottom: 18px;
-}
-
-.mlbb-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.mlbb-stat-item {
-    background: var(--surface-alt, rgba(0, 0, 0, 0.02));
-    border: 1px solid var(--border-light);
-    border-radius: 12px;
-    padding: 10px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.mlbb-stat-label {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-soft);
-}
-
-.mlbb-stat-value {
-    font-size: 0.88rem;
-    font-weight: 700;
-    color: var(--text-main);
-}
-
-.mlbb-footer-note {
-    background: rgba(94, 124, 87, 0.08);
-    border: 1px solid rgba(94, 124, 87, 0.2);
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 0.82rem;
-    color: var(--sage-700);
-}
-
-body.dark-mode .mlbb-footer-note {
-    color: #BDCFB1;
-    background: rgba(94, 124, 87, 0.15);
-}
-
-/* Tab 2: Elitis Movies */
-.elitis-intro-box {
-    background: linear-gradient(135deg, rgba(94, 124, 87, 0.12) 0%, rgba(94, 124, 87, 0.02) 100%);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 14px 18px;
-    margin-bottom: 16px;
-}
-
-.letterboxd-badge {
-    font-size: 0.7rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    color: #FAF8F1;
-    background: #14181C;
-    padding: 3px 8px;
-    border-radius: 6px;
-    display: inline-block;
-    margin-bottom: 6px;
-}
-
-.elitis-intro-box p {
-    color: var(--text-soft);
-    font-size: 0.84rem;
-    line-height: 1.5;
-    margin: 0;
-}
-
-.elitis-movies-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-height: 380px;
-    overflow-y: auto;
-    padding-right: 4px;
-    margin-bottom: 16px;
-}
-
-.elitis-movie-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 14px 16px;
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
-    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.elitis-movie-card:hover {
-    border-color: var(--sage-500);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
-}
-
-.movie-rank-tag {
-    font-size: 0.85rem;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    color: var(--sage-600);
-    background: rgba(94, 124, 87, 0.1);
-    width: 28px;
-    height: 28px;
+.hobby-game-logo-wrap.is-fallback::after {
+    content: attr(data-fallback);
+    padding: 6px 10px;
     border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    background: var(--sage-100);
+    border: 1px solid var(--border);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-soft);
 }
 
-.movie-meta {
-    flex: 1;
-    min-width: 0;
+.hobby-divider {
+    height: 1px;
+    width: 100%;
+    background: var(--border);
+    margin: 22px 0;
 }
 
-.movie-title-row {
+.hobby-item-title {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--text-main);
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 4px;
+    gap: 7px;
 }
 
-.movie-title-row h5 {
-    margin: 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-main);
+.hobby-movie-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgba(110, 128, 102, 0.35);
+    text-underline-offset: 3px;
+    padding: 2px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.16s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.movie-year {
-    font-size: 0.74rem;
-    color: var(--text-soft);
-    font-weight: 500;
+.hobby-movie-link:hover {
+    color: var(--sage-700);
+    text-decoration-color: currentColor;
 }
 
-.movie-quote {
-    color: var(--text-soft);
-    font-size: 0.82rem;
-    font-style: italic;
-    line-height: 1.5;
-    margin-bottom: 8px;
+.hobby-movie-link:active {
+    opacity: 0.75;
 }
 
-.movie-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+.hobby-movie-link:focus-visible {
+    outline: 2px solid var(--sage-600);
+    outline-offset: 2px;
 }
 
-.movie-tags span {
-    font-size: 0.68rem;
+body.dark-mode .hobby-movie-link,
+[data-theme="dark"] .hobby-movie-link {
+    text-decoration-color: rgba(189, 207, 177, 0.35);
+}
+
+body.dark-mode .hobby-movie-link:hover,
+[data-theme="dark"] .hobby-movie-link:hover {
+    color: var(--sage-300, #BDCFB1);
+    text-decoration-color: currentColor;
+}
+
+.hobby-imdb-arrow {
+    font-size: 0.76rem;
     font-weight: 600;
+    opacity: 0.65;
+    transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hobby-movie-link:hover .hobby-imdb-arrow {
+    opacity: 1;
+    transform: translate(1px, -1px);
+}
+
+.hobby-movie-year {
+    font-size: 0.78rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
+.hobby-item-desc {
+    margin: 0;
+    font-size: 0.86rem;
+    line-height: 1.55;
     color: var(--text-soft);
-    background: var(--surface-alt, rgba(0, 0, 0, 0.04));
-    border: 1px solid var(--border-light);
-    border-radius: 6px;
-    padding: 2px 7px;
+}
+
+.hobby-movies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.hobby-movie-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.hobby-movie-cover {
+    width: 72px;
+    height: 108px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--sage-100);
+    border: 1px solid var(--border);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hobby-movie-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.hobby-movie-cover.is-fallback::after {
+    content: attr(data-fallback);
+    padding: 6px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    color: var(--text-soft);
+}
+
+.hobby-movie-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 2px;
 }
 
 /* =========================================================
@@ -2956,14 +2921,17 @@ body.dark-mode .mlbb-footer-note {
     will-change: transform, opacity;
 }
 
-.modal-overlay:not(.active) .modal-content {
+.modal-overlay:not(.open):not(.active) .modal-content {
     transform: scale(0.95) translateY(10px) !important;
     opacity: 0 !important;
+    pointer-events: none !important;
 }
 
+.modal-overlay.open .modal-content,
 .modal-overlay.active .modal-content {
     transform: scale(1) translateY(0) !important;
     opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
 /* Ambient Floating Decorations */

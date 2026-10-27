@@ -92,6 +92,7 @@ async function startServer() {
   app.use(express.static(path.join(__dirname, 'public')));
   app.use('/assets', express.static(path.join(__dirname, 'assets')));
   app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+  app.use('/src/assets', express.static(path.join(__dirname, 'src', 'assets')));
 
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, 'dist')));

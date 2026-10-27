@@ -1016,171 +1016,108 @@
     </div>
 
     <div class="modal-overlay" id="hobbyModalOverlay">
-        <div class="support-modal modal-content hobby-modal-container" role="dialog" aria-modal="true">
-            <button class="modal-close" type="button" onclick="closeInfoModal('hobbyModalOverlay')">×</button>
-            <div class="modal-icon">♡</div>
-            <p class="section-kicker">what i enjoy</p>
-            <h2 class="hobby-modal-title">Gaming & Cinema Realm</h2>
-            <p class="hobby-modal-desc">Kombinasi dunia kompetitif malam hari dan karya sinematik yang bermakna.</p>
-
-            <!-- Hobby Segmented Tabs -->
-            <div class="hobby-tabs" role="tablist">
-                <button class="hobby-tab-btn active" id="hobbyTabGamingBtn" type="button" onclick="switchHobbyTab('gaming')">
-                    🎮 Mobile Legends
-                </button>
-                <button class="hobby-tab-btn" id="hobbyTabMoviesBtn" type="button" onclick="switchHobbyTab('movies')">
-                    🎬 Film Elitis (Cinephile)
-                </button>
+        <div class="support-modal modal-content hobby-modal-container" role="dialog" aria-modal="true" aria-label="Hobbies">
+            <div class="hobby-close-sticky">
+                <button class="modal-close" type="button" onclick="closeInfoModal('hobbyModalOverlay')" aria-label="Tutup">×</button>
             </div>
 
-            <!-- Tab 1: Gaming (Mobile Legends) -->
-            <div class="hobby-tab-pane active" id="hobbyPaneGaming">
-                <div class="mlbb-showcase-card">
-                    <div class="mlbb-header">
-                        <div class="mlbb-badge-icon">⚔️</div>
-                        <div class="mlbb-title-meta">
-                            <h4>Mobile Legends: Bang Bang</h4>
-                            <span class="mlbb-tag">Competitive & Mabar Companion</span>
-                        </div>
+            <section class="hobby-section">
+                <h3 class="hobby-section-title">Gaming</h3>
+                <div class="hobby-game-block">
+                    <div class="hobby-game-logo-wrap" data-fallback="Mobile Legends: Bang Bang">
+                        <img src="/src/assets/images/mlbb_official_logo.png" alt="Logo resmi Mobile Legends: Bang Bang" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.classList.add('is-fallback'); this.style.display='none';" />
                     </div>
-                    <p class="mlbb-desc">
-                        Game utama buat seru-seruan bareng teman atau nge-push rank waktu santai malam hari. Paling menikmati gameplay yang butuh kalkulasi positioning, timing skill, dan rotasi objektif makro yang rapi.
+                    <h4 class="hobby-item-title">Mobile Legends</h4>
+                    <p class="hobby-item-desc">
+                        Game MOBA 5v5 strategi real-time di mana dua tim bertarung menghancurkan base lawan lewat kerja sama tim dan pemilihan role hero.
                     </p>
-                    <div class="mlbb-stats-grid">
-                        <div class="mlbb-stat-item">
-                            <span class="mlbb-stat-label">Role Favorit</span>
-                            <strong class="mlbb-stat-value">Mid Lane / Roam</strong>
-                        </div>
-                        <div class="mlbb-stat-item">
-                            <span class="mlbb-stat-label">Playstyle</span>
-                            <strong class="mlbb-stat-value">Vision & Macro Objective</strong>
-                        </div>
-                        <div class="mlbb-stat-item">
-                            <span class="mlbb-stat-label">Vibe Main</span>
-                            <strong class="mlbb-stat-value">Santai tapi Gak Mau Kalah ✌</strong>
-                        </div>
-                        <div class="mlbb-stat-item">
-                            <span class="mlbb-stat-label">Status Mabar</span>
-                            <strong class="mlbb-stat-value" style="color: var(--sage-700);">Open for Mabar</strong>
-                        </div>
-                    </div>
-                    <div class="mlbb-footer-note">
-                        <span>💡 Mau mabar bareng? Boleh banget chat atau ajak pas lagi online!</span>
-                    </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Tab 2: Movies (Elitis FilmTok & Letterboxd Picks) -->
-            <div class="hobby-tab-pane" id="hobbyPaneMovies" style="display: none;">
-                <div class="elitis-intro-box">
-                    <span class="letterboxd-badge">★ LETTERBOXD ESSENTIALS</span>
-                    <p>Kurasi karya sinema legendaris dengan storytelling mendalam, sinematografi atmosferik, dan tensi psikologis yang jadi favorit anak film & elitis FilmTok.</p>
+            <div class="hobby-divider" aria-hidden="true"></div>
+
+            <section class="hobby-section">
+                <h3 class="hobby-section-title">Movies</h3>
+                <div class="hobby-movies-list">
+                    <article class="hobby-movie-item">
+                        <div class="hobby-movie-cover" data-fallback="Fight Club">
+                            <img src="/src/assets/images/official_poster_fight_club.jpg" alt="Poster resmi film Fight Club" loading="lazy" onerror="this.parentElement.classList.add('is-fallback'); this.style.display='none';" />
+                        </div>
+                        <div class="hobby-movie-info">
+                            <h4 class="hobby-item-title">
+                                <a href="https://www.imdb.com/title/tt0137523/" target="_blank" rel="noopener noreferrer" class="hobby-movie-link" aria-label="Buka Fight Club di IMDb">Fight Club<span class="hobby-imdb-arrow" aria-hidden="true">↗</span></a>
+                                <span class="hobby-movie-year">1999</span>
+                            </h4>
+                            <p class="hobby-item-desc">Pekerja kantoran yang insomnia membentuk klub pertarungan bawah tanah bersama penjual sabun misterius bernama Tyler Durden.</p>
+                        </div>
+                    </article>
+
+                    <article class="hobby-movie-item">
+                        <div class="hobby-movie-cover" data-fallback="Blade Runner 2049">
+                            <img src="/src/assets/images/official_poster_blade_runner_2049.png" alt="Poster resmi film Blade Runner 2049" loading="lazy" onerror="this.parentElement.classList.add('is-fallback'); this.style.display='none';" />
+                        </div>
+                        <div class="hobby-movie-info">
+                            <h4 class="hobby-item-title">
+                                <a href="https://www.imdb.com/title/tt1856101/" target="_blank" rel="noopener noreferrer" class="hobby-movie-link" aria-label="Buka Blade Runner 2049 di IMDb">Blade Runner 2049<span class="hobby-imdb-arrow" aria-hidden="true">↗</span></a>
+                                <span class="hobby-movie-year">2017</span>
+                            </h4>
+                            <p class="hobby-item-desc">Seorang perwira Blade Runner mengungkap rahasia lama yang berpotensi mengguncang sisa tatanan manusia dan replika di masa depan.</p>
+                        </div>
+                    </article>
+
+                    <article class="hobby-movie-item">
+                        <div class="hobby-movie-cover" data-fallback="Interstellar">
+                            <img src="/src/assets/images/official_poster_interstellar.jpg" alt="Poster resmi film Interstellar" loading="lazy" onerror="this.parentElement.classList.add('is-fallback'); this.style.display='none';" />
+                        </div>
+                        <div class="hobby-movie-info">
+                            <h4 class="hobby-item-title">
+                                <a href="https://www.imdb.com/title/tt0816692/" target="_blank" rel="noopener noreferrer" class="hobby-movie-link" aria-label="Buka Interstellar di IMDb">Interstellar<span class="hobby-imdb-arrow" aria-hidden="true">↗</span></a>
+                                <span class="hobby-movie-year">2014</span>
+                            </h4>
+                            <p class="hobby-item-desc">Tim penjelajah antariksa melewati lubang cacing demi mencari planet baru yang layak huni bagi kelangsungan umat manusia.</p>
+                        </div>
+                    </article>
+
+                    <article class="hobby-movie-item">
+                        <div class="hobby-movie-cover" data-fallback="Whiplash">
+                            <img src="/src/assets/images/official_poster_whiplash.jpg" alt="Poster resmi film Whiplash" loading="lazy" onerror="this.parentElement.classList.add('is-fallback'); this.style.display='none';" />
+                        </div>
+                        <div class="hobby-movie-info">
+                            <h4 class="hobby-item-title">
+                                <a href="https://www.imdb.com/title/tt2582802/" target="_blank" rel="noopener noreferrer" class="hobby-movie-link" aria-label="Buka Whiplash di IMDb">Whiplash<span class="hobby-imdb-arrow" aria-hidden="true">↗</span></a>
+                                <span class="hobby-movie-year">2014</span>
+                            </h4>
+                            <p class="hobby-item-desc">Drummer jazz muda berambisi menjadi yang terbaik di bawah didikan instruktur musik konservatori yang keras dan perfeksionis.</p>
+                        </div>
+                    </article>
+
+                    <article class="hobby-movie-item">
+                        <div class="hobby-movie-cover" data-fallback="La La Land">
+                            <img src="/src/assets/images/official_poster_la_la_land.png" alt="Poster resmi film La La Land" loading="lazy" onerror="this.parentElement.classList.add('is-fallback'); this.style.display='none';" />
+                        </div>
+                        <div class="hobby-movie-info">
+                            <h4 class="hobby-item-title">
+                                <a href="https://www.imdb.com/title/tt3783958/" target="_blank" rel="noopener noreferrer" class="hobby-movie-link" aria-label="Buka La La Land di IMDb">La La Land<span class="hobby-imdb-arrow" aria-hidden="true">↗</span></a>
+                                <span class="hobby-movie-year">2016</span>
+                            </h4>
+                            <p class="hobby-item-desc">Kisah pianis jazz dan calon aktris di Los Angeles yang saling jatuh cinta sambil memperjuangkan mimpi besar mereka masing-masing.</p>
+                        </div>
+                    </article>
+
+                    <article class="hobby-movie-item">
+                        <div class="hobby-movie-cover" data-fallback="Parasite">
+                            <img src="/src/assets/images/official_poster_parasite.png" alt="Poster resmi film Parasite" loading="lazy" onerror="this.parentElement.classList.add('is-fallback'); this.style.display='none';" />
+                        </div>
+                        <div class="hobby-movie-info">
+                            <h4 class="hobby-item-title">
+                                <a href="https://www.imdb.com/title/tt6751668/" target="_blank" rel="noopener noreferrer" class="hobby-movie-link" aria-label="Buka Parasite di IMDb">Parasite<span class="hobby-imdb-arrow" aria-hidden="true">↗</span></a>
+                                <span class="hobby-movie-year">2019</span>
+                            </h4>
+                            <p class="hobby-item-desc">Keluarga kurang mampu perlahan menyusup bekerja di rumah keluarga kaya raya hingga memicu rangkaian peristiwa tak terduga.</p>
+                        </div>
+                    </article>
                 </div>
-
-                <div class="elitis-movies-grid">
-                    <div class="elitis-movie-card">
-                        <div class="movie-rank-tag">01</div>
-                        <div class="movie-meta">
-                            <div class="movie-title-row">
-                                <h5>Fight Club</h5>
-                                <span class="movie-year">1999 • David Fincher</span>
-                            </div>
-                            <p class="movie-quote">"It's only after we've lost everything that we're free to do anything."</p>
-                            <div class="movie-tags">
-                                <span>Psychological</span>
-                                <span>Cult Classic</span>
-                                <span>Satire</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="elitis-movie-card">
-                        <div class="movie-rank-tag">02</div>
-                        <div class="movie-meta">
-                            <div class="movie-title-row">
-                                <h5>Blade Runner 2049</h5>
-                                <span class="movie-year">2017 • Denis Villeneuve</span>
-                            </div>
-                            <p class="movie-quote">"All the best memories are hers." Visual neo-noir cyberpunk paling atmosferik.</p>
-                            <div class="movie-tags">
-                                <span>Neo-Noir</span>
-                                <span>Atmospheric</span>
-                                <span>Sci-Fi</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="elitis-movie-card">
-                        <div class="movie-rank-tag">03</div>
-                        <div class="movie-meta">
-                            <div class="movie-title-row">
-                                <h5>Interstellar</h5>
-                                <span class="movie-year">2014 • Christopher Nolan</span>
-                            </div>
-                            <p class="movie-quote">"Love is the one thing that transcends dimensions of time and space." Score Hans Zimmer tiada tanding.</p>
-                            <div class="movie-tags">
-                                <span>Existential</span>
-                                <span>Space Epic</span>
-                                <span>Hans Zimmer</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="elitis-movie-card">
-                        <div class="movie-rank-tag">04</div>
-                        <div class="movie-meta">
-                            <div class="movie-title-row">
-                                <h5>Whiplash</h5>
-                                <span class="movie-year">2014 • Damien Chazelle</span>
-                            </div>
-                            <p class="movie-quote">"There are no two words in the English language more harmful than 'good job'." Tensi tiada henti.</p>
-                            <div class="movie-tags">
-                                <span>Obsession</span>
-                                <span>Jazz Thriller</span>
-                                <span>Pacing 10/10</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="elitis-movie-card">
-                        <div class="movie-rank-tag">05</div>
-                        <div class="movie-meta">
-                            <div class="movie-title-row">
-                                <h5>La La Land</h5>
-                                <span class="movie-year">2016 • Damien Chazelle</span>
-                            </div>
-                            <p class="movie-quote">Romansa realis tentang mimpi, kompromi hidup, dan sequence tatapan mata di ending paling puitis.</p>
-                            <div class="movie-tags">
-                                <span>Bittersweet</span>
-                                <span>Melancholy</span>
-                                <span>Romance</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="elitis-movie-card">
-                        <div class="movie-rank-tag">06</div>
-                        <div class="movie-meta">
-                            <div class="movie-title-row">
-                                <h5>Parasite</h5>
-                                <span class="movie-year">2019 • Bong Joon-ho</span>
-                            </div>
-                            <p class="movie-quote">Satire sosial paling tajam dan rapi dari Korea Selatan yang memenangkan Palme d'Or & Oscar.</p>
-                            <div class="movie-tags">
-                                <span>Social Satire</span>
-                                <span>Black Comedy</span>
-                                <span>Masterpiece</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="hobby-modal-actions">
-                <button class="modal-support-button" type="button" onclick="closeInfoModal('hobbyModalOverlay')">
-                    Tutup
-                </button>
-            </div>
+            </section>
         </div>
     </div>
 

@@ -1263,24 +1263,38 @@ window.openInfoModal = function(modalId) {
     }
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.classList.add("open");
+        modal.classList.add("open", "active");
         body.classList.add("modal-open");
+        if (modalId === "ageModalOverlay") {
+            updateAge();
+        }
     }
 };
 
 window.closeInfoModal = function(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.classList.remove("open");
-        if (!document.querySelector(".modal-overlay.open")) {
+        modal.classList.remove("open", "active");
+        if (!document.querySelector(".modal-overlay.open, .modal-overlay.active")) {
             body.classList.remove("modal-open");
         }
     }
 };
 
-if (ageCard) ageCard.addEventListener("click", () => openInfoModal("ageModalOverlay"));
-if (locationCard) locationCard.addEventListener("click", () => openInfoModal("locationModalOverlay"));
-if (hobbyCard) hobbyCard.addEventListener("click", () => openInfoModal("hobbyModalOverlay"));
+function bindInfoCardModal(cardEl, modalId) {
+    if (!cardEl) return;
+    cardEl.addEventListener("click", () => openInfoModal(modalId));
+    cardEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openInfoModal(modalId);
+        }
+    });
+}
+
+bindInfoCardModal(ageCard, "ageModalOverlay");
+bindInfoCardModal(locationCard, "locationModalOverlay");
+bindInfoCardModal(hobbyCard, "hobbyModalOverlay");
 
 if (supportButton) {
     supportButton.addEventListener("click", () => {
@@ -2055,6 +2069,15 @@ modals.forEach((modal) => {
     modal.addEventListener("click", (e) => {
         if (e.target === modal) closeInfoModal(modal.id);
     });
+});
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        const openModals = document.querySelectorAll(".modal-overlay.open, .modal-overlay.active");
+        openModals.forEach((modal) => {
+            if (modal.id) closeInfoModal(modal.id);
+        });
+    }
 });
 
 
