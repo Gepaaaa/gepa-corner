@@ -90,7 +90,7 @@ export const About: React.FC<AboutProps> = ({
             >
               <span className="info-icon">♡</span>
               <span className="info-label">Hobbies</span>
-              <strong>Gaming, Movies, Tech</strong>
+              <strong>Gaming, Movies</strong>
             </div>
 
             <div className="info-card">

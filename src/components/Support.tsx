@@ -6,21 +6,31 @@ interface SupportProps {
   onOpenSupportModal: () => void;
   onOpenAccountModal: () => void;
   onOpenAuthModal: () => void;
+  initialRankingData?: RankingData;
 }
 
 export const Support: React.FC<SupportProps> = ({
   onOpenSupportModal,
   onOpenAccountModal,
-  onOpenAuthModal
+  onOpenAuthModal,
+  initialRankingData
 }) => {
   const { user } = useAuth();
   const [activeRankTab, setActiveRankTab] = useState<'daily' | 'weekly' | 'lifetime'>('daily');
-  const [rankingData, setRankingData] = useState<RankingData>({
-    daily: [],
-    weekly: [],
-    lifetime: []
-  });
-  const [loading, setLoading] = useState(true);
+
+  const getInitialRankData = (): RankingData => {
+    if (initialRankingData) return initialRankingData;
+    if (typeof window !== 'undefined' && (window as unknown as { __INITIAL_DATA__?: { leaderboard?: RankingData } }).__INITIAL_DATA__?.leaderboard) {
+      return (window as unknown as { __INITIAL_DATA__: { leaderboard: RankingData } }).__INITIAL_DATA__.leaderboard;
+    }
+    return { daily: [], weekly: [], lifetime: [] };
+  };
+
+  const initialData = getInitialRankData();
+  const hasInitialData = initialData.daily.length > 0 || initialData.weekly.length > 0 || initialData.lifetime.length > 0;
+
+  const [rankingData, setRankingData] = useState<RankingData>(initialData);
+  const [loading, setLoading] = useState(!hasInitialData);
 
   const fetchRankings = async () => {
     try {

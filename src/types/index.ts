@@ -52,3 +52,24 @@ export interface Track {
   source?: 'youtube' | 'itunes';
   previewUrl?: string;
 }
+
+export interface ProfileData {
+  name: string;
+  eyebrow: string;
+  tagline: string;
+  aboutStory: string[];
+  quote: string;
+  birthDate: string;
+  calculatedAge: string;
+  location: string;
+  hobby: string;
+  avatarUrl: string;
+  photos: string[];
+}
+
+export interface InitialSSRData {
+  profile: ProfileData;
+  leaderboard: RankingData;
+  timestamp: string;
+}
+

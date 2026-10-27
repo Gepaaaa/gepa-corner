@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -38,6 +39,55 @@ async function startServer() {
   app.all('/api/webhook', (req, res) => webhookHandler(req, res));
   app.all('/api/upload-logo', (req, res) => uploadLogoHandler(req, res));
 
+  // Server-Side Services for Next.js App Router & SSR
+  const { getProfileData } = await import('./src/lib/services/profile.js');
+  const { getLeaderboardData } = await import('./src/lib/services/leaderboard.js');
+
+  app.get('/api/profile', async (_req, res) => {
+    try {
+      const profile = await getProfileData();
+      res.json(profile);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/ssr-state', async (_req, res) => {
+    try {
+      const [profile, leaderboard] = await Promise.all([
+        getProfileData(),
+        getLeaderboardData()
+      ]);
+      res.json({
+        profile,
+        leaderboard,
+        timestamp: new Date().toISOString()
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Helper function to inject SSR Leaderboard and Profile data into HTML
+  async function renderHtmlWithSSR(templateHtml: string): Promise<string> {
+    try {
+      const [profile, leaderboard] = await Promise.all([
+        getProfileData(),
+        getLeaderboardData()
+      ]);
+      const ssrData = {
+        profile,
+        leaderboard,
+        timestamp: new Date().toISOString()
+      };
+      const ssrScript = `<script id="__INITIAL_DATA__" type="application/json">${JSON.stringify(ssrData).replace(/</g, '\\u003c')}</script>`;
+      return templateHtml.replace('</head>', `${ssrScript}\n</head>`);
+    } catch (err) {
+      console.warn('SSR hydration injection warning:', err);
+      return templateHtml;
+    }
+  }
+
   // Serve static assets
   app.use(express.static(path.join(__dirname, 'public')));
   app.use('/assets', express.static(path.join(__dirname, 'assets')));
@@ -45,6 +95,19 @@ async function startServer() {
 
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, 'dist')));
+    app.get('/', async (_req, res, next) => {
+      try {
+        const filePath = path.join(__dirname, 'dist', 'index.html');
+        if (fs.existsSync(filePath)) {
+          const rawHtml = fs.readFileSync(filePath, 'utf-8');
+          const ssrHtml = await renderHtmlWithSSR(rawHtml);
+          return res.status(200).set({ 'Content-Type': 'text/html' }).end(ssrHtml);
+        }
+        next();
+      } catch (err) {
+        next(err);
+      }
+    });
     app.get('*', (_req, res) => {
       res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     });
@@ -53,6 +116,18 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: 'spa'
     });
+
+    app.get('/', async (req, res, next) => {
+      try {
+        const rawHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+        const template = await vite.transformIndexHtml(req.originalUrl, rawHtml);
+        const ssrHtml = await renderHtmlWithSSR(template);
+        return res.status(200).set({ 'Content-Type': 'text/html' }).end(ssrHtml);
+      } catch (e) {
+        next(e);
+      }
+    });
+
     app.use(vite.middlewares);
   }
 

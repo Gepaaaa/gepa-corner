@@ -17,9 +17,17 @@ import { AgeModal } from './components/modals/AgeModal';
 import { LocationModal } from './components/modals/LocationModal';
 import { HobbyModal } from './components/modals/HobbyModal';
 import { PrivacyModal, TermsModal } from './components/modals/LegalModals';
-import { Donation } from './types';
+import { Donation, ProfileData, RankingData } from './types';
 
-const MainApp: React.FC = () => {
+export interface MainAppProps {
+  initialProfile?: ProfileData;
+  initialLeaderboard?: RankingData;
+}
+
+export const MainApp: React.FC<MainAppProps> = ({
+  initialProfile,
+  initialLeaderboard
+}) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [supportModalOpen, setSupportModalOpen] = useState(false);
@@ -84,6 +92,7 @@ const MainApp: React.FC = () => {
           onOpenSupportModal={() => setSupportModalOpen(true)}
           onOpenAccountModal={() => setAccountModalOpen(true)}
           onOpenAuthModal={() => setAuthModalOpen(true)}
+          initialRankingData={initialLeaderboard}
         />
       </main>
 
@@ -150,12 +159,12 @@ const MainApp: React.FC = () => {
   );
 };
 
-export const App: React.FC = () => {
+export const App: React.FC<MainAppProps> = (props) => {
   return (
     <ToastProvider>
       <AuthProvider>
         <MusicProvider>
-          <MainApp />
+          <MainApp {...props} />
         </MusicProvider>
       </AuthProvider>
     </ToastProvider>

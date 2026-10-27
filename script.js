@@ -2673,6 +2673,18 @@ window.scrollToRanking = function () {
 let currentRankTab = "daily";
 let rankingDataCache = { daily: [], weekly: [], lifetime: [] };
 
+// Hydrate from Server-Side Rendered (SSR) Initial Data immediately
+try {
+    const ssrEl = document.getElementById("__INITIAL_DATA__");
+    if (ssrEl && ssrEl.textContent) {
+        const parsed = JSON.parse(ssrEl.textContent);
+        if (parsed && parsed.leaderboard) {
+            rankingDataCache = parsed.leaderboard;
+            if (rankingList) renderRanking(currentRankTab);
+        }
+    }
+} catch (e) {}
+
 async function fetchRankings() {
     if (!rankingList) return;
     try {
@@ -2966,20 +2978,27 @@ function onYtStateChange(event) {
     if (event.data === window.YT.PlayerState.PLAYING) {
         isPlaying = true;
         userExplicitlyPaused = false;
+        startBackgroundKeepAlive();
         setPlaybackUIState(true);
         startProgressTracking();
+        updateMediaSession();
     } else if (event.data === window.YT.PlayerState.PAUSED) {
         // If pause was NOT explicitly triggered by user, but caused by browser tab switching or background throttle
         if (!userExplicitlyPaused && isPlaying) {
+            startBackgroundKeepAlive();
             setTimeout(() => {
                 if (!userExplicitlyPaused && isPlaying && ytPlayer && typeof ytPlayer.playVideo === "function") {
-                    ytPlayer.playVideo();
+                    try {
+                        ytPlayer.playVideo();
+                    } catch (e) {}
                 }
-            }, 100);
+            }, 60);
         } else {
             isPlaying = false;
+            stopBackgroundKeepAlive();
             setPlaybackUIState(false);
             stopProgressTracking();
+            updateMediaSession();
         }
     } else if (event.data === window.YT.PlayerState.ENDED) {
         if (isLooping) {
@@ -3010,6 +3029,8 @@ function onYtError(event) {
 function playMusic() {
     isPlaying = true;
     userExplicitlyPaused = false;
+    startBackgroundKeepAlive();
+
     if (currentTrack.source === "itunes" && currentTrack.previewUrl) {
         playWithHtml5(currentTrack.previewUrl);
         return;
@@ -3028,6 +3049,8 @@ function playMusic() {
 function pauseMusic() {
     isPlaying = false;
     userExplicitlyPaused = true;
+    stopBackgroundKeepAlive();
+
     if (ytPlayer && typeof ytPlayer.pauseVideo === "function") {
         ytPlayer.pauseVideo();
     }
@@ -3051,6 +3074,7 @@ function playTrack(track) {
     currentTrack = track;
     isPlaying = true;
     userExplicitlyPaused = false;
+    startBackgroundKeepAlive();
     updateTrackDisplay(track);
 
     // Stop HTML5 audio if active
@@ -3071,6 +3095,9 @@ function playTrack(track) {
     }
 
     updateMediaSession();
+    if (typeof loadLyricsForCurrentTrack === "function") {
+        loadLyricsForCurrentTrack();
+    }
     // Save last played track in localStorage
     try {
         localStorage.setItem("gepa_last_track", JSON.stringify(track));
@@ -3281,16 +3308,28 @@ function updateMediaSession() {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: currentTrack.title || "Gepa Online Music",
             artist: currentTrack.artist || "Gepa Corner",
-            album: "Background Music Player",
+            album: "Gepa Music Room",
             artwork: [
-                { src: currentTrack.thumbnail || "https://i.ytimg.com/vi/dGcGbF4ex5o/hqdefault.jpg", sizes: "512x512", type: "image/jpeg" }
+                { src: currentTrack.thumbnail || "/favicon-512x512.png", sizes: "512x512", type: "image/png" }
             ]
         });
+
+        navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
 
         navigator.mediaSession.setActionHandler("play", () => playMusic());
         navigator.mediaSession.setActionHandler("pause", () => pauseMusic());
         navigator.mediaSession.setActionHandler("previoustrack", () => playPrevTrack());
         navigator.mediaSession.setActionHandler("nexttrack", () => playNextTrack());
+        navigator.mediaSession.setActionHandler("stop", () => pauseMusic());
+        navigator.mediaSession.setActionHandler("seekto", (details) => {
+            if (details && details.seekTime !== undefined) {
+                if (ytPlayer && typeof ytPlayer.seekTo === "function") {
+                    ytPlayer.seekTo(details.seekTime, true);
+                } else if (html5Audio) {
+                    html5Audio.currentTime = details.seekTime;
+                }
+            }
+        });
     } catch (e) {
         console.warn("MediaSession setup warning:", e);
     }
@@ -3894,11 +3933,302 @@ function bindMusicEventListeners() {
     });
 }
 
+// =========================================================
+// 1. PERSISTENT BACKGROUND AUDIO KEEP-ALIVE ENGINE
+// =========================================================
+const bgKeepAliveAnchor = document.getElementById("bgKeepAliveAnchor");
+const SILENT_AUDIO_WAV = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+let wakeLockSentinel = null;
+
+function startBackgroundKeepAlive() {
+    if (!bgKeepAliveAnchor) return;
+    try {
+        if (!bgKeepAliveAnchor.src || bgKeepAliveAnchor.src !== SILENT_AUDIO_WAV) {
+            bgKeepAliveAnchor.src = SILENT_AUDIO_WAV;
+        }
+        bgKeepAliveAnchor.volume = 0.0001; // Imperceptible volume to activate mobile audio session
+        bgKeepAliveAnchor.play().catch(() => {});
+
+        // Request screen wake lock if available to prevent aggressive OS sleep
+        if ("wakeLock" in navigator && !wakeLockSentinel) {
+            navigator.wakeLock.request("screen").then(sentinel => {
+                wakeLockSentinel = sentinel;
+                sentinel.addEventListener("release", () => {
+                    wakeLockSentinel = null;
+                });
+            }).catch(() => {});
+        }
+    } catch (e) {}
+}
+
+function stopBackgroundKeepAlive() {
+    if (!bgKeepAliveAnchor) return;
+    try {
+        bgKeepAliveAnchor.pause();
+    } catch (e) {}
+    if (wakeLockSentinel) {
+        try {
+            wakeLockSentinel.release();
+            wakeLockSentinel = null;
+        } catch (e) {}
+    }
+}
+
+// Ensure audio keeps playing when user switches apps or screen locks
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden && isPlaying && !userExplicitlyPaused) {
+        startBackgroundKeepAlive();
+        if (ytPlayer && typeof ytPlayer.getPlayerState === "function") {
+            try {
+                const st = ytPlayer.getPlayerState();
+                if (st !== window.YT.PlayerState.PLAYING && st !== window.YT.PlayerState.BUFFERING) {
+                    ytPlayer.playVideo();
+                }
+            } catch (e) {
+                try { ytPlayer.playVideo(); } catch (err) {}
+            }
+        }
+    }
+});
+
+// =========================================================
+// 2. CUSTOM PLAYLISTS MODULE
+// =========================================================
+const PLAYLISTS_STORAGE_KEY = "gepa_custom_playlists";
+
+function getCustomPlaylists() {
+    try {
+        const raw = localStorage.getItem(PLAYLISTS_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+        }
+    } catch (e) {}
+    // Default initial playlist
+    const initial = [
+        {
+            id: "pl_favorites",
+            name: "Lagu Favorit",
+            createdAt: new Date().toISOString(),
+            tracks: [
+                {
+                    id: "dGcGbF4ex5o",
+                    title: "Dan...",
+                    artist: "Sheila On 7",
+                    duration: "04:46",
+                    thumbnail: "https://i.ytimg.com/vi/dGcGbF4ex5o/hqdefault.jpg",
+                    source: "youtube"
+                }
+            ]
+        }
+    ];
+    saveCustomPlaylists(initial);
+    return initial;
+}
+
+function saveCustomPlaylists(playlists) {
+    try {
+        localStorage.setItem(PLAYLISTS_STORAGE_KEY, JSON.stringify(playlists));
+    } catch (e) {}
+}
+
+function renderPlaylists() {
+    const container = document.getElementById("playlistsListContainer");
+    if (!container) return;
+    const playlists = getCustomPlaylists();
+
+    if (playlists.length === 0) {
+        container.innerHTML = `<div class="guestbook-empty" style="padding: 24px; font-size: 0.88rem;">Belum ada playlist. Buat playlist baru untuk menyimpan lagu favorit Anda!</div>`;
+        return;
+    }
+
+    let html = "";
+    playlists.forEach(pl => {
+        const count = Array.isArray(pl.tracks) ? pl.tracks.length : 0;
+        html += `
+            <div class="playlist-card" data-id="${escapeHtml(pl.id)}">
+                <div class="playlist-info" onclick="playCustomPlaylist('${escapeHtml(pl.id)}')">
+                    <div class="playlist-icon">🎵</div>
+                    <div class="playlist-names">
+                        <div class="playlist-title-text">${escapeHtml(pl.name)}</div>
+                        <div class="playlist-sub-text">${count} lagu · Klik untuk putar</div>
+                    </div>
+                </div>
+                <div class="playlist-actions">
+                    <button type="button" class="playlist-action-btn" onclick="playCustomPlaylist('${escapeHtml(pl.id)}')" title="Putar Semua">
+                        ▶ Putar
+                    </button>
+                    ${pl.id !== 'pl_favorites' ? `
+                    <button type="button" class="playlist-action-btn delete" onclick="deleteCustomPlaylist('${escapeHtml(pl.id)}')" title="Hapus Playlist">
+                        ✕
+                    </button>` : ''}
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+window.playCustomPlaylist = function(playlistId) {
+    const playlists = getCustomPlaylists();
+    const pl = playlists.find(p => p.id === playlistId);
+    if (!pl || !Array.isArray(pl.tracks) || pl.tracks.length === 0) {
+        showToast("Playlist ini masih kosong. Tambahkan lagu terlebih dahulu!");
+        return;
+    }
+    playlistQueue = [...pl.tracks];
+    queueIndex = 0;
+    playTrack(playlistQueue[0]);
+    showToast(`Memutar playlist "${pl.name}" (${pl.tracks.length} lagu) 🎶`);
+
+    // Switch view to Now Playing tab
+    const nowPlayingTabBtn = document.querySelector('.music-tab-btn[data-tab="nowPlayingTab"]');
+    if (nowPlayingTabBtn) nowPlayingTabBtn.click();
+};
+
+window.deleteCustomPlaylist = function(playlistId) {
+    if (!confirm("Hapus playlist ini?")) return;
+    let playlists = getCustomPlaylists();
+    playlists = playlists.filter(p => p.id !== playlistId);
+    saveCustomPlaylists(playlists);
+    renderPlaylists();
+    showToast("Playlist berhasil dihapus.");
+};
+
+function initPlaylistsModule() {
+    const openCreateBtn = document.getElementById("openCreatePlaylistBtn");
+    const saveNewBtn = document.getElementById("saveNewPlaylistBtn");
+    const nameInput = document.getElementById("newPlaylistNameInput");
+    const saveCurrentTrackBtn = document.getElementById("saveCurrentTrackToPlaylistBtn");
+    const confirmAddBtn = document.getElementById("confirmAddToPlaylistBtn");
+
+    if (openCreateBtn) {
+        openCreateBtn.addEventListener("click", () => {
+            if (nameInput) nameInput.value = "";
+            openInfoModal("createPlaylistModal");
+            if (nameInput) setTimeout(() => nameInput.focus(), 150);
+        });
+    }
+
+    if (saveNewBtn && nameInput) {
+        saveNewBtn.addEventListener("click", () => {
+            const name = nameInput.value.trim();
+            if (!name) {
+                showToast("Nama playlist tidak boleh kosong!");
+                return;
+            }
+            const playlists = getCustomPlaylists();
+            const newPl = {
+                id: "pl_" + Date.now(),
+                name,
+                createdAt: new Date().toISOString(),
+                tracks: []
+            };
+            playlists.push(newPl);
+            saveCustomPlaylists(playlists);
+            renderPlaylists();
+            closeInfoModal("createPlaylistModal");
+            showToast(`Playlist "${name}" berhasil dibuat! ✨`);
+        });
+    }
+
+    if (saveCurrentTrackBtn) {
+        saveCurrentTrackBtn.addEventListener("click", () => {
+            if (!currentTrack) return;
+            openAddToPlaylistModal(currentTrack);
+        });
+    }
+
+    if (confirmAddBtn) {
+        confirmAddBtn.addEventListener("click", () => {
+            const selectedRadio = document.querySelector('input[name="targetPlaylist"]:checked');
+            if (!selectedRadio) {
+                showToast("Pilih salah satu playlist terlebih dahulu!");
+                return;
+            }
+            const playlistId = selectedRadio.value;
+            const playlists = getCustomPlaylists();
+            const targetPl = playlists.find(p => p.id === playlistId);
+            if (!targetPl) return;
+
+            if (!Array.isArray(targetPl.tracks)) targetPl.tracks = [];
+            const exists = targetPl.tracks.some(t => t.id === currentTrack.id);
+            if (exists) {
+                showToast(`Lagu sudah ada di dalam playlist "${targetPl.name}".`);
+            } else {
+                targetPl.tracks.push(currentTrack);
+                saveCustomPlaylists(playlists);
+                renderPlaylists();
+                showToast(`Lagu disimpan ke "${targetPl.name}"! 🎵`);
+            }
+            closeInfoModal("addToPlaylistModal");
+        });
+    }
+}
+
+function openAddToPlaylistModal(track) {
+    const listEl = document.getElementById("playlistSelectionList");
+    const infoText = document.getElementById("targetTrackInfoText");
+    if (infoText) {
+        infoText.textContent = `Pilih playlist untuk lagu: ${track.title} — ${track.artist}`;
+    }
+    if (listEl) {
+        const playlists = getCustomPlaylists();
+        if (playlists.length === 0) {
+            listEl.innerHTML = `<div style="text-align:center; padding: 12px; color: var(--text-soft);">Belum ada playlist. Buat playlist baru terlebih dahulu.</div>`;
+        } else {
+            let html = "";
+            playlists.forEach((pl, idx) => {
+                html += `
+                    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer;">
+                        <input type="radio" name="targetPlaylist" value="${escapeHtml(pl.id)}" ${idx === 0 ? "checked" : ""} style="accent-color: var(--sage-600);" />
+                        <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">${escapeHtml(pl.name)}</span>
+                        <span style="font-size: 0.76rem; color: var(--text-soft); margin-left: auto;">${(pl.tracks || []).length} lagu</span>
+                    </label>
+                `;
+            });
+            listEl.innerHTML = html;
+        }
+    }
+    openInfoModal("addToPlaylistModal");
+}
+
+
+window.switchHobbyTab = function(tab) {
+    const gamingBtn = document.getElementById("hobbyTabGamingBtn");
+    const moviesBtn = document.getElementById("hobbyTabMoviesBtn");
+    const gamingPane = document.getElementById("hobbyPaneGaming");
+    const moviesPane = document.getElementById("hobbyPaneMovies");
+
+    if (tab === "gaming") {
+        if (gamingBtn) gamingBtn.classList.add("active");
+        if (moviesBtn) moviesBtn.classList.remove("active");
+        if (gamingPane) {
+            gamingPane.style.display = "block";
+            gamingPane.classList.add("active");
+        }
+        if (moviesPane) {
+            moviesPane.style.display = "none";
+            moviesPane.classList.remove("active");
+        }
+    } else {
+        if (moviesBtn) moviesBtn.classList.add("active");
+        if (gamingBtn) gamingBtn.classList.remove("active");
+        if (moviesPane) {
+            moviesPane.style.display = "block";
+            moviesPane.classList.add("active");
+        }
+        if (gamingPane) {
+            gamingPane.style.display = "none";
+            gamingPane.classList.remove("active");
+        }
+    }
+};
+
 // ----------------------------------------------------
-// BOOTSTRAP MUSIC PLAYER
+// BOOTSTRAP MUSIC PLAYER & INTEGRATED MODULES
 // ----------------------------------------------------
 function initMusicPlayer() {
-    // Restore last track if present
     try {
         const saved = localStorage.getItem("gepa_last_track");
         if (saved) {
@@ -3914,6 +4244,10 @@ function initMusicPlayer() {
     bindMusicEventListeners();
     initYouTubeAudioEngine();
     loadCuratedPlaylists();
+
+    // Bootstrap newly added modules
+    initPlaylistsModule();
+    renderPlaylists();
 }
 
 initMusicPlayer();

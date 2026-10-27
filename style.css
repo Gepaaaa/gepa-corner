@@ -2473,3 +2473,525 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
     pointer-events: none;
 }
 
+/* =========================================================
+   CUSTOM PLAYLISTS TAB STYLES
+========================================================= */
+.playlists-manager-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.playlists-manager-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.playlist-create-btn {
+    background: var(--sage-600);
+    color: #FAF8F1;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s ease;
+}
+
+.playlist-create-btn:hover {
+    background: var(--sage-700);
+}
+
+.playlists-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.playlist-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.playlist-card:hover {
+    border-color: var(--sage-400);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.playlist-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.playlist-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--sage-100);
+    color: var(--sage-700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+body.dark-mode .playlist-icon {
+    background: rgba(94, 124, 87, 0.25);
+    color: #E8EFE1;
+}
+
+.playlist-names {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.playlist-title-text {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-main);
+}
+
+.playlist-sub-text {
+    font-size: 0.78rem;
+    color: var(--text-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.playlist-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.playlist-action-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-main);
+    transition: all 0.15s ease;
+}
+
+.playlist-action-btn:hover {
+    background: var(--sage-50);
+    border-color: var(--sage-500);
+}
+
+body.dark-mode .playlist-action-btn:hover {
+    background: rgba(94, 124, 87, 0.2);
+}
+
+.playlist-action-btn.delete {
+    color: #e63946;
+}
+
+.playlist-action-btn.delete:hover {
+    background: #ffe3e3;
+    border-color: #e63946;
+}
+
+/* =========================================================
+   HOBBY MODAL (MLBB & ELITIS MOVIES)
+========================================================= */
+.hobby-modal-container {
+    max-width: 580px !important;
+    text-align: left !important;
+    padding: 28px !important;
+}
+
+.hobby-modal-title {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.hobby-modal-desc {
+    color: var(--text-soft);
+    font-size: 0.88rem;
+    margin-bottom: 18px;
+    line-height: 1.5;
+}
+
+/* Segmented Tabs */
+.hobby-tabs {
+    display: flex;
+    background: var(--surface-alt, rgba(0, 0, 0, 0.04));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 4px;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+body.dark-mode .hobby-tabs {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.hobby-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.hobby-tab-btn:hover {
+    color: var(--text-main);
+}
+
+.hobby-tab-btn.active {
+    background: var(--surface);
+    color: var(--sage-700);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+body.dark-mode .hobby-tab-btn.active {
+    background: var(--sage-700);
+    color: #FAF8F1;
+}
+
+/* Tab 1: MLBB Showcase */
+.mlbb-showcase-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+}
+
+.mlbb-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.mlbb-badge-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, rgba(94, 124, 87, 0.2), rgba(94, 124, 87, 0.06));
+    border: 1.5px solid var(--sage-400);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.mlbb-title-meta h4 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.mlbb-tag {
+    font-size: 0.74rem;
+    color: var(--sage-600);
+    font-weight: 600;
+    display: inline-block;
+    margin-top: 2px;
+}
+
+.mlbb-desc {
+    color: var(--text-soft);
+    font-size: 0.88rem;
+    line-height: 1.6;
+    margin-bottom: 18px;
+}
+
+.mlbb-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.mlbb-stat-item {
+    background: var(--surface-alt, rgba(0, 0, 0, 0.02));
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.mlbb-stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-soft);
+}
+
+.mlbb-stat-value {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.mlbb-footer-note {
+    background: rgba(94, 124, 87, 0.08);
+    border: 1px solid rgba(94, 124, 87, 0.2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--sage-700);
+}
+
+body.dark-mode .mlbb-footer-note {
+    color: #BDCFB1;
+    background: rgba(94, 124, 87, 0.15);
+}
+
+/* Tab 2: Elitis Movies */
+.elitis-intro-box {
+    background: linear-gradient(135deg, rgba(94, 124, 87, 0.12) 0%, rgba(94, 124, 87, 0.02) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+}
+
+.letterboxd-badge {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #FAF8F1;
+    background: #14181C;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 6px;
+}
+
+.elitis-intro-box p {
+    color: var(--text-soft);
+    font-size: 0.84rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.elitis-movies-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 16px;
+}
+
+.elitis-movie-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.elitis-movie-card:hover {
+    border-color: var(--sage-500);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+.movie-rank-tag {
+    font-size: 0.85rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--sage-600);
+    background: rgba(94, 124, 87, 0.1);
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.movie-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.movie-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.movie-title-row h5 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.movie-year {
+    font-size: 0.74rem;
+    color: var(--text-soft);
+    font-weight: 500;
+}
+
+.movie-quote {
+    color: var(--text-soft);
+    font-size: 0.82rem;
+    font-style: italic;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.movie-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.movie-tags span {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    background: var(--surface-alt, rgba(0, 0, 0, 0.04));
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 2px 7px;
+}
+
+/* =========================================================
+   INTERACTIVE CARDS & SPRING MICRO-INTERACTIONS
+========================================================= */
+.link-card {
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s !important;
+    will-change: transform, box-shadow;
+}
+
+.link-card:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 12px 24px -4px rgba(94, 124, 87, 0.14) !important;
+    border-color: var(--sage-400) !important;
+}
+
+.link-card:active {
+    transform: scale(0.98) translateY(-1px) !important;
+    transition-duration: 0.1s !important;
+}
+
+.link-card:hover .link-arrow {
+    transform: translate(3px, -3px) !important;
+    color: var(--sage-600) !important;
+}
+
+.link-arrow {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s !important;
+}
+
+/* Info Cards Tactile Depth */
+.clickable-card {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s !important;
+    will-change: transform, box-shadow;
+    cursor: pointer;
+}
+
+.clickable-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: var(--sage-500) !important;
+    box-shadow: 0 10px 22px rgba(94, 124, 87, 0.12) !important;
+}
+
+.clickable-card:active {
+    transform: scale(0.97) translateY(0) !important;
+    transition-duration: 0.1s !important;
+}
+
+/* Modal Smooth Spring Popup */
+.modal-overlay {
+    transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 0.24s !important;
+}
+
+.modal-content {
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s !important;
+    will-change: transform, opacity;
+}
+
+.modal-overlay:not(.active) .modal-content {
+    transform: scale(0.95) translateY(10px) !important;
+    opacity: 0 !important;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1) translateY(0) !important;
+    opacity: 1 !important;
+}
+
+/* Ambient Floating Decorations */
+@keyframes gentleAmbientFloat {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-8px) rotate(3deg);
+    }
+}
+
+.decoration-one {
+    animation: gentleAmbientFloat 6s ease-in-out infinite !important;
+}
+
+.decoration-two {
+    animation: gentleAmbientFloat 8s ease-in-out infinite 1s !important;
+}
+
+/* Respect Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+
