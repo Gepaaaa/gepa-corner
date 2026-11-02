@@ -163,9 +163,13 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
     setChangingPassword(true);
     try {
+      const token = session?.accessToken || session?.token;
       const res = await fetch('/api/auth', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           action: 'change-password',
           userId: user.id,

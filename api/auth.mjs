@@ -60,6 +60,75 @@ function createToken(userId) {
     .digest("hex");
 }
 
+// Authoritative user authentication verification helper
+export async function getAuthenticatedUser(req) {
+  const authHeader = req.headers?.authorization;
+  if (!authHeader || typeof authHeader !== "string") {
+    return null;
+  }
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!token) return null;
+
+  // 1. Verify via Supabase if token looks like a Supabase session JWT
+  if (SUPABASE_SERVICE_ROLE && token.length > 50) {
+    try {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+      const { data: { user: sbUser }, error } = await supabase.auth.getUser(token);
+      if (sbUser && !error) {
+        let username = sbUser.user_metadata?.username || sbUser.email.split("@")[0];
+        let avatar = sbUser.user_metadata?.avatar_url || "👤";
+        let phone = sbUser.user_metadata?.phone || "";
+        let bio = "Sahabat Corner";
+
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", sbUser.id)
+          .maybeSingle();
+
+        if (prof) {
+          if (prof.username) username = prof.username;
+          if (prof.avatar_url) avatar = prof.avatar_url;
+          if (prof.phone) phone = prof.phone;
+          if (prof.bio) bio = prof.bio;
+        }
+
+        return {
+          id: sbUser.id,
+          email: sbUser.email,
+          username: String(username).replace(/^@/, ""),
+          avatar,
+          phone,
+          bio,
+          createdAt: sbUser.created_at,
+          isSupabase: true
+        };
+      }
+    } catch (e) {
+      console.warn("Supabase token verification error:", e.message);
+    }
+  }
+
+  // 2. Verify via memoryUsers
+  for (const [_, u] of memoryUsers.entries()) {
+    if (u.lastToken === token || (token.startsWith("demo_") && u.id === token)) {
+      return {
+        id: u.id,
+        email: u.email,
+        username: String(u.username || "").replace(/^@/, ""),
+        avatar: u.avatar || "👤",
+        phone: u.phone || "",
+        bio: u.bio || "Sahabat Corner",
+        createdAt: u.createdAt,
+        passwordHash: u.passwordHash,
+        isSupabase: false
+      };
+    }
+  }
+
+  return null;
+}
+
 export default async function handler(req, res) {
   // CORS
   if (req.method === "OPTIONS") {
@@ -73,121 +142,75 @@ export default async function handler(req, res) {
 
   try {
     // ==========================================
-    // ACTION: ME / GET CURRENT USER SESSION (SYNC)
+    // ACTION: ME / GET CURRENT USER SESSION (SECURE)
     // ==========================================
     if ((action === "me" || action === "get-profile") && (req.method === "GET" || req.method === "POST")) {
-      const authHeader = req.headers.authorization;
-      const queryUserId = req.query.userId || req.body?.userId;
+      const authenticatedUser = await getAuthenticatedUser(req);
+      if (!authenticatedUser) {
+        return res.status(401).json({ error: "Sesi tidak ditemukan atau kedaluwarsa. Silakan masuk kembali." });
+      }
+
+      return res.status(200).json({
+        user: {
+          id: authenticatedUser.id,
+          email: authenticatedUser.email,
+          username: authenticatedUser.username,
+          avatar: authenticatedUser.avatar || "👤",
+          phone: authenticatedUser.phone || "",
+          bio: authenticatedUser.bio || "",
+          createdAt: authenticatedUser.createdAt
+        }
+      });
+    }
+
+    // ==========================================
+    // ACTION: PUBLIC PROFILE (Sanitized, NO email or phone)
+    // ==========================================
+    if (action === "public-profile" && (req.method === "GET" || req.method === "POST")) {
       const queryUsername = (req.query.username || req.body?.username || "").trim().toLowerCase().replace(/^@/, "");
-      let targetUser = null;
-
-      if (queryUserId) {
-        targetUser = memoryUsers.get(queryUserId);
+      if (!queryUsername) {
+        return res.status(400).json({ error: "Username diperlukan." });
       }
 
-      if (!targetUser && queryUsername) {
-        for (const [_, u] of memoryUsers.entries()) {
-          if (u.username?.toLowerCase() === queryUsername) {
-            targetUser = u;
-            break;
-          }
-        }
-      }
+      let pubAvatar = "👤";
+      let pubBio = "Sahabat Corner";
+      let resolvedUsername = queryUsername;
 
-      if (!targetUser && authHeader) {
-        const token = authHeader.replace("Bearer ", "").trim();
-        for (const [_, u] of memoryUsers.entries()) {
-          if (u.id === token || u.lastToken === token) {
-            targetUser = u;
-            break;
-          }
-        }
-      }
-
-      // Selalu cek database Supabase untuk mendapatkan avatar dan profil terupdate (sinkronisasi antar web/perangkat)
-      if (SUPABASE_SERVICE_ROLE && (queryUsername || targetUser || queryUserId)) {
+      if (SUPABASE_SERVICE_ROLE) {
         try {
           const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-          const cleanName = (targetUser ? targetUser.username : queryUsername).toLowerCase();
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("username, avatar_url, bio")
+            .ilike("username", queryUsername)
+            .maybeSingle();
 
-          // 1. Ambil data profil dari profiles table (Sumber Utama Akurat)
-          let profAvatar = null;
-          if (cleanName) {
-            const { data: prof } = await supabase
-              .from("profiles")
-              .select("*")
-              .ilike("username", cleanName)
-              .maybeSingle();
-
-            if (prof) {
-              profAvatar = prof.avatar_url;
-              if (!targetUser) {
-                targetUser = {
-                  id: prof.id,
-                  email: `${prof.username}@gepacorner.my.id`,
-                  username: prof.username,
-                  phone: prof.phone || "",
-                  bio: "Sahabat Corner",
-                  createdAt: prof.updated_at,
-                  avatar: prof.avatar_url || "👤"
-                };
-              } else {
-                if (!targetUser.id) targetUser.id = prof.id;
-                if (prof.phone) targetUser.phone = prof.phone;
-              }
-            }
+          if (prof) {
+            resolvedUsername = prof.username;
+            if (prof.avatar_url) pubAvatar = prof.avatar_url;
+            if (prof.bio) pubBio = prof.bio;
           }
+        } catch (e) {}
+      }
 
-          // 2. Ambil avatar dari record donations (AVATAR_USER_*) sebagai fallback emoji jika profiles kosong
-          let donAvatar = null;
-          if (cleanName) {
-            const { data: avRow } = await supabase
-              .from("donations")
-              .select("status")
-              .eq("order_id", `AVATAR_USER_${cleanName}`)
-              .maybeSingle();
-
-            if (avRow && avRow.status && avRow.status.startsWith("AVATAR_DATA:")) {
-              donAvatar = avRow.status.slice("AVATAR_DATA:".length);
-            }
+      if (pubAvatar === "👤") {
+        for (const [_, u] of memoryUsers.entries()) {
+          if (u.username?.toLowerCase() === queryUsername) {
+            resolvedUsername = u.username;
+            pubAvatar = u.avatar || "👤";
+            pubBio = u.bio || pubBio;
+            break;
           }
-
-          // Resolusi avatar terbaik: Foto profil asli (data:image / http) selalu menang di atas emoji default
-          const resolvedAvatar = (profAvatar && (profAvatar.startsWith("data:image") || profAvatar.startsWith("http")))
-            ? profAvatar
-            : (donAvatar && (donAvatar.startsWith("data:image") || donAvatar.startsWith("http")))
-            ? donAvatar
-            : (profAvatar || donAvatar || targetUser?.avatar || "👤");
-
-          if (targetUser) {
-            targetUser.avatar = resolvedAvatar;
-          } else if (cleanName) {
-            targetUser = {
-              username: cleanName,
-              avatar: resolvedAvatar,
-              bio: "Sahabat Corner"
-            };
-          }
-        } catch (sbErr) {
-          console.warn("Supabase me sync fallback warning:", sbErr.message);
         }
       }
 
-      if (targetUser) {
-        return res.status(200).json({
-          user: {
-            id: targetUser.id || queryUserId,
-            email: targetUser.email,
-            username: targetUser.username,
-            avatar: targetUser.avatar || "👤",
-            phone: targetUser.phone || "",
-            bio: targetUser.bio || "",
-            createdAt: targetUser.createdAt
-          }
-        });
-      }
-
-      return res.status(401).json({ error: "Sesi tidak ditemukan atau kedaluwarsa." });
+      return res.status(200).json({
+        profile: {
+          username: resolvedUsername,
+          avatar: pubAvatar,
+          bio: pubBio
+        }
+      });
     }
 
     // ==========================================
@@ -892,12 +915,19 @@ export default async function handler(req, res) {
     }
 
     // ==========================================
-    // ACTION: UPDATE PROFILE
+    // ACTION: UPDATE PROFILE (SECURE)
     // ==========================================
     if (action === "update-profile" && req.method === "POST") {
+      const authenticatedUser = await getAuthenticatedUser(req);
+      if (!authenticatedUser) {
+        return res.status(401).json({ error: "Autentikasi diperlukan untuk memperbarui profil." });
+      }
+
       const { userId, username, avatar, phone, bio } = req.body || {};
-      if (!userId) {
-        return res.status(400).json({ error: "User ID diperlukan." });
+      const targetUserId = userId || authenticatedUser.id;
+
+      if (targetUserId !== authenticatedUser.id) {
+        return res.status(403).json({ error: "Tidak diizinkan mengubah profil akun lain." });
       }
 
       const cleanUsername = String(username || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
@@ -907,21 +937,21 @@ export default async function handler(req, res) {
 
       // Check if username taken by someone else
       for (const [id, u] of memoryUsers.entries()) {
-        if (id !== userId && u.username === cleanUsername) {
+        if (id !== targetUserId && u.username === cleanUsername) {
           return res.status(400).json({ error: "Username sudah digunakan oleh akun lain." });
         }
       }
 
-      let user = memoryUsers.get(userId);
+      let user = memoryUsers.get(targetUserId);
       if (!user) {
         user = {
-          id: userId,
-          email: `${cleanUsername}@gepacorner.my.id`,
+          id: targetUserId,
+          email: authenticatedUser.email || `${cleanUsername}@gepacorner.my.id`,
           username: cleanUsername,
-          avatar: avatar || "🐱",
+          avatar: avatar || authenticatedUser.avatar || "🐱",
           phone: phone || "",
           bio: bio || "Sahabat Corner",
-          createdAt: new Date().toISOString()
+          createdAt: authenticatedUser.createdAt || new Date().toISOString()
         };
       }
 
@@ -930,7 +960,7 @@ export default async function handler(req, res) {
       if (avatar) user.avatar = avatar;
       if (phone !== undefined) user.phone = phone;
       if (bio !== undefined) user.bio = bio;
-      memoryUsers.set(userId, user);
+      memoryUsers.set(targetUserId, user);
       saveUsersToDisk();
 
       // Cascade update to memoryTransactions so leaderboard and history stay synced
@@ -946,15 +976,15 @@ export default async function handler(req, res) {
         saveTransactionsToDisk();
       }
 
-      // Sync ke Supabase jika aktif (sertakan bearer token jika dikirim oleh client)
-      if (SUPABASE_SERVICE_ROLE && !userId.startsWith("demo_")) {
+      // Sync ke Supabase jika aktif
+      if (SUPABASE_SERVICE_ROLE && !targetUserId.startsWith("demo_")) {
         try {
           const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-          const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+          const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
 
-          // 1. Simpan ke profiles table (Primary source of truth untuk user & foto profil)
+          // 1. Simpan ke profiles table
           try {
-            let profileId = isValidUuid ? userId : null;
+            let profileId = isValidUuid ? targetUserId : null;
             if (!profileId) {
               const { data: pExist } = await supabase.from("profiles").select("id").ilike("username", cleanUsername).maybeSingle();
               if (pExist && pExist.id) profileId = pExist.id;
@@ -965,6 +995,7 @@ export default async function handler(req, res) {
                 username: user.username,
                 avatar_url: user.avatar,
                 phone: user.phone || "",
+                bio: user.bio || "Sahabat Corner",
                 updated_at: new Date().toISOString()
               }).eq("id", profileId);
             } else {
@@ -972,6 +1003,7 @@ export default async function handler(req, res) {
                 username: user.username,
                 avatar_url: user.avatar,
                 phone: user.phone || "",
+                bio: user.bio || "Sahabat Corner",
                 updated_at: new Date().toISOString()
               }, { onConflict: "username" });
             }
@@ -979,9 +1011,7 @@ export default async function handler(req, res) {
             console.warn("Supabase profiles update error:", pErr.message);
           }
 
-          // 2. Untuk tabel donations: donations.status memiliki indeks b-tree PostgreSQL (maks 2704 byte).
-          // Jika avatar adalah foto galeri (base64 besar), hapus record emoji lama di donations agar tidak menimpa foto profil.
-          // Jika avatar adalah emoji biasa (pendek), barulah simpan ke donations sebagai cadangan.
+          // 2. Simpan avatar di donations table jika berupa short string / emoji
           try {
             if (user.avatar && (user.avatar.startsWith("data:image") || user.avatar.length > 200)) {
               await supabase.from("donations").delete().eq("order_id", `AVATAR_USER_${cleanUsername}`);
@@ -992,7 +1022,7 @@ export default async function handler(req, res) {
                 amount: 0,
                 status: `AVATAR_DATA:${user.avatar}`,
                 transaction_time: new Date().toISOString(),
-                user_id: isValidUuid ? userId : null
+                user_id: isValidUuid ? targetUserId : null
               }, { onConflict: "order_id" });
             }
           } catch (dErr) {
@@ -1010,62 +1040,71 @@ export default async function handler(req, res) {
     }
 
     // ==========================================
-    // ACTION: CHANGE PASSWORD
+    // ACTION: CHANGE PASSWORD (SECURE & VERIFIED)
     // ==========================================
     if (action === "change-password" && req.method === "POST") {
-      const { userId, oldPassword, newPassword } = req.body || {};
-      if (!userId) {
-        return res.status(400).json({ error: "User ID diperlukan." });
+      const authenticatedUser = await getAuthenticatedUser(req);
+      if (!authenticatedUser) {
+        return res.status(401).json({ error: "Autentikasi diperlukan. Silakan masuk terlebih dahulu." });
       }
+
+      const { userId, oldPassword, newPassword } = req.body || {};
+      const targetUserId = userId || authenticatedUser.id;
+
+      // Prevent tampering with another user's password
+      if (targetUserId !== authenticatedUser.id) {
+        return res.status(403).json({ error: "Tidak diizinkan mengubah password akun lain." });
+      }
+
+      if (!oldPassword) {
+        return res.status(400).json({ error: "Password lama wajib diisi." });
+      }
+
       if (!newPassword || newPassword.length < 6) {
         return res.status(400).json({ error: "Password baru minimal 6 karakter." });
       }
 
-      let user = memoryUsers.get(userId);
-      if (!user && SUPABASE_SERVICE_ROLE) {
+      // Verify old password for Supabase accounts
+      if (authenticatedUser.isSupabase && SUPABASE_SERVICE_ROLE) {
         try {
           const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-          const { data: { user: sbUser } } = await supabase.auth.admin.getUserById(userId);
-          if (sbUser) {
-            user = {
-              id: sbUser.id,
-              email: sbUser.email,
-              username: sbUser.user_metadata?.username || "user",
-              passwordHash: "",
-              avatar: sbUser.user_metadata?.avatar_url || "🐱"
-            };
-            memoryUsers.set(userId, user);
+          
+          // Verify old password against Supabase auth
+          const { error: verifyErr } = await supabase.auth.signInWithPassword({
+            email: authenticatedUser.email,
+            password: oldPassword
+          });
+
+          if (verifyErr) {
+            return res.status(400).json({ error: "Password lama tidak sesuai." });
           }
-        } catch (e) {}
-      }
 
-      if (!user) {
-        return res.status(404).json({ error: "Akun pengguna tidak ditemukan." });
-      }
+          // Update password
+          const { error: updateErr } = await supabase.auth.admin.updateUserById(authenticatedUser.id, {
+            password: newPassword
+          });
 
-      // Verifikasi password lama jika bukan guest dan memiliki password tersimpan
-      if (!userId.startsWith("demo_") && user.passwordHash) {
-        if (!oldPassword) {
-          return res.status(400).json({ error: "Password lama wajib diisi." });
+          if (updateErr) {
+            return res.status(500).json({ error: updateErr.message || "Gagal memperbarui password di database." });
+          }
+        } catch (sbErr) {
+          console.error("Supabase password update error:", sbErr);
+          return res.status(500).json({ error: "Gagal memverifikasi atau mengubah password di database." });
         }
-        if (user.passwordHash !== hashPassword(oldPassword)) {
+      } else {
+        // Local memory user verification
+        let user = memoryUsers.get(authenticatedUser.id);
+        if (!user) {
+          return res.status(404).json({ error: "Akun pengguna tidak ditemukan." });
+        }
+
+        if (!user.passwordHash || user.passwordHash !== hashPassword(oldPassword)) {
           return res.status(400).json({ error: "Password lama tidak sesuai." });
         }
-      }
 
-      // Set password baru
-      user.passwordHash = hashPassword(newPassword);
-      memoryUsers.set(userId, user);
-      saveUsersToDisk();
-
-      // Update di Supabase jika aktif
-      if (SUPABASE_SERVICE_ROLE && !userId.startsWith("demo_")) {
-        try {
-          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-          await supabase.auth.admin.updateUserById(userId, { password: newPassword });
-        } catch (sbErr) {
-          console.warn("Supabase password update error:", sbErr.message);
-        }
+        user.passwordHash = hashPassword(newPassword);
+        memoryUsers.set(user.id, user);
+        saveUsersToDisk();
       }
 
       return res.status(200).json({

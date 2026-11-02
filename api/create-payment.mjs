@@ -167,12 +167,20 @@ export default async function handler(req, res) {
                 .from(`${serverKey}:`)
                 .toString("base64");
 
+        const isProduction =
+            process.env.MIDTRANS_IS_PRODUCTION === "true" ||
+            process.env.MIDTRANS_PRODUCTION === "true";
+
+        const snapUrl = isProduction
+            ? "https://app.midtrans.com/snap/v1/transactions"
+            : "https://app.sandbox.midtrans.com/snap/v1/transactions";
+
         /* =================================================
            CREATE MIDTRANS TRANSACTION
         ================================================= */
         const midtransResponse =
             await fetch(
-                "https://app.sandbox.midtrans.com/snap/v1/transactions",
+                snapUrl,
                 {
                     method: "POST",
 
@@ -295,8 +303,10 @@ export default async function handler(req, res) {
              * yang membuat payment.
              */
             session_token:
-                sessionToken
+                sessionToken,
 
+            is_production:
+                isProduction
         });
 
     } catch (error) {
